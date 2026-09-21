@@ -50,6 +50,8 @@ Accept: application/json
   directamente interoperable; XML es una alternativa completa y documentada.
 - La respuesta contiene `status` y `data`; una ejecución futura deberá validar
   ambos, no sólo el código HTTP.
+- Una nueva comprobación real de JSON durante la Fase 03B confirmó que
+  `status.code` es una **cadena** con valor `"200"`; no se observó como entero.
 
 No se recomienda construir el futuro collector con HTML o PDF: las URL de esos
 formatos ya las expone el sumario estructurado para cada ítem.

@@ -1,0 +1,50 @@
+{
+  "status": {
+    "code": "200",
+    "text": "ok"
+  },
+  "data": {
+    "sumario": {
+      "metadatos": {
+        "publicacion": "BOE",
+        "fecha_publicacion": "20240529"
+      },
+      "diario": [
+        {
+          "numero": "130",
+          "seccion": [
+            {
+              "codigo": "1",
+              "nombre": "I. Disposiciones generales",
+              "departamento": [
+                {
+                  "codigo": "9562",
+                  "nombre": "MINISTERIO DE ASUNTOS EXTERIORES, UNI\u00d3N EUROPEA Y COOPERACI\u00d3N",
+                  "epigrafe": [
+                    {
+                      "nombre": "Tratados internacionales",
+                      "item": {
+                        "identificador": "BOE-A-2024-10761",
+                        "control": "2024/8474",
+                        "titulo": "Modificaciones de los anexos I, II y IV del Protocolo para la protecci\u00f3n del Mar Mediterr\u00e1neo contra la contaminaci\u00f3n causada por fuentes y actividades situadas en tierra, adoptadas en Antalya el 10 de diciembre de 2021.",
+                        "url_pdf": {
+                          "szBytes": "263064",
+                          "szKBytes": "257",
+                          "pagina_inicial": "61912",
+                          "pagina_final": "61920",
+                          "texto": "https://www.boe.es/boe/dias/2024/05/29/pdfs/BOE-A-2024-10761.pdf"
+                        },
+                        "url_html": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-10761",
+                        "url_xml": "https://www.boe.es/diario_boe/xml.php?id=BOE-A-2024-10761"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
