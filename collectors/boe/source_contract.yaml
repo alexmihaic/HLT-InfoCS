@@ -1,0 +1,172 @@
+schema_version: "1"
+source_id: boe
+status: verified
+verified_at: "2026-09-21"
+
+source_definition:
+  id: boe
+  name: Boletín Oficial del Estado
+  responsible_authority:
+    id: aeboe
+    name: Agencia Estatal Boletín Oficial del Estado
+    administration_level: state
+  official_url: https://www.boe.es/
+  access_type: official_api
+  status: active
+  reuse:
+    status: conditional
+    metadata_publication: true
+    transformed_data_publication: true
+    mirror_documents: false
+    fulltext_publication: false
+    default_document_policy: link_and_hash
+  allowed_hosts:
+    - www.boe.es
+    - boe.es
+  terms:
+    checked_at: "2026-09-21"
+    source: https://www.boe.es/informacion/aviso_legal/index.php?lang=es
+    notes: >-
+      Reutilización permitida bajo condiciones oficiales. Las restricciones de
+      publicación documental son la política preventiva de InfoCs, no una
+      afirmación de que la licencia prohíba toda reproducción.
+
+access:
+  type: official_documented
+  primary:
+    name: OpenData API — sumario diario del BOE
+    method: GET
+    url_template: https://www.boe.es/datosabiertos/api/boe/sumario/{fecha}
+    date_parameter:
+      name: fecha
+      location: path
+      format: YYYYMMDD
+      meaning: fecha de publicación del BOE
+    pagination: none_documented
+    documentation: https://www.boe.es/datosabiertos/documentos/APIsumarioBOE.pdf
+  alternatives:
+    - name: OpenData API — legislación consolidada y metadatos
+      type: official_documented
+      method: GET
+      url_template: https://www.boe.es/datosabiertos/api/legislacion-consolidada/id/{id}/metadatos
+      use_for: metadatos de una norma consolidada identificada
+      not_selected_as_daily_feed: true
+      documentation: https://www.boe.es/datosabiertos/documentos/APIconsolidada.pdf
+    - name: URLs de documento emitidas por el sumario
+      type: official_documented
+      formats:
+        - xml
+        - html
+        - pdf
+      use_for: enlace a la publicación individual
+      standalone_body_schema: not_audited_as_api_contract
+
+formats:
+  preferred:
+    name: json
+    accept: application/json
+    observed_content_type: application/json
+    encoding: not_documented_in_the_API_contract
+  alternatives:
+    - name: xml
+      accept: application/xml
+      observed_content_type: application/xml
+      encoding: utf-8_in_documented_XML_declaration
+  document_formats:
+    - name: xml
+      observed_content_type: application/xml; charset=utf-8
+    - name: html
+      observed_content_type: text/html; charset=UTF-8
+    - name: pdf
+      observed_content_type: application/pdf
+
+identity:
+  primary_official_field: identificador
+  scope: disposición o anuncio publicado en el sumario
+  documented_example: BOE-A-2024-10761
+  evidence:
+    sumario: true
+    document_urls: true
+    consolidated_metadata: true
+  non_identity_fields:
+    - control
+  fallback: >-
+    Si faltara identificador, el core de InfoCs decidirá una estrategia de
+    identidad; este contrato no autoriza inventar una equivalencia BOE.
+
+dates:
+  published_at:
+    source_field: data.sumario.metadatos.fecha_publicacion
+    format: YYYYMMDD
+    mapping: dates.published_at
+    status: official_documented
+  event_at:
+    source_field: fecha_disposicion
+    availability: optional_in_consolidated_legislation_metadata
+    mapping: dates.event_at_only_when_the_specific_source_representation_is_documented
+    status: official_documented_for_consolidated_metadata
+  source_updated_at:
+    source_field: fecha_actualizacion
+    availability: present_in_consolidated_legislation_metadata
+    format: YYYYMMDDTHHmmSSZ
+    mapping: no_mapping_to_Infocs_internal_timestamps
+    status: official_documented_for_consolidated_metadata
+  infocs_internal:
+    - detected_at
+    - last_checked_at
+
+territoriality:
+  source_scope: state
+  direct_castellon_field: not_found_in_audited_daily_summary
+  available_signals:
+    - section_code_and_name
+    - department_code_and_name
+    - heading_name_when_present
+    - title
+    - individual_document_text_in_linked_XML_or_HTML
+    - consolidated_legislation_ambito_state_or_autonomous
+  rule: >-
+    Ninguna señal convierte por sí sola una publicación estatal en una norma
+    aplicable a Castellón. Las coincidencias de texto requieren una política
+    posterior, objetiva y explicable.
+
+documents:
+  default_policy: link_and_hash
+  published_from_daily_summary:
+    - url_pdf
+    - url_html
+    - url_xml
+  pdf_size_metadata:
+    - szBytes
+    - szKBytes
+  official_document_hash: not_found_in_audited_summary_contract
+  local_copy_required: false
+
+health:
+  valid_success:
+    http_status: 200
+    required_payload_status: "200"
+  known_no_daily_publication:
+    http_status: 404
+    classification: accessible_but_no_requested_daily_summary
+  invalid_request:
+    http_status: 400
+    classification: failed_run
+  server_failure:
+    http_status_range: 500-599
+    classification: failed_run
+  transport_failure:
+    classification: failed_run
+  no_successful_empty_list_observed: true
+
+automation:
+  documented_rate_limit: not_found
+  documented_user_agent_requirement: not_found
+  proposed_initial_usage: >-
+    Una consulta diaria del sumario, sin reintentos agresivos; aplicar espera
+    exponencial ante errores transitorios cuando exista el collector.
+
+security:
+  allowed_hosts:
+    - www.boe.es
+    - boe.es
