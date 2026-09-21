@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "source": {"id": "fixture_gazette", "official_id": "FICT-REG-001"},
+  "authority": {"id": "fixture_council", "name": "Consejo Ficticio de Ejemplo", "administration_level": "autonomous", "aliases": ["Consejo de Ejemplo"]},
+  "administration_level": "autonomous",
+  "category": "regulation",
+  "title": "Resolución ficticia de prueba",
+  "description": "Texto exclusivamente ficticio para validar el contrato de datos.",
+  "dates": {"published_at": "2026-09-20", "event_at": "2026-09-18", "detected_at": "2026-09-21T08:30:00Z", "last_checked_at": "2026-09-21T08:30:00Z"},
+  "source_url": "https://source.example.test/gazette/FICT-REG-001",
+  "geography": {"municipality": "Municipio Ficticio", "province": "Provincia Ficticia"},
+  "tags": ["normativa", "ejemplo"],
+  "provenance": {"collector": "fixture_gazette_collector", "collector_version": "0.0.0", "normalizer_version": "1.0.0", "territorial_matches": [{"reason": "explicit_text_match", "detail": "Mención ficticia documentada"}], "transformed_by_infocs": true},
+  "technical": {"raw_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "extraction_method": "fixture"},
+  "status": "active"
+}

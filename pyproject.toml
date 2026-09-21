@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "infocs"
+version = "0.0.0"
+description = "Índice abierto y reproducible de actividad pública de Castellón."
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+license = { text = "TBD" }
+authors = [{ name = "InfoCs contributors" }]
+dependencies = ["jsonschema==4.26.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

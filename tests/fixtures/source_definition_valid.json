@@ -1,0 +1,11 @@
+{
+  "id": "fixture_source",
+  "name": "Fuente Ficticia Estructurada",
+  "responsible_authority": {"id": "fixture_authority", "name": "Institución Ficticia", "administration_level": "municipal"},
+  "official_url": "https://source.example.test/",
+  "access_type": "structured_data",
+  "status": "active",
+  "reuse": {"status": "conditional", "metadata_publication": true, "transformed_data_publication": true, "mirror_documents": false, "fulltext_publication": false, "default_document_policy": "link_and_hash"},
+  "allowed_hosts": ["source.example.test"],
+  "terms": {"checked_at": "2026-09-21", "source": "fixture", "notes": "Fixture sin fuente administrativa real."}
+}

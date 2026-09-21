@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "source": {"id": "fixture_grants", "official_id": "FICT-GRANT-001"},
+  "authority": {"id": "fixture_department", "name": "Departamento Ficticio", "administration_level": "state"},
+  "administration_level": "state",
+  "category": "grants.resolution",
+  "title": "Resolución ficticia de concesión",
+  "dates": {"published_at": "2026-09-20", "event_at": "2026-09-17", "detected_at": "2026-09-21T09:30:00Z", "last_checked_at": "2026-09-21T09:30:00Z"},
+  "source_url": "https://source.example.test/grants/FICT-GRANT-001",
+  "grant": {"call_id": "FICT-CALL-2026", "resolution_id": "FICT-RES-001", "beneficiary": {"name": "Asociación Ficticia Cultural", "type": "legal_entity"}},
+  "financial": {"grant_amount": {"value": "2500.00", "currency": "EUR"}},
+  "provenance": {"collector": "fixture_grants_collector", "collector_version": "0.0.0", "territorial_matches": [{"reason": "municipality_match", "detail": "Municipio Ficticio"}], "transformed_by_infocs": true},
+  "status": "active"
+}

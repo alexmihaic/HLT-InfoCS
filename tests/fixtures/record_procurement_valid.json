@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "source": {"id": "fixture_procurement", "official_id": "FICT-CONTRACT-001"},
+  "authority": {"id": "fixture_city", "name": "Ayuntamiento Ficticio", "administration_level": "municipal"},
+  "administration_level": "municipal",
+  "category": "procurement.award",
+  "title": "Contrato ficticio de mantenimiento",
+  "dates": {"published_at": "2026-09-20", "event_at": "2026-09-19", "detected_at": "2026-09-21T09:00:00Z", "last_checked_at": "2026-09-21T09:15:00Z"},
+  "source_url": "https://source.example.test/contracts/FICT-CONTRACT-001",
+  "procurement": {
+    "expediente": "FICT-EXP-2026-001",
+    "cpv": ["50700000", "50000000-5"],
+    "awardee": {"name": "Servicios Ficticios del Levante SL", "type": "legal_entity"}
+  },
+  "financial": {"base_budget": {"value": "12100.00", "currency": "EUR"}, "estimated_value": {"value": "20000.00", "currency": "EUR"}, "tender_amount": {"value": "12000.00", "currency": "EUR"}, "award_amount": {"value": "9876.54", "currency": "EUR"}, "modification_amount": {"value": "123.46", "currency": "EUR"}},
+  "documents": [{"source_url": "https://source.example.test/documents/FICT-CONTRACT-001", "mime_type": "application/pdf", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "archive_status": "not_archived", "has_local_copy": false, "publication_allowed": false}],
+  "geography": {"municipality": "Municipio Ficticio", "province": "Provincia Ficticia"},
+  "tags": ["contratación", "mantenimiento"],
+  "relations": [{"type": "related_contract", "target_id": "infocs:fixture:notice-001"}],
+  "provenance": {"collector": "fixture_procurement_collector", "collector_version": "0.0.0", "territorial_matches": [{"reason": "authority_match", "detail": "fixture_city"}], "transformed_by_infocs": true},
+  "technical": {"raw_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "extraction_method": "fixture"},
+  "status": "active"
+}

@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infocs.local/schemas/record.schema.json",
+  "title": "InfoCs Record v1",
+  "allOf": [
+    {"$ref": "#/$defs/candidate_core"},
+    {
+      "type": "object",
+      "required": ["id", "technical"],
+      "properties": {
+        "id": {"$ref": "#/$defs/non_empty_string"},
+        "technical": {"$ref": "#/$defs/final_technical"}
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "candidate_core": {
+      "type": "object",
+      "required": ["schema_version", "source", "authority", "administration_level", "category", "title", "dates", "source_url", "provenance", "status"],
+      "properties": {
+        "schema_version": {"const": "1.0"},
+        "source": {"$ref": "#/$defs/source_reference"},
+        "authority": {"$ref": "#/$defs/authority"},
+        "administration_level": {"$ref": "#/$defs/administration_level"},
+        "category": {"$ref": "#/$defs/category"},
+        "title": {"$ref": "#/$defs/non_empty_string"},
+        "description": {"type": "string"},
+        "financial": {"$ref": "#/$defs/financial"},
+        "dates": {"$ref": "#/$defs/dates"},
+        "source_url": {"type": "string", "format": "uri"},
+        "procurement": {"$ref": "#/$defs/procurement"},
+        "grant": {"$ref": "#/$defs/grant"},
+        "geography": {"$ref": "#/$defs/geography"},
+        "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
+        "tags": {"type": "array", "items": {"$ref": "#/$defs/non_empty_string"}, "uniqueItems": true},
+        "relations": {"type": "array", "items": {"$ref": "#/$defs/relation"}},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "status": {"enum": ["active", "missing_from_source", "withdrawn", "quarantine"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"administration_level": {"const": "municipal"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "municipal"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "provincial"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "provincial"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "autonomous"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "autonomous"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "state"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "state"}}}}}}
+      ]
+    },
+    "non_empty_string": {"type": "string", "minLength": 1},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "administration_level": {"enum": ["municipal", "provincial", "autonomous", "state"]},
+    "category": {"enum": ["regulation", "procurement", "procurement.notice", "procurement.award", "grants", "grants.call", "grants.resolution", "budget", "employment", "urbanism", "governing_bodies", "agreement", "auction", "other"]},
+    "source_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {"id": {"$ref": "#/$defs/non_empty_string"}, "official_id": {"$ref": "#/$defs/non_empty_string"}}
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "administration_level"],
+      "properties": {
+        "id": {"$ref": "#/$defs/non_empty_string"},
+        "name": {"$ref": "#/$defs/non_empty_string"},
+        "administration_level": {"$ref": "#/$defs/administration_level"},
+        "aliases": {"type": "array", "items": {"$ref": "#/$defs/non_empty_string"}, "uniqueItems": true}
+      }
+    },
+    "dates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detected_at", "last_checked_at"],
+      "properties": {
+        "published_at": {"type": "string", "format": "date"},
+        "event_at": {"type": "string", "format": "date"},
+        "detected_at": {"type": "string", "format": "date-time"},
+        "last_checked_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "currency"],
+      "properties": {
+        "value": {"type": "string", "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+        "currency": {"type": "string", "pattern": "^[A-Z]{3}$"}
+      }
+    },
+    "financial": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "base_budget": {"$ref": "#/$defs/money"},
+        "estimated_value": {"$ref": "#/$defs/money"},
+        "tender_amount": {"$ref": "#/$defs/money"},
+        "award_amount": {"$ref": "#/$defs/money"},
+        "modification_amount": {"$ref": "#/$defs/money"},
+        "grant_amount": {"$ref": "#/$defs/money"}
+      }
+    },
+    "awardee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": {"$ref": "#/$defs/non_empty_string"},
+        "type": {"enum": ["legal_entity", "natural_person", "unknown"]},
+        "tax_identifier": {"type": ["string", "null"]}
+      }
+    },
+    "procurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "expediente": {"$ref": "#/$defs/non_empty_string"},
+        "cpv": {"type": "array", "items": {"type": "string", "pattern": "^[0-9]{8}(-[0-9])?$"}, "uniqueItems": true},
+        "awardee": {"$ref": "#/$defs/awardee"}
+      }
+    },
+    "grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "call_id": {"$ref": "#/$defs/non_empty_string"},
+        "resolution_id": {"$ref": "#/$defs/non_empty_string"},
+        "beneficiary": {"$ref": "#/$defs/awardee"}
+      }
+    },
+    "geography": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {"municipality": {"$ref": "#/$defs/non_empty_string"}, "province": {"$ref": "#/$defs/non_empty_string"}}
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_url", "archive_status", "has_local_copy", "publication_allowed"],
+      "properties": {
+        "source_url": {"type": "string", "format": "uri"},
+        "mime_type": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "archive_status": {"enum": ["not_archived", "archived"]},
+        "has_local_copy": {"type": "boolean"},
+        "publication_allowed": {"type": "boolean"}
+      },
+      "allOf": [{"if": {"properties": {"archive_status": {"const": "archived"}}}, "then": {"properties": {"has_local_copy": {"const": true}, "publication_allowed": {"const": true}}}}]
+    },
+    "territorial_match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason"],
+      "properties": {"reason": {"enum": ["authority_match", "municipality_match", "explicit_text_match", "official_code_match", "other_documented"]}, "detail": {"type": "string"}}
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "target_id"],
+      "properties": {"type": {"enum": ["same_event_as", "supersedes", "amends", "implements", "related_contract", "related_grant", "related_agenda", "related_minutes"]}, "target_id": {"$ref": "#/$defs/non_empty_string"}}
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collector", "collector_version", "territorial_matches", "transformed_by_infocs"],
+      "properties": {
+        "collector": {"$ref": "#/$defs/non_empty_string"},
+        "collector_version": {"$ref": "#/$defs/non_empty_string"},
+        "normalizer_version": {"$ref": "#/$defs/non_empty_string"},
+        "territorial_matches": {"type": "array", "items": {"$ref": "#/$defs/territorial_match"}},
+        "transformed_by_infocs": {"type": "boolean"}
+      }
+    },
+    "candidate_technical": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"raw_sha256": {"$ref": "#/$defs/sha256"}, "extraction_method": {"type": "string"}}
+    },
+    "final_technical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_hash", "identity_strategy"],
+      "properties": {"content_hash": {"$ref": "#/$defs/sha256"}, "raw_sha256": {"$ref": "#/$defs/sha256"}, "extraction_method": {"type": "string"}, "identity_strategy": {"enum": ["official_id", "case_number", "canonical_url", "composite_fingerprint"]}}
+    }
+  }
+}

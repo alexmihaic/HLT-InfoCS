@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infocs.local/schemas/source.schema.json",
+  "title": "InfoCs Source Definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "responsible_authority", "official_url", "access_type", "status", "reuse", "allowed_hosts"],
+  "properties": {
+    "id": {"$ref": "#/$defs/non_empty_string"},
+    "name": {"$ref": "#/$defs/non_empty_string"},
+    "responsible_authority": {"$ref": "#/$defs/authority"},
+    "official_url": {"type": "string", "format": "uri"},
+    "access_type": {"enum": ["official_api", "structured_data", "feed", "structured_download", "html", "pdf", "observed_public_download_endpoint"]},
+    "status": {"enum": ["active", "disabled", "under_review"]},
+    "reuse": {"$ref": "#/$defs/reuse"},
+    "allowed_hosts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "terms": {"$ref": "#/$defs/terms"}
+  },
+  "$defs": {
+    "non_empty_string": {"type": "string", "minLength": 1},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "administration_level"],
+      "properties": {
+        "id": {"$ref": "#/$defs/non_empty_string"},
+        "name": {"$ref": "#/$defs/non_empty_string"},
+        "administration_level": {"enum": ["municipal", "provincial", "autonomous", "state"]},
+        "aliases": {"type": "array", "items": {"$ref": "#/$defs/non_empty_string"}, "uniqueItems": true}
+      }
+    },
+    "reuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "metadata_publication", "transformed_data_publication", "mirror_documents", "fulltext_publication", "default_document_policy"],
+      "properties": {
+        "status": {"enum": ["allowed", "conditional", "unknown", "restricted"]},
+        "metadata_publication": {"type": "boolean"},
+        "transformed_data_publication": {"type": "boolean"},
+        "mirror_documents": {"type": "boolean"},
+        "fulltext_publication": {"type": "boolean"},
+        "default_document_policy": {"enum": ["link_and_hash"]}
+      }
+    },
+    "terms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked_at", "source"],
+      "properties": {"checked_at": {"type": "string", "format": "date"}, "source": {"$ref": "#/$defs/non_empty_string"}, "notes": {"type": "string"}}
+    }
+  }
+}

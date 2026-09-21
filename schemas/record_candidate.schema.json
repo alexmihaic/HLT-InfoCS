@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infocs.local/schemas/record_candidate.schema.json",
+  "title": "InfoCs RecordCandidate v1",
+  "description": "Salida normalizada de un collector antes de identidad y hash de InfoCs.",
+  "allOf": [
+    {"$ref": "https://infocs.local/schemas/record.schema.json#/$defs/candidate_core"},
+    {
+      "type": "object",
+      "properties": {
+        "status": {"const": "active"},
+        "technical": {"$ref": "https://infocs.local/schemas/record.schema.json#/$defs/candidate_technical"}
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}
