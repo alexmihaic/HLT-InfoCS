@@ -120,3 +120,28 @@ documentos, procedencia y límites están en
 [`NORMALIZATION_POLICY.md`](NORMALIZATION_POLICY.md). 03D no implementa
 persistencia, reconciliación BOE, eventos BOE, manifests ni inspección de
 documentos individuales.
+
+## Ingesta incremental 03E
+
+El sumario diario BOE está declarado como `collection_semantics:
+incremental_feed` en `source_contract.yaml`: cada edición contiene
+publicaciones de una fecha, no un snapshot completo. La ausencia de un ítem en
+el siguiente día no genera `missing_from_source` ni cambia su estado activo.
+
+`ingest_boe_summary()` evalúa, normaliza y finaliza los ítems incluidos, y
+devuelve operaciones `create`, `update` o `no_change`. Un `source_failure`, un
+`invalid_request` o un `no_daily_publication` no escribe nada; este último es
+un resultado correcto sin edición diaria. Los eventos `create` y `update` se
+devuelven en memoria para validar el contrato, pero no se guardan todavía en
+`data/events/`.
+
+`RecordStore` escribe un JSON por record en un directorio proporcionado por el
+caller (en producción futura sería `data/records/<fuente>/`). La ruta del ID
+se codifica de forma determinista, la representación es UTF-8 con newline
+final y cada reemplazo usa un temporal del mismo directorio y `os.replace`.
+Los tests utilizan exclusivamente directorios temporales. La persistencia de
+datos BOE reales está bloqueada explícitamente hasta disponer del privacy gate:
+
+```text
+LIVE REAL DATA PERSISTENCE BLOCKED until privacy gate exists
+```

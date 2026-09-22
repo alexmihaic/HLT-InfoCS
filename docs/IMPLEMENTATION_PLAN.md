@@ -40,6 +40,15 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Criterio de aceptación:** entradas verificadas producen records y eventos conformes sin scraping ni archivo público indiscriminado.
 - **Fuera de alcance:** clasificación jurídica de aplicabilidad, PDF mirroring, otros collectors y portal.
 
+### Fase 03E — Ingesta incremental y persistencia canónica (cerrada en fixtures)
+
+- **Objetivo:** distinguir el sumario BOE incremental de un snapshot y validar un store JSON individual, determinista y atómico.
+- **Dependencias:** Fases 01–03D, transport, parser, política territorial, normalizador y finalizador aprobados.
+- **Entregables:** `RecordStore`, orquestador `ingest_boe_summary()`, operaciones create/update/no_change, métricas y policy de privacidad de persistencia.
+- **Tests necesarios:** idempotencia, actualización con `changed_fields`, ausencia entre días sin missing, no_daily_publication, fallos sin writes, invalid_request, paths seguros, atomicidad y round-trip de records.
+- **Criterio de aceptación:** los datos sintéticos se escriben como JSON individual válido y estable; un fallo contractual aborta el batch antes de escribir; no se persisten records o events BOE reales.
+- **Fuera de alcance:** ejecución diaria, GitHub Actions, manifests, health real, eventos persistidos, privacy gate completo, XML/PDF crawling y cualquier otra fuente.
+
 ## Fase 04 — BDNS
 
 - **Objetivo:** incorporar subvenciones mediante el canal oficial estructurado que se vuelva a verificar en esta fase.

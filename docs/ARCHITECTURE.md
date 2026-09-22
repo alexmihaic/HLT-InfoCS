@@ -71,6 +71,25 @@ Git aporta historial público y reproducibilidad, pero no una certificación jur
 
 SQLite o DuckDB podrán generarse localmente para análisis, validación o descargas, pero nunca serán la verdad canónica sin una decisión documentada posterior.
 
+### Semántica de colección y persistencia canónica
+
+Cada fuente debe declarar si una ejecución es un `incremental_feed` o un
+`snapshot`. Un feed incremental comunica publicaciones nuevas o revisadas de
+un intervalo, no la ausencia de todo lo que no aparece en esa ejecución. BOE
+declara `incremental_feed`, por lo que sus sumarios diarios no generan
+`missing_from_source` por comparación entre fechas. La reconciliación de
+ausencias queda reservada a fuentes con semántica `snapshot` y observación
+completa.
+
+El `RecordStore` común mantiene un JSON por record bajo el directorio de la
+fuente. El ID externo se codifica como segmento seguro y no se usa el hash de
+contenido como nombre de archivo. La escritura valida el `Record`, comprueba
+el hash semántico, serializa con `Record.canonical_json()` y newline final,
+escribe un temporal en el mismo directorio y ejecuta un reemplazo atómico.
+Esta abstracción no crea bases de datos ni persiste eventos, manifests o health.
+En BOE 03E se utiliza sólo con temporales de test: la persistencia de datos
+administrativos reales permanece bloqueada hasta el privacy gate.
+
 ## Automatización y publicación
 
 La automatización futura ejecutará collectors de forma aislada, agregará sus resultados aunque una fuente falle, validará y solo después actualizará los datos válidos. Cada fuente publicará salud diferenciando `last_success` de `last_change_detected`. No se añaden workflows en esta fase.

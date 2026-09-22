@@ -21,6 +21,17 @@ from infocs.fetch.boe.normalize import (
     category_for_boe_section,
     normalize_boe_item,
 )
+from infocs.fetch.boe.ingest import (
+    BOE_COLLECTION_SEMANTICS,
+    BOECollectionSemantics,
+    BOEIngestionError,
+    BOEIngestionMetrics,
+    BOEIngestionResult,
+    BOEIngestionStatus,
+    BOEOperation,
+    BOEOperationType,
+    ingest_boe_summary,
+)
 from infocs.fetch.boe.parser import BOEContractError, parse_boe_summary
 from infocs.fetch.boe.territorial import (
     BOETerritorialEntity,
@@ -34,6 +45,12 @@ from infocs.fetch.boe.transport import BOETransport
 
 __all__ = [
     "BOEContractError",
+    "BOE_COLLECTION_SEMANTICS",
+    "BOECollectionSemantics",
+    "BOEIngestionError",
+    "BOEIngestionMetrics",
+    "BOEIngestionResult",
+    "BOEIngestionStatus",
     "BOENormalizationError",
     "BOEDepartment",
     "BOEDiary",
@@ -54,9 +71,12 @@ __all__ = [
     "BOETerritorialRegistry",
     "BOETerritorialRegistryError",
     "BOETransport",
+    "BOEOperation",
+    "BOEOperationType",
     "decide_boe_territorial_inclusion",
     "category_for_boe_section",
     "load_castellon_registry",
+    "ingest_boe_summary",
     "normalize_boe_item",
     "parse_boe_summary",
 ]
