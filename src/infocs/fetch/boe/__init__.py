@@ -16,6 +16,11 @@ from infocs.fetch.boe.models import (
     BOETerritorialMatch,
     BOETerritorialMatchReason,
 )
+from infocs.fetch.boe.normalize import (
+    BOENormalizationError,
+    category_for_boe_section,
+    normalize_boe_item,
+)
 from infocs.fetch.boe.parser import BOEContractError, parse_boe_summary
 from infocs.fetch.boe.territorial import (
     BOETerritorialEntity,
@@ -29,6 +34,7 @@ from infocs.fetch.boe.transport import BOETransport
 
 __all__ = [
     "BOEContractError",
+    "BOENormalizationError",
     "BOEDepartment",
     "BOEDiary",
     "BOEDocumentLinks",
@@ -49,6 +55,8 @@ __all__ = [
     "BOETerritorialRegistryError",
     "BOETransport",
     "decide_boe_territorial_inclusion",
+    "category_for_boe_section",
     "load_castellon_registry",
+    "normalize_boe_item",
     "parse_boe_summary",
 ]

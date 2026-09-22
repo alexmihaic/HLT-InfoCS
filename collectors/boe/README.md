@@ -1,4 +1,4 @@
-# BOE — Transporte, parser y política territorial (Fases 03B–03C)
+# BOE — Transporte, parser, territorialidad y normalización (Fases 03B–03D)
 
 ## Finalidad y límite
 
@@ -7,11 +7,14 @@ Este módulo implementa exclusivamente la primera parte del adaptador BOE:
 ```text
 API BOE -> transporte HTTP seguro -> validación -> BOESummary / BOEItem
                                                         -> decisión territorial explicable
+                                                        -> normalizador -> RecordCandidate
 ```
 
-No crea `RecordCandidate`, no llama a `finalize_record()` y no escribe datos,
-eventos, manifests ni health global. Por tanto, un `BOEItem` ni una decisión
-territorial BOE son todavía un record InfoCs publicable.
+El normalizador sólo crea un `RecordCandidate` activo para una decisión
+`include`. No escribe datos, eventos, manifests ni health global. El core es
+el único responsable de convertir ese candidato en un `Record` final mediante
+`finalize_record()`; la integración se prueba offline, pero no persiste su
+resultado.
 
 ## Endpoint y configuración
 
@@ -104,5 +107,16 @@ usa fuzzy matching, IA o puntuaciones, y no clasifica el ítem. El registro
 versionado de entidades está en `config/entities/castellon.json`; su contrato y
 limitaciones se describen en `TERRITORIAL_POLICY.md`.
 
-La normalización a `RecordCandidate`, las categorías InfoCs y toda escritura o
-reconciliación quedan expresamente fuera de 03C.
+## Normalización 03D
+
+`normalize_boe_item(item, decision, detected_at=..., last_checked_at=...)`
+recibe un `BOEItem` ya parseado, una decisión territorial ya tomada y los
+timestamps explícitos de observación. No accede a red ni abre XML, HTML o PDF.
+Devuelve un `RecordCandidate` sólo si la decisión es `include`; para
+`no_match` devuelve `None` sin tratar el ítem como un record irrelevante.
+
+El mapping detallado, la regla de `source_url`, autoridad, categorías,
+documentos, procedencia y límites están en
+[`NORMALIZATION_POLICY.md`](NORMALIZATION_POLICY.md). 03D no implementa
+persistencia, reconciliación BOE, eventos BOE, manifests ni inspección de
+documentos individuales.
