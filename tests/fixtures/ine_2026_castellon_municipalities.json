@@ -1,0 +1,688 @@
+{
+  "schema_version": "1.0.0",
+  "canonical_source": {
+    "title": "Relación de municipios y códigos a 1 de enero de 2026",
+    "url": "https://www.ine.es/daco/daco42/codmun/26codmun.xlsx",
+    "sheet": "12"
+  },
+  "reference_date": "2026-01-01",
+  "checked_at": "2026-09-21",
+  "expected_municipality_count": 135,
+  "municipalities": [
+    {
+      "code": "12002",
+      "official_name": "Aín",
+      "check_digit": "2"
+    },
+    {
+      "code": "12003",
+      "official_name": "Albocàsser",
+      "check_digit": "8"
+    },
+    {
+      "code": "12004",
+      "official_name": "Alcalà de Xivert",
+      "check_digit": "3"
+    },
+    {
+      "code": "12005",
+      "official_name": "Alcora, l'",
+      "check_digit": "6"
+    },
+    {
+      "code": "12006",
+      "official_name": "Alcudia de Veo",
+      "check_digit": "9"
+    },
+    {
+      "code": "12007",
+      "official_name": "Alfondeguilla",
+      "check_digit": "5"
+    },
+    {
+      "code": "12008",
+      "official_name": "Algimia de Almonacid",
+      "check_digit": "1"
+    },
+    {
+      "code": "12009",
+      "official_name": "Almassora",
+      "check_digit": "4"
+    },
+    {
+      "code": "12010",
+      "official_name": "Almedíjar",
+      "check_digit": "8"
+    },
+    {
+      "code": "12011",
+      "official_name": "Almenara",
+      "check_digit": "5"
+    },
+    {
+      "code": "12901",
+      "official_name": "Alqueries, les/Alquerías del Niño Perdido",
+      "check_digit": "8"
+    },
+    {
+      "code": "12012",
+      "official_name": "Altura",
+      "check_digit": "0"
+    },
+    {
+      "code": "12013",
+      "official_name": "Arañuel",
+      "check_digit": "6"
+    },
+    {
+      "code": "12014",
+      "official_name": "Ares del Maestrat",
+      "check_digit": "1"
+    },
+    {
+      "code": "12015",
+      "official_name": "Argelita",
+      "check_digit": "4"
+    },
+    {
+      "code": "12016",
+      "official_name": "Artana",
+      "check_digit": "7"
+    },
+    {
+      "code": "12001",
+      "official_name": "Atzeneta del Maestrat",
+      "check_digit": "7"
+    },
+    {
+      "code": "12017",
+      "official_name": "Ayódar",
+      "check_digit": "3"
+    },
+    {
+      "code": "12018",
+      "official_name": "Azuébar",
+      "check_digit": "9"
+    },
+    {
+      "code": "12020",
+      "official_name": "Barracas",
+      "check_digit": "6"
+    },
+    {
+      "code": "12022",
+      "official_name": "Bejís",
+      "check_digit": "8"
+    },
+    {
+      "code": "12024",
+      "official_name": "Benafer",
+      "check_digit": "9"
+    },
+    {
+      "code": "12025",
+      "official_name": "Benafigos",
+      "check_digit": "2"
+    },
+    {
+      "code": "12026",
+      "official_name": "Benassal",
+      "check_digit": "5"
+    },
+    {
+      "code": "12027",
+      "official_name": "Benicarló",
+      "check_digit": "1"
+    },
+    {
+      "code": "12028",
+      "official_name": "Benicàssim/Benicasim",
+      "check_digit": "7"
+    },
+    {
+      "code": "12029",
+      "official_name": "Benlloc",
+      "check_digit": "0"
+    },
+    {
+      "code": "12021",
+      "official_name": "Betxí",
+      "check_digit": "3"
+    },
+    {
+      "code": "12032",
+      "official_name": "Borriana/Burriana",
+      "check_digit": "6"
+    },
+    {
+      "code": "12031",
+      "official_name": "Borriol",
+      "check_digit": "1"
+    },
+    {
+      "code": "12033",
+      "official_name": "Cabanes",
+      "check_digit": "2"
+    },
+    {
+      "code": "12034",
+      "official_name": "Càlig",
+      "check_digit": "7"
+    },
+    {
+      "code": "12036",
+      "official_name": "Canet lo Roig",
+      "check_digit": "3"
+    },
+    {
+      "code": "12037",
+      "official_name": "Castell de Cabres",
+      "check_digit": "9"
+    },
+    {
+      "code": "12038",
+      "official_name": "Castellfort",
+      "check_digit": "5"
+    },
+    {
+      "code": "12039",
+      "official_name": "Castellnovo",
+      "check_digit": "8"
+    },
+    {
+      "code": "12040",
+      "official_name": "Castelló de la Plana/Castellón de la Plana",
+      "check_digit": "2"
+    },
+    {
+      "code": "12041",
+      "official_name": "Castillo de Villamalefa",
+      "check_digit": "9"
+    },
+    {
+      "code": "12042",
+      "official_name": "Catí",
+      "check_digit": "4"
+    },
+    {
+      "code": "12043",
+      "official_name": "Caudiel",
+      "check_digit": "0"
+    },
+    {
+      "code": "12044",
+      "official_name": "Cervera del Maestre",
+      "check_digit": "5"
+    },
+    {
+      "code": "12053",
+      "official_name": "Chilches/Xilxes",
+      "check_digit": "7"
+    },
+    {
+      "code": "12056",
+      "official_name": "Chóvar",
+      "check_digit": "8"
+    },
+    {
+      "code": "12045",
+      "official_name": "Cinctorres",
+      "check_digit": "8"
+    },
+    {
+      "code": "12046",
+      "official_name": "Cirat",
+      "check_digit": "1"
+    },
+    {
+      "code": "12048",
+      "official_name": "Cortes de Arenoso",
+      "check_digit": "3"
+    },
+    {
+      "code": "12049",
+      "official_name": "Costur",
+      "check_digit": "6"
+    },
+    {
+      "code": "12050",
+      "official_name": "Coves de Vinromà, les",
+      "check_digit": "9"
+    },
+    {
+      "code": "12051",
+      "official_name": "Culla",
+      "check_digit": "6"
+    },
+    {
+      "code": "12057",
+      "official_name": "Eslida",
+      "check_digit": "4"
+    },
+    {
+      "code": "12058",
+      "official_name": "Espadilla",
+      "check_digit": "0"
+    },
+    {
+      "code": "12059",
+      "official_name": "Fanzara",
+      "check_digit": "3"
+    },
+    {
+      "code": "12060",
+      "official_name": "Figueroles",
+      "check_digit": "7"
+    },
+    {
+      "code": "12061",
+      "official_name": "Forcall",
+      "check_digit": "4"
+    },
+    {
+      "code": "12063",
+      "official_name": "Fuente la Reina",
+      "check_digit": "5"
+    },
+    {
+      "code": "12064",
+      "official_name": "Fuentes de Ayódar",
+      "check_digit": "0"
+    },
+    {
+      "code": "12065",
+      "official_name": "Gaibiel",
+      "check_digit": "3"
+    },
+    {
+      "code": "12067",
+      "official_name": "Geldo",
+      "check_digit": "2"
+    },
+    {
+      "code": "12068",
+      "official_name": "Herbers",
+      "check_digit": "8"
+    },
+    {
+      "code": "12069",
+      "official_name": "Higueras",
+      "check_digit": "1"
+    },
+    {
+      "code": "12070",
+      "official_name": "Jana, la",
+      "check_digit": "5"
+    },
+    {
+      "code": "12071",
+      "official_name": "Jérica",
+      "check_digit": "2"
+    },
+    {
+      "code": "12074",
+      "official_name": "Llosa, la",
+      "check_digit": "8"
+    },
+    {
+      "code": "12072",
+      "official_name": "Llucena/Lucena del Cid",
+      "check_digit": "7"
+    },
+    {
+      "code": "12073",
+      "official_name": "Ludiente",
+      "check_digit": "3"
+    },
+    {
+      "code": "12075",
+      "official_name": "Mata de Morella, la",
+      "check_digit": "1"
+    },
+    {
+      "code": "12076",
+      "official_name": "Matet",
+      "check_digit": "4"
+    },
+    {
+      "code": "12077",
+      "official_name": "Moncofa",
+      "check_digit": "0"
+    },
+    {
+      "code": "12078",
+      "official_name": "Montán",
+      "check_digit": "6"
+    },
+    {
+      "code": "12079",
+      "official_name": "Montanejos",
+      "check_digit": "9"
+    },
+    {
+      "code": "12080",
+      "official_name": "Morella",
+      "check_digit": "3"
+    },
+    {
+      "code": "12081",
+      "official_name": "Navajas",
+      "check_digit": "0"
+    },
+    {
+      "code": "12082",
+      "official_name": "Nules",
+      "check_digit": "5"
+    },
+    {
+      "code": "12083",
+      "official_name": "Olocau del Rey",
+      "check_digit": "1"
+    },
+    {
+      "code": "12084",
+      "official_name": "Onda",
+      "check_digit": "6"
+    },
+    {
+      "code": "12085",
+      "official_name": "Orpesa/Oropesa del Mar",
+      "check_digit": "9"
+    },
+    {
+      "code": "12087",
+      "official_name": "Palanques",
+      "check_digit": "8"
+    },
+    {
+      "code": "12088",
+      "official_name": "Pavías",
+      "check_digit": "4"
+    },
+    {
+      "code": "12089",
+      "official_name": "Peníscola/Peñíscola",
+      "check_digit": "7"
+    },
+    {
+      "code": "12090",
+      "official_name": "Pina de Montalgrao",
+      "check_digit": "1"
+    },
+    {
+      "code": "12093",
+      "official_name": "Pobla de Benifassà, la",
+      "check_digit": "9"
+    },
+    {
+      "code": "12094",
+      "official_name": "Pobla Tornesa, la",
+      "check_digit": "4"
+    },
+    {
+      "code": "12091",
+      "official_name": "Portell de Morella",
+      "check_digit": "8"
+    },
+    {
+      "code": "12092",
+      "official_name": "Puebla de Arenoso",
+      "check_digit": "3"
+    },
+    {
+      "code": "12095",
+      "official_name": "Ribesalbes",
+      "check_digit": "7"
+    },
+    {
+      "code": "12096",
+      "official_name": "Rossell",
+      "check_digit": "0"
+    },
+    {
+      "code": "12097",
+      "official_name": "Sacañet",
+      "check_digit": "6"
+    },
+    {
+      "code": "12098",
+      "official_name": "Salzadella, la",
+      "check_digit": "2"
+    },
+    {
+      "code": "12101",
+      "official_name": "San Rafael del Río",
+      "check_digit": "6"
+    },
+    {
+      "code": "12902",
+      "official_name": "Sant Joan de Moró",
+      "check_digit": "3"
+    },
+    {
+      "code": "12099",
+      "official_name": "Sant Jordi/San Jorge",
+      "check_digit": "5"
+    },
+    {
+      "code": "12100",
+      "official_name": "Sant Mateu",
+      "check_digit": "9"
+    },
+    {
+      "code": "12102",
+      "official_name": "Santa Magdalena de Pulpis",
+      "check_digit": "1"
+    },
+    {
+      "code": "12104",
+      "official_name": "Segorbe",
+      "check_digit": "2"
+    },
+    {
+      "code": "12103",
+      "official_name": "Serratella, la",
+      "check_digit": "7"
+    },
+    {
+      "code": "12105",
+      "official_name": "Sierra Engarcerán",
+      "check_digit": "5"
+    },
+    {
+      "code": "12106",
+      "official_name": "Soneja",
+      "check_digit": "8"
+    },
+    {
+      "code": "12107",
+      "official_name": "Sot de Ferrer",
+      "check_digit": "4"
+    },
+    {
+      "code": "12108",
+      "official_name": "Suera/Sueras",
+      "check_digit": "0"
+    },
+    {
+      "code": "12109",
+      "official_name": "Tales",
+      "check_digit": "3"
+    },
+    {
+      "code": "12110",
+      "official_name": "Teresa",
+      "check_digit": "7"
+    },
+    {
+      "code": "12111",
+      "official_name": "Tírig",
+      "check_digit": "4"
+    },
+    {
+      "code": "12112",
+      "official_name": "Todolella",
+      "check_digit": "9"
+    },
+    {
+      "code": "12113",
+      "official_name": "Toga",
+      "check_digit": "5"
+    },
+    {
+      "code": "12114",
+      "official_name": "Torás",
+      "check_digit": "0"
+    },
+    {
+      "code": "12115",
+      "official_name": "Toro, El",
+      "check_digit": "3"
+    },
+    {
+      "code": "12116",
+      "official_name": "Torralba del Pinar",
+      "check_digit": "6"
+    },
+    {
+      "code": "12119",
+      "official_name": "Torre d'en Besora, la",
+      "check_digit": "1"
+    },
+    {
+      "code": "12120",
+      "official_name": "Torre d'en Doménec, la",
+      "check_digit": "5"
+    },
+    {
+      "code": "12117",
+      "official_name": "Torreblanca",
+      "check_digit": "2"
+    },
+    {
+      "code": "12118",
+      "official_name": "Torrechiva",
+      "check_digit": "8"
+    },
+    {
+      "code": "12121",
+      "official_name": "Traiguera",
+      "check_digit": "2"
+    },
+    {
+      "code": "12122",
+      "official_name": "Useres, les/Useras",
+      "check_digit": "7"
+    },
+    {
+      "code": "12124",
+      "official_name": "Vall d'Alba",
+      "check_digit": "8"
+    },
+    {
+      "code": "12125",
+      "official_name": "Vall de Almonacid",
+      "check_digit": "1"
+    },
+    {
+      "code": "12126",
+      "official_name": "Vall d'Uixó, la",
+      "check_digit": "4"
+    },
+    {
+      "code": "12123",
+      "official_name": "Vallat",
+      "check_digit": "3"
+    },
+    {
+      "code": "12127",
+      "official_name": "Vallibona",
+      "check_digit": "0"
+    },
+    {
+      "code": "12128",
+      "official_name": "Vilafamés",
+      "check_digit": "6"
+    },
+    {
+      "code": "12129",
+      "official_name": "Vilafranca/Villafranca del Cid",
+      "check_digit": "9"
+    },
+    {
+      "code": "12132",
+      "official_name": "Vilanova d'Alcolea",
+      "check_digit": "5"
+    },
+    {
+      "code": "12134",
+      "official_name": "Vilar de Canes",
+      "check_digit": "6"
+    },
+    {
+      "code": "12135",
+      "official_name": "Vila-real",
+      "check_digit": "9"
+    },
+    {
+      "code": "12136",
+      "official_name": "Vilavella, la",
+      "check_digit": "2"
+    },
+    {
+      "code": "12130",
+      "official_name": "Villahermosa del Río",
+      "check_digit": "3"
+    },
+    {
+      "code": "12131",
+      "official_name": "Villamalur",
+      "check_digit": "0"
+    },
+    {
+      "code": "12133",
+      "official_name": "Villanueva de Viver",
+      "check_digit": "1"
+    },
+    {
+      "code": "12137",
+      "official_name": "Villores",
+      "check_digit": "8"
+    },
+    {
+      "code": "12138",
+      "official_name": "Vinaròs",
+      "check_digit": "4"
+    },
+    {
+      "code": "12139",
+      "official_name": "Vistabella del Maestrat",
+      "check_digit": "7"
+    },
+    {
+      "code": "12140",
+      "official_name": "Viver",
+      "check_digit": "1"
+    },
+    {
+      "code": "12052",
+      "official_name": "Xert",
+      "check_digit": "1"
+    },
+    {
+      "code": "12055",
+      "official_name": "Xodos/Chodos",
+      "check_digit": "5"
+    },
+    {
+      "code": "12141",
+      "official_name": "Zorita del Maestrazgo",
+      "check_digit": "8"
+    },
+    {
+      "code": "12142",
+      "official_name": "Zucaina",
+      "check_digit": "3"
+    }
+  ]
+}

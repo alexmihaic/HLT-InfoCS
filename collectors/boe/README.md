@@ -1,4 +1,4 @@
-# BOE — Transporte y parser (Fase 03B)
+# BOE — Transporte, parser y política territorial (Fases 03B–03C)
 
 ## Finalidad y límite
 
@@ -6,12 +6,12 @@ Este módulo implementa exclusivamente la primera parte del adaptador BOE:
 
 ```text
 API BOE -> transporte HTTP seguro -> validación -> BOESummary / BOEItem
+                                                        -> decisión territorial explicable
 ```
 
-No clasifica relevancia territorial, no consulta XML/HTML/PDF individuales, no
-crea `RecordCandidate`, no llama a `finalize_record()` y no escribe datos,
-eventos, manifests ni health global. Por tanto, un `BOEItem` no es todavía un
-record InfoCs publicable.
+No crea `RecordCandidate`, no llama a `finalize_record()` y no escribe datos,
+eventos, manifests ni health global. Por tanto, un `BOEItem` ni una decisión
+territorial BOE son todavía un record InfoCs publicable.
 
 ## Endpoint y configuración
 
@@ -90,8 +90,19 @@ No hay smoke test de red en la suite: las pruebas ordinarias no acceden a
 Internet. La petición de humo se decidirá separadamente cuando exista una fase
 autorizada para ello.
 
-## Lo que corresponde a 03C
+## Política territorial 03C
 
-Fase 03C decidirá, con reglas documentadas, cómo transformar el resultado
-source-specific en `RecordCandidate`, qué datos oficiales conservar, y cómo
-tratar categorías o inclusión territorial. Nada de ello está implementado aquí.
+`territorial.py` aplica una política literal y auditable sobre metadatos ya
+presentes en `BOEItem`. Sólo examina, en este orden, epígrafe, departamento y
+título. Devuelve `BOETerritorialDecision` con `include` o `no_match` y motivos
+como `municipality_exact`, `province_exact` o `authority_exact`.
+
+La política no afirma que una disposición sea aplicable o importante para
+Castellón: registra exclusivamente dónde se observó una coincidencia exacta.
+No consulta `url_xml`, `url_html` ni `url_pdf`, no inspecciona la sección, no
+usa fuzzy matching, IA o puntuaciones, y no clasifica el ítem. El registro
+versionado de entidades está en `config/entities/castellon.json`; su contrato y
+limitaciones se describen en `TERRITORIAL_POLICY.md`.
+
+La normalización a `RecordCandidate`, las categorías InfoCs y toda escritura o
+reconciliación quedan expresamente fuera de 03C.

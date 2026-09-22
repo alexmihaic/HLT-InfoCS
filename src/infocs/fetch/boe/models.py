@@ -84,6 +84,55 @@ class BOEFetchStatus(str, Enum):
     SOURCE_FAILURE = "source_failure"
 
 
+class BOETerritorialDecisionStatus(str, Enum):
+    """Resultado auditable de la política territorial específica del BOE."""
+
+    INCLUDE = "include"
+    NO_MATCH = "no_match"
+
+
+class BOETerritorialMatchReason(str, Enum):
+    """Hechos observables que justifican la inclusión territorial."""
+
+    MUNICIPALITY_EXACT = "municipality_exact"
+    PROVINCE_EXACT = "province_exact"
+    AUTHORITY_EXACT = "authority_exact"
+
+
+class BOETerritorialField(str, Enum):
+    """Campos de ``BOEItem`` que la política v1 está autorizada a examinar."""
+
+    HEADING = "heading"
+    DEPARTMENT = "department"
+    TITLE = "title"
+
+
+@dataclass(frozen=True, slots=True)
+class BOETerritorialMatch:
+    """Una coincidencia literal y explicable, no una inferencia de aplicabilidad."""
+
+    reason: BOETerritorialMatchReason
+    entity_code: str
+    entity_name: str
+    field: BOETerritorialField
+    matched_text: str
+    method: str
+
+
+@dataclass(frozen=True, slots=True)
+class BOETerritorialDecision:
+    """Decisión source-specific previa a cualquier normalización InfoCs."""
+
+    status: BOETerritorialDecisionStatus
+    matches: tuple[BOETerritorialMatch, ...]
+
+    def __post_init__(self) -> None:
+        if self.status is BOETerritorialDecisionStatus.INCLUDE and not self.matches:
+            raise ValueError("include requiere al menos una coincidencia territorial.")
+        if self.status is BOETerritorialDecisionStatus.NO_MATCH and self.matches:
+            raise ValueError("no_match no puede incluir coincidencias territoriales.")
+
+
 @dataclass(frozen=True, slots=True)
 class BOEFetchResult:
     status: BOEFetchStatus

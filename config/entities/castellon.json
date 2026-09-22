@@ -1,0 +1,1129 @@
+{
+  "schema_version": "1.0.0",
+  "scope": "province_12_castellon",
+  "source": {
+    "publisher": "Instituto Nacional de Estadística (INE)",
+    "canonical_source": {
+      "title": "Relación de municipios y códigos a 1 de enero de 2026",
+      "url": "https://www.ine.es/daco/daco42/codmun/26codmun.xlsx",
+      "sheet": "12"
+    },
+    "reference_date": "2026-01-01",
+    "checked_at": "2026-09-21",
+    "expected_municipality_count": 135,
+    "api_source": {
+      "url": "https://servicios.ine.es/wstempus/js/ES/VALORES_HIJOS/115/13?det=2",
+      "role": "auxiliary_cross_check_only"
+    },
+    "post_reference_modifications_source": {
+      "url": "https://www.ine.es/daco/daco42/codmun/codmun_anual.htm",
+      "checked_at": "2026-09-21",
+      "result": "No entries for Castellón/Castelló were published at verification time."
+    }
+  },
+  "province": {
+    "code": "12",
+    "official_name": "Castellón/Castelló",
+    "official_variants": [
+      "Castellón",
+      "Castelló"
+    ],
+    "technical_aliases": []
+  },
+  "municipalities": [
+    {
+      "code": "12002",
+      "official_name": "Aín",
+      "official_variants": [
+        "Aín"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12003",
+      "official_name": "Albocàsser",
+      "official_variants": [
+        "Albocàsser"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12004",
+      "official_name": "Alcalà de Xivert",
+      "official_variants": [
+        "Alcalà de Xivert"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12005",
+      "official_name": "Alcora, l'",
+      "official_variants": [
+        "Alcora, l'"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12006",
+      "official_name": "Alcudia de Veo",
+      "official_variants": [
+        "Alcudia de Veo"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12007",
+      "official_name": "Alfondeguilla",
+      "official_variants": [
+        "Alfondeguilla"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12008",
+      "official_name": "Algimia de Almonacid",
+      "official_variants": [
+        "Algimia de Almonacid"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12009",
+      "official_name": "Almassora",
+      "official_variants": [
+        "Almassora"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12010",
+      "official_name": "Almedíjar",
+      "official_variants": [
+        "Almedíjar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12011",
+      "official_name": "Almenara",
+      "official_variants": [
+        "Almenara"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12901",
+      "official_name": "Alqueries, les/Alquerías del Niño Perdido",
+      "official_variants": [
+        "Alqueries, les",
+        "Alquerías del Niño Perdido"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12012",
+      "official_name": "Altura",
+      "official_variants": [
+        "Altura"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12013",
+      "official_name": "Arañuel",
+      "official_variants": [
+        "Arañuel"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12014",
+      "official_name": "Ares del Maestrat",
+      "official_variants": [
+        "Ares del Maestrat"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12015",
+      "official_name": "Argelita",
+      "official_variants": [
+        "Argelita"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12016",
+      "official_name": "Artana",
+      "official_variants": [
+        "Artana"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12001",
+      "official_name": "Atzeneta del Maestrat",
+      "official_variants": [
+        "Atzeneta del Maestrat"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12017",
+      "official_name": "Ayódar",
+      "official_variants": [
+        "Ayódar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12018",
+      "official_name": "Azuébar",
+      "official_variants": [
+        "Azuébar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12020",
+      "official_name": "Barracas",
+      "official_variants": [
+        "Barracas"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12022",
+      "official_name": "Bejís",
+      "official_variants": [
+        "Bejís"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12024",
+      "official_name": "Benafer",
+      "official_variants": [
+        "Benafer"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12025",
+      "official_name": "Benafigos",
+      "official_variants": [
+        "Benafigos"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12026",
+      "official_name": "Benassal",
+      "official_variants": [
+        "Benassal"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12027",
+      "official_name": "Benicarló",
+      "official_variants": [
+        "Benicarló"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12028",
+      "official_name": "Benicàssim/Benicasim",
+      "official_variants": [
+        "Benicàssim",
+        "Benicasim"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12029",
+      "official_name": "Benlloc",
+      "official_variants": [
+        "Benlloc"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12021",
+      "official_name": "Betxí",
+      "official_variants": [
+        "Betxí"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12032",
+      "official_name": "Borriana/Burriana",
+      "official_variants": [
+        "Borriana",
+        "Burriana"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12031",
+      "official_name": "Borriol",
+      "official_variants": [
+        "Borriol"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12033",
+      "official_name": "Cabanes",
+      "official_variants": [
+        "Cabanes"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12034",
+      "official_name": "Càlig",
+      "official_variants": [
+        "Càlig"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12036",
+      "official_name": "Canet lo Roig",
+      "official_variants": [
+        "Canet lo Roig"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12037",
+      "official_name": "Castell de Cabres",
+      "official_variants": [
+        "Castell de Cabres"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12038",
+      "official_name": "Castellfort",
+      "official_variants": [
+        "Castellfort"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12039",
+      "official_name": "Castellnovo",
+      "official_variants": [
+        "Castellnovo"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12040",
+      "official_name": "Castelló de la Plana/Castellón de la Plana",
+      "official_variants": [
+        "Castelló de la Plana",
+        "Castellón de la Plana"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12041",
+      "official_name": "Castillo de Villamalefa",
+      "official_variants": [
+        "Castillo de Villamalefa"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12042",
+      "official_name": "Catí",
+      "official_variants": [
+        "Catí"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12043",
+      "official_name": "Caudiel",
+      "official_variants": [
+        "Caudiel"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12044",
+      "official_name": "Cervera del Maestre",
+      "official_variants": [
+        "Cervera del Maestre"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12053",
+      "official_name": "Chilches/Xilxes",
+      "official_variants": [
+        "Chilches",
+        "Xilxes"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12056",
+      "official_name": "Chóvar",
+      "official_variants": [
+        "Chóvar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12045",
+      "official_name": "Cinctorres",
+      "official_variants": [
+        "Cinctorres"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12046",
+      "official_name": "Cirat",
+      "official_variants": [
+        "Cirat"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12048",
+      "official_name": "Cortes de Arenoso",
+      "official_variants": [
+        "Cortes de Arenoso"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12049",
+      "official_name": "Costur",
+      "official_variants": [
+        "Costur"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12050",
+      "official_name": "Coves de Vinromà, les",
+      "official_variants": [
+        "Coves de Vinromà, les"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12051",
+      "official_name": "Culla",
+      "official_variants": [
+        "Culla"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12057",
+      "official_name": "Eslida",
+      "official_variants": [
+        "Eslida"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12058",
+      "official_name": "Espadilla",
+      "official_variants": [
+        "Espadilla"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12059",
+      "official_name": "Fanzara",
+      "official_variants": [
+        "Fanzara"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12060",
+      "official_name": "Figueroles",
+      "official_variants": [
+        "Figueroles"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12061",
+      "official_name": "Forcall",
+      "official_variants": [
+        "Forcall"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12063",
+      "official_name": "Fuente la Reina",
+      "official_variants": [
+        "Fuente la Reina"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12064",
+      "official_name": "Fuentes de Ayódar",
+      "official_variants": [
+        "Fuentes de Ayódar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12065",
+      "official_name": "Gaibiel",
+      "official_variants": [
+        "Gaibiel"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12067",
+      "official_name": "Geldo",
+      "official_variants": [
+        "Geldo"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12068",
+      "official_name": "Herbers",
+      "official_variants": [
+        "Herbers"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12069",
+      "official_name": "Higueras",
+      "official_variants": [
+        "Higueras"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12070",
+      "official_name": "Jana, la",
+      "official_variants": [
+        "Jana, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12071",
+      "official_name": "Jérica",
+      "official_variants": [
+        "Jérica"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12074",
+      "official_name": "Llosa, la",
+      "official_variants": [
+        "Llosa, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12072",
+      "official_name": "Llucena/Lucena del Cid",
+      "official_variants": [
+        "Llucena",
+        "Lucena del Cid"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12073",
+      "official_name": "Ludiente",
+      "official_variants": [
+        "Ludiente"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12075",
+      "official_name": "Mata de Morella, la",
+      "official_variants": [
+        "Mata de Morella, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12076",
+      "official_name": "Matet",
+      "official_variants": [
+        "Matet"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12077",
+      "official_name": "Moncofa",
+      "official_variants": [
+        "Moncofa"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12078",
+      "official_name": "Montán",
+      "official_variants": [
+        "Montán"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12079",
+      "official_name": "Montanejos",
+      "official_variants": [
+        "Montanejos"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12080",
+      "official_name": "Morella",
+      "official_variants": [
+        "Morella"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12081",
+      "official_name": "Navajas",
+      "official_variants": [
+        "Navajas"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12082",
+      "official_name": "Nules",
+      "official_variants": [
+        "Nules"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12083",
+      "official_name": "Olocau del Rey",
+      "official_variants": [
+        "Olocau del Rey"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12084",
+      "official_name": "Onda",
+      "official_variants": [
+        "Onda"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12085",
+      "official_name": "Orpesa/Oropesa del Mar",
+      "official_variants": [
+        "Orpesa",
+        "Oropesa del Mar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12087",
+      "official_name": "Palanques",
+      "official_variants": [
+        "Palanques"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12088",
+      "official_name": "Pavías",
+      "official_variants": [
+        "Pavías"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12089",
+      "official_name": "Peníscola/Peñíscola",
+      "official_variants": [
+        "Peníscola",
+        "Peñíscola"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12090",
+      "official_name": "Pina de Montalgrao",
+      "official_variants": [
+        "Pina de Montalgrao"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12093",
+      "official_name": "Pobla de Benifassà, la",
+      "official_variants": [
+        "Pobla de Benifassà, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12094",
+      "official_name": "Pobla Tornesa, la",
+      "official_variants": [
+        "Pobla Tornesa, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12091",
+      "official_name": "Portell de Morella",
+      "official_variants": [
+        "Portell de Morella"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12092",
+      "official_name": "Puebla de Arenoso",
+      "official_variants": [
+        "Puebla de Arenoso"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12095",
+      "official_name": "Ribesalbes",
+      "official_variants": [
+        "Ribesalbes"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12096",
+      "official_name": "Rossell",
+      "official_variants": [
+        "Rossell"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12097",
+      "official_name": "Sacañet",
+      "official_variants": [
+        "Sacañet"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12098",
+      "official_name": "Salzadella, la",
+      "official_variants": [
+        "Salzadella, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12101",
+      "official_name": "San Rafael del Río",
+      "official_variants": [
+        "San Rafael del Río"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12902",
+      "official_name": "Sant Joan de Moró",
+      "official_variants": [
+        "Sant Joan de Moró"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12099",
+      "official_name": "Sant Jordi/San Jorge",
+      "official_variants": [
+        "Sant Jordi",
+        "San Jorge"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12100",
+      "official_name": "Sant Mateu",
+      "official_variants": [
+        "Sant Mateu"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12102",
+      "official_name": "Santa Magdalena de Pulpis",
+      "official_variants": [
+        "Santa Magdalena de Pulpis"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12104",
+      "official_name": "Segorbe",
+      "official_variants": [
+        "Segorbe"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12103",
+      "official_name": "Serratella, la",
+      "official_variants": [
+        "Serratella, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12105",
+      "official_name": "Sierra Engarcerán",
+      "official_variants": [
+        "Sierra Engarcerán"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12106",
+      "official_name": "Soneja",
+      "official_variants": [
+        "Soneja"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12107",
+      "official_name": "Sot de Ferrer",
+      "official_variants": [
+        "Sot de Ferrer"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12108",
+      "official_name": "Suera/Sueras",
+      "official_variants": [
+        "Suera",
+        "Sueras"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12109",
+      "official_name": "Tales",
+      "official_variants": [
+        "Tales"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12110",
+      "official_name": "Teresa",
+      "official_variants": [
+        "Teresa"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12111",
+      "official_name": "Tírig",
+      "official_variants": [
+        "Tírig"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12112",
+      "official_name": "Todolella",
+      "official_variants": [
+        "Todolella"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12113",
+      "official_name": "Toga",
+      "official_variants": [
+        "Toga"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12114",
+      "official_name": "Torás",
+      "official_variants": [
+        "Torás"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12115",
+      "official_name": "Toro, El",
+      "official_variants": [
+        "Toro, El"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12116",
+      "official_name": "Torralba del Pinar",
+      "official_variants": [
+        "Torralba del Pinar"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12119",
+      "official_name": "Torre d'en Besora, la",
+      "official_variants": [
+        "Torre d'en Besora, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12120",
+      "official_name": "Torre d'en Doménec, la",
+      "official_variants": [
+        "Torre d'en Doménec, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12117",
+      "official_name": "Torreblanca",
+      "official_variants": [
+        "Torreblanca"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12118",
+      "official_name": "Torrechiva",
+      "official_variants": [
+        "Torrechiva"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12121",
+      "official_name": "Traiguera",
+      "official_variants": [
+        "Traiguera"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12122",
+      "official_name": "Useres, les/Useras",
+      "official_variants": [
+        "Useres, les",
+        "Useras"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12124",
+      "official_name": "Vall d'Alba",
+      "official_variants": [
+        "Vall d'Alba"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12125",
+      "official_name": "Vall de Almonacid",
+      "official_variants": [
+        "Vall de Almonacid"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12126",
+      "official_name": "Vall d'Uixó, la",
+      "official_variants": [
+        "Vall d'Uixó, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12123",
+      "official_name": "Vallat",
+      "official_variants": [
+        "Vallat"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12127",
+      "official_name": "Vallibona",
+      "official_variants": [
+        "Vallibona"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12128",
+      "official_name": "Vilafamés",
+      "official_variants": [
+        "Vilafamés"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12129",
+      "official_name": "Vilafranca/Villafranca del Cid",
+      "official_variants": [
+        "Vilafranca",
+        "Villafranca del Cid"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12132",
+      "official_name": "Vilanova d'Alcolea",
+      "official_variants": [
+        "Vilanova d'Alcolea"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12134",
+      "official_name": "Vilar de Canes",
+      "official_variants": [
+        "Vilar de Canes"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12135",
+      "official_name": "Vila-real",
+      "official_variants": [
+        "Vila-real"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12136",
+      "official_name": "Vilavella, la",
+      "official_variants": [
+        "Vilavella, la"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12130",
+      "official_name": "Villahermosa del Río",
+      "official_variants": [
+        "Villahermosa del Río"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12131",
+      "official_name": "Villamalur",
+      "official_variants": [
+        "Villamalur"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12133",
+      "official_name": "Villanueva de Viver",
+      "official_variants": [
+        "Villanueva de Viver"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12137",
+      "official_name": "Villores",
+      "official_variants": [
+        "Villores"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12138",
+      "official_name": "Vinaròs",
+      "official_variants": [
+        "Vinaròs"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12139",
+      "official_name": "Vistabella del Maestrat",
+      "official_variants": [
+        "Vistabella del Maestrat"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12140",
+      "official_name": "Viver",
+      "official_variants": [
+        "Viver"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12052",
+      "official_name": "Xert",
+      "official_variants": [
+        "Xert"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12055",
+      "official_name": "Xodos/Chodos",
+      "official_variants": [
+        "Xodos",
+        "Chodos"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12141",
+      "official_name": "Zorita del Maestrazgo",
+      "official_variants": [
+        "Zorita del Maestrazgo"
+      ],
+      "technical_aliases": []
+    },
+    {
+      "code": "12142",
+      "official_name": "Zucaina",
+      "official_variants": [
+        "Zucaina"
+      ],
+      "technical_aliases": []
+    }
+  ],
+  "authorities": []
+}
