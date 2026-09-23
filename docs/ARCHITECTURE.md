@@ -57,6 +57,16 @@ la decisión, de modo que un collector no puede publicar por olvidar una llamada
 al gate. Un fallo del motor o de su configuración aborta el batch antes de
 nuevas escrituras; una detección sensible sólo aísla el record afectado.
 
+`allow` no es aprobación humana. Antes de la primera publicación BOE, una capa
+separada de `Publication Review` resuelve `approved`, `hold` o `rejected` a
+partir de una lista versionada de `official_id`. La ausencia de entrada es
+`hold` (fail closed). El orden de publicación es
+`finalize -> Privacy Gate -> Publication Review -> preflight de lote ->
+RecordStore`; una aprobación nunca omite privacidad. Esta decisión no modifica
+`Record.status`, procedencia ni `content_hash`. El primer lote controlado no
+persiste eventos y no tiene rollback multiarchivo ante un fallo de I/O, aunque
+cada archivo individual es atómico.
+
 La política es individual por fuente: metadatos y enlaces por defecto; documentos, texto completo o capturas solo si su política de reutilización lo permite expresamente. `archive/` existe para copias permitidas y debe permanecer prácticamente vacío mientras no haya políticas aprobadas.
 
 ### Validación

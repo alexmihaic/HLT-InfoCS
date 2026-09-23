@@ -50,6 +50,14 @@ from infocs.fetch.boe.dry_run import (
     BOEDryRunResult,
     dry_run_boe_date,
 )
+from infocs.fetch.boe.controlled import (
+    BOEControlledPersistenceResult,
+    BOEControlledPublicationError,
+    BOEPublicationItem,
+    BOEPublicationPreview,
+    persist_approved_preview,
+    prepare_boe_publication_preview,
+)
 
 __all__ = [
     "BOEContractError",
@@ -84,10 +92,16 @@ __all__ = [
     "BOEDryRunMatchAudit",
     "BOEDryRunMetrics",
     "BOEDryRunResult",
+    "BOEControlledPersistenceResult",
+    "BOEControlledPublicationError",
+    "BOEPublicationItem",
+    "BOEPublicationPreview",
     "BOEOperation",
     "BOEOperationType",
     "decide_boe_territorial_inclusion",
     "dry_run_boe_date",
+    "persist_approved_preview",
+    "prepare_boe_publication_preview",
     "category_for_boe_section",
     "load_castellon_registry",
     "ingest_boe_summary",

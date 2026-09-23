@@ -1,0 +1,41 @@
+{
+  "schema_version": "1",
+  "source_id": "boe",
+  "records": [
+    {
+      "official_id": "BOE-A-2026-19433",
+      "decision": "hold",
+      "reason_code": "personal_content_review"
+    },
+    {
+      "official_id": "BOE-A-2026-19457",
+      "decision": "approved",
+      "reason_code": "reviewed_safe"
+    },
+    {
+      "official_id": "BOE-B-2026-30223",
+      "decision": "hold",
+      "reason_code": "personal_content_review"
+    },
+    {
+      "official_id": "BOE-B-2026-30232",
+      "decision": "hold",
+      "reason_code": "personal_content_review"
+    },
+    {
+      "official_id": "BOE-B-2026-30240",
+      "decision": "hold",
+      "reason_code": "personal_content_review"
+    },
+    {
+      "official_id": "BOE-B-2026-30520",
+      "decision": "hold",
+      "reason_code": "personal_content_review"
+    },
+    {
+      "official_id": "BOE-B-2026-30592",
+      "decision": "rejected",
+      "reason_code": "privacy_quarantine"
+    }
+  ]
+}

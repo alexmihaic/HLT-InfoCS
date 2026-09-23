@@ -49,7 +49,7 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Criterio de aceptación:** los datos sintéticos se escriben como JSON individual válido y estable; un fallo contractual aborta el batch antes de escribir; no se persisten records o events BOE reales.
 - **Fuera de alcance:** ejecución diaria, GitHub Actions, manifests, health real, Privacy Gate v1 (Fase 03F), XML/PDF crawling y cualquier otra fuente.
 
-### Fase 03F — Privacy Gate v1 (implementada, revisión de falsos positivos en curso)
+### Fase 03F — Privacy Gate v1 (cerrada)
 
 - **Objetivo:** impedir técnicamente que un `Record` llegue al almacén público sin una decisión de privacidad explícita.
 - **Dependencias:** Fases 01–03E y política de reutilización de cada fuente.
@@ -58,7 +58,7 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Criterio de aceptación:** ninguna escritura pasa sin `allow`; no se almacenan valores sensibles en razones ni logs; `data/records/` y `data/events/` no reciben datos BOE reales.
 - **Fuera de alcance:** redacción automática, OCR, IA, mirroring, DLP completo, automatización diaria y siguiente fuente.
 
-### Fase 03F.1 — Endurecimiento de falsos positivos
+### Fase 03F.1 — Endurecimiento de falsos positivos (cerrada)
 
 - **Objetivo:** reducir cuarentenas indebidas antes de evaluar datos reales con el gate.
 - **Dependencias:** Fase 03F y corpus sintético de patrones.
@@ -66,6 +66,24 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Tests necesarios:** positivos y negativos sintéticos para los patrones y configuraciones; cero escrituras ante error de privacidad.
 - **Criterio de aceptación:** teléfonos genéricos y dominios organizativos desconocidos no se clasifican como personales; reglas ambiguas son explícitas; errores del gate no permiten escritura.
 - **Fuera de alcance:** run BOE real, persistencia de datos reales, DLP completo, OCR, IA y otra fuente.
+
+### Fase 03G — BOE Live Dry Run (cerrada)
+
+- **Objetivo:** ejecutar el pipeline BOE real en memoria hasta Privacy Gate, sin store ni archivos de salida.
+- **Dependencias:** Fases 03B–03F.1.
+- **Entregables:** dry-run aislado, informe saneado y comprobación de transporte, parser, territorialidad, identidad y privacidad.
+- **Tests necesarios:** métricas, decisiones, errores, no filtración y garantía anti-write.
+- **Criterio de aceptación:** las fechas autorizadas se procesan sin persistencia real y el informe recomienda o rechaza explícitamente la primera persistencia.
+- **Fuera de alcance:** records, events, respuestas raw, documentos y automatización.
+
+### Fase 03H — Primera persistencia BOE controlada (en revisión)
+
+- **Objetivo:** persistir sólo IDs aprobados explícitamente tras revisión humana separada de Privacy Gate.
+- **Dependencias:** Fases 03E–03G y allowlist versionada por `official_id`.
+- **Entregables:** Publication Review fail-closed, preflight completo de tres sumarios, primer lote mínimo de Records canónicos e informe de auditoría; sin Events.
+- **Tests necesarios:** allow/hold/rejected, gate que prevalece, ID desconocido en hold, aprobación ausente, preflight sin escrituras parciales, idempotencia y hash/ID estables.
+- **Criterio de aceptación:** sólo Records aprobados y con Privacy Gate `allow` llegan a `RecordStore`; el segundo procesamiento es `no_change`; no hay automatización ni contenido documental.
+- **Fuera de alcance:** aprobación automática, Events reales, manifests, health, Actions, UI, documentos BOE y siguientes fuentes.
 
 ## Fase 04 — BDNS
 

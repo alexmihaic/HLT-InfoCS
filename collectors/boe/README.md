@@ -161,3 +161,16 @@ y detalles territoriales no se incluyen para decisiones de privacidad que no
 sean `allow`. La ejecución auditada de 2026-09-23 está documentada en
 [`LIVE_DRY_RUN_2026-09.md`](LIVE_DRY_RUN_2026-09.md). Las pruebas siguen siendo
 offline; no existe automatización ni escritura de resultados del dry-run.
+
+## Primera persistencia controlada 03H
+
+`config/publication-review/boe-initial.json` registra decisiones explícitas
+por `official_id`. La revisión de publicación es distinta del Privacy Gate:
+un record sólo puede escribirse si ambos permiten la operación. Los IDs no
+listados quedan en `hold`; una cuarentena de privacidad no puede ser
+sobrescrita por una aprobación. El preflight prepara y valida el lote completo
+antes de invocar `RecordStore`; sólo los aprobados llegan al store, que vuelve
+a evaluar privacidad. No se persisten events y no existe automatización.
+
+La ejecución, el lote mínimo y sus límites se documentan en
+[`FIRST_PERSISTENCE_2026-09.md`](FIRST_PERSISTENCE_2026-09.md).

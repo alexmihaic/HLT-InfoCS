@@ -98,6 +98,24 @@ preventiva no altera las conclusiones legales de la auditoría de fuente.
 señal bloqueante. Privacy Gate v1 no es garantía de anonimización completa ni
 aprobación jurídica de publicación.
 
+### Revisión de publicación humana
+
+La decisión de privacidad y la aprobación de publicación son controles
+independientes. Privacy Gate responde si sus reglas detectan una señal
+bloqueante; no decide que el contenido haya recibido revisión humana. La capa
+de Publication Review usa una configuración JSON versionada por `official_id`
+y produce `approved`, `hold` o `rejected`. Un ID ausente equivale a `hold`.
+La aprobación sólo permite continuar cuando Privacy Gate también devuelve
+`allow`; nunca puede sobreescribir `quarantine` o `reject`.
+
+La revisión de publicación no altera el Record ni su `content_hash`, y no es
+un estado del ciclo de vida del Record. La persistencia controlada exige
+revisar territorialidad y advertencias pendientes en la configuración de
+aprobación. Para BOE, los registros de anuncios judiciales cuyo documento
+enlazado no se inspeccionó quedan en `hold`; no se descargan documentos para
+esta decisión. Este control manual no constituye una garantía general de
+ausencia de datos personales.
+
 ## Limitaciones
 
 Esto no es DLP completo: no reconoce nombres por sí solos, no analiza OCR ni

@@ -4,6 +4,7 @@ status: verified
 verified_at: "2026-09-21"
 collection_semantics: incremental_feed
 privacy_gate_required: true
+publication_review_required: true
 
 source_definition:
   id: boe
