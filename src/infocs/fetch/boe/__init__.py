@@ -42,6 +42,14 @@ from infocs.fetch.boe.territorial import (
     load_castellon_registry,
 )
 from infocs.fetch.boe.transport import BOETransport
+from infocs.fetch.boe.dry_run import (
+    BOEDryRunError,
+    BOEDryRunItemAudit,
+    BOEDryRunMatchAudit,
+    BOEDryRunMetrics,
+    BOEDryRunResult,
+    dry_run_boe_date,
+)
 
 __all__ = [
     "BOEContractError",
@@ -71,9 +79,15 @@ __all__ = [
     "BOETerritorialRegistry",
     "BOETerritorialRegistryError",
     "BOETransport",
+    "BOEDryRunError",
+    "BOEDryRunItemAudit",
+    "BOEDryRunMatchAudit",
+    "BOEDryRunMetrics",
+    "BOEDryRunResult",
     "BOEOperation",
     "BOEOperationType",
     "decide_boe_territorial_inclusion",
+    "dry_run_boe_date",
     "category_for_boe_section",
     "load_castellon_registry",
     "ingest_boe_summary",

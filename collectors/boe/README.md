@@ -151,3 +151,13 @@ implementada:
 ```text
 LIVE REAL DATA PERSISTENCE BLOCKED pending explicit publication approval
 ```
+
+## Live dry run 03G
+
+`dry_run_boe_date()` está separado de la ingesta persistente: recibe fecha y
+timestamps explícitos, transport, registry y Privacy Gate, pero no acepta ni
+importa `RecordStore`. Devuelve métricas y una vista minimizada por ítem; títulos
+y detalles territoriales no se incluyen para decisiones de privacidad que no
+sean `allow`. La ejecución auditada de 2026-09-23 está documentada en
+[`LIVE_DRY_RUN_2026-09.md`](LIVE_DRY_RUN_2026-09.md). Las pruebas siguen siendo
+offline; no existe automatización ni escritura de resultados del dry-run.
