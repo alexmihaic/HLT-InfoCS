@@ -3,9 +3,9 @@
 ## Health es una proyección, no un log
 
 `SourceHealth` se deriva exclusivamente de los `RunManifest` validados de una
-fuente. Los manifests son el historial; Health es un resumen regenerable. En
-esta fase no hay `HealthStore`, archivo health productivo, ejecución real ni
-actualización por reloj.
+fuente. Los manifests son el historial; Health es un resumen regenerable. La
+fase 03L.1 materializa `data/health/boe.json` después de cada run manual; el
+archivo se regenera desde los manifests y no es una fuente de verdad aparte.
 
 La función ordena los manifests por `finished_at`, `started_at` y `run_id`.
 Por ello el resultado no depende del orden de entrada ni del filesystem. Si
@@ -43,8 +43,10 @@ el manifest de esa ejecución indique `no_publication`.
 
 `derive_source_health(manifests, source_id=...)` valida que los manifests
 pertenecen a una única fuente y devuelve el mismo resultado para el mismo
-conjunto de entrada. Un futuro `health.json`, si se decide materializar, será
-un artefacto derivado regenerable y no otra fuente de verdad.
+conjunto de entrada. `write_source_health()` valida el modelo/schema y
+materializa JSON UTF-8 determinista con newline final mediante reemplazo
+atómico. El writer no obtiene el reloj ni altera los timestamps derivados.
 
 No existen notificaciones, SLA, checks de disponibilidad entre runs,
-monitorización externa, cambios de health reales ni reglas de anomalía en v1.
+monitorización externa ni reglas de anomalía en v1. La ejecución programada
+queda pendiente; 03L.1 sólo habilita un disparo manual.

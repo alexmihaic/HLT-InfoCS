@@ -124,7 +124,7 @@ Event.
 
 ## Automatización y publicación
 
-La automatización futura ejecutará collectors de forma aislada, agregará sus resultados aunque una fuente falle, validará y solo después actualizará los datos válidos. Source Health diferencia último intento y último éxito; no expone `last_publication_at` sin evidencia específica. El manifest se escribiría al final del run: una falla de su I/O podría dejar Records/Events sin manifest, pues no hay transacción multiarchivo. No se añaden workflows en esta fase.
+El workflow BOE manual (03L.1) ejecuta el pipeline en Python para una única fecha explícita. Mantiene Privacy Gate → Publication Review → Event → Record, escribe un Run Manifest al terminar y deriva después `data/health/boe.json`. Un fallo de fuente puede publicar un manifest `failed` y Health actualizado antes de propagar un exit code fallido a Actions. La acción sólo permite cambios bajo `data/records/`, `data/events/`, `data/manifests/` y `data/health/`; si `origin/main` avanzó desde el inicio, no publica. No hay `schedule`, rangos ni transacción multiarchivo global.
 
 El portal futuro será una construcción Astro estática, con búsqueda e índices precalculados, sin cuentas, cookies de analítica, base de datos remota ni servidor de búsqueda. GitHub Pages será el destino de publicación previsto. La configuración de dominio y despliegue queda fuera de este bootstrap.
 

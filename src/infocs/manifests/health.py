@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 import json
+import os
 from pathlib import Path
+import tempfile
 from typing import Iterable, Mapping
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -74,7 +76,9 @@ class SourceHealth:
     def from_mapping(cls, payload: Mapping[str, Any]) -> "SourceHealth":
         _validate_health_schema(payload)
         try:
-            return cls(**dict(payload))
+            values = dict(payload)
+            values["status"] = HealthStatus(values["status"])
+            return cls(**values)
         except (TypeError, ValueError) as error:
             if isinstance(error, ManifestValidationError):
                 raise
@@ -124,6 +128,31 @@ def derive_source_health(
         # Derived as-of time, not the time this projection happened to be built.
         updated_at=latest.finished_at,
     )
+
+
+def write_source_health(path: str | Path, health: SourceHealth) -> Path:
+    """Materializa atómicamente una proyección Health regenerable como JSON."""
+    if not isinstance(health, SourceHealth):
+        raise ManifestValidationError("Sólo se puede materializar SourceHealth validado.")
+    validated = SourceHealth.from_mapping(health.to_dict())
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        descriptor, name = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+        temporary = Path(name)
+        payload = json.dumps(validated.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        SourceHealth.from_mapping(json.loads(temporary.read_text(encoding="utf-8")))
+        os.replace(temporary, target)
+        return target
+    except Exception as error:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+        raise ManifestValidationError("No se pudo materializar SourceHealth de forma atómica.") from error
 
 
 def _validate_health_schema(payload: Mapping[str, Any]) -> None:

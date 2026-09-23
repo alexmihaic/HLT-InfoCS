@@ -6,14 +6,15 @@ Esta fase valida el mecanismo únicamente con fixtures y datos sintéticos. No
 se escriben records BOE reales en `data/records/`, ni eventos reales en
 `data/events/`.
 
-```text
-LIVE REAL DATA PERSISTENCE BLOCKED pending explicit publication approval
-```
+La fase 03E bloqueó la persistencia real hasta disponer de aprobación
+explícita. Desde 03H existe una aprobación versionada por ID; el runner manual
+03L.1 sólo puede persistir Records con Privacy Gate `allow` y Publication
+Review `approved`. Los IDs no listados quedan en `hold`; la aprobación nunca
+elude privacidad. No hay aprobación automática ni schedule.
 
 El Privacy Gate v1 es una barrera técnica obligatoria en el flujo: clasifica
 cada `Record` antes de `RecordStore.write()`, y el store vuelve a comprobarlo.
-La persistencia de datos administrativos BOE reales sigue bloqueada en esta
-fase; los tests usan `TemporaryDirectory` y datos sintéticos.
+Los tests continúan usando `TemporaryDirectory` y datos sintéticos.
 
 ## Semántica de colección
 
@@ -120,7 +121,7 @@ por lo que se prefiere Event-first. La ausencia entre días sigue sin generar
 evento. El primer Record real histórico no se retrorellena y `data/events/`
 permanece vacío salvo `.gitkeep`.
 
-## Run Manifest y Health (contrato 03K)
+## Run Manifest y Health (contrato 03K / ejecución manual 03L.1)
 
 BOE conserva `collection_mode: incremental_feed`. Un adaptador offline mapea el
 resultado ya agregado de `ingest_boe_summary()` a `RunManifest` en memoria;
@@ -130,10 +131,22 @@ resultado ya agregado de `ingest_boe_summary()` a `RunManifest` en memoria;
 Events son los Events producidos en memoria, no prueba de escritura. El
 adaptador omite mensajes de error originales y usa un resumen fijo seguro.
 
-ManifestStore y `derive_source_health()` son reutilizables y se prueban con
-temporales/manifests sintéticos. No se ejecuta BOE ni se escriben manifests o
-health reales en esta fase. La primera persistencia 03H no recibe manifest
-retroactivo; no se inventan run ID ni timestamps. Una integración productiva
-futura finalizará con la escritura del manifest: un error al escribirlo puede
-dejar Records/Events ya escritos sin manifest, porque aún no hay transacción
-multiarchivo global.
+`ManifestStore` y `derive_source_health()` son reutilizables. El runner manual
+03L.1 los ejecuta para una única fecha: genera un UUIDv4 al comienzo, usa el
+mismo timestamp UTC de inicio como detección/comprobación del lote y escribe
+el manifest final después del procesamiento. Luego deriva y materializa
+`data/health/boe.json` atómicamente. Un run fallido también escribe
+observabilidad segura y hace que la acción termine fallida después de intentar
+publicar esos artefactos.
+
+El workflow sólo admite `workflow_dispatch` con una fecha estricta
+`YYYY-MM-DD`; no hay schedule, rango ni alias `today`. El pipeline mantiene
+Privacy Gate → Publication Review → Event → Record. Después se guarda Manifest
+y finalmente Health. Un error de I/O al finalizar observabilidad puede dejar
+datos previos del pipeline sin manifest; no hay transacción global
+multiarchivo. La acción valida que todos los paths modificados estén bajo los
+directorios canónicos de datos y falla cerrada si `origin/main` avanzó desde
+que empezó el run.
+
+La persistencia de 03H no recibe manifest retroactivo: no se inventan run ID ni
+timestamps. El workflow no activa aún automatización periódica.
