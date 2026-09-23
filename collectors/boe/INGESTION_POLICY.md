@@ -108,7 +108,14 @@ UTF-8 determinista (`Record.canonical_json()`) con newline final. El temporal
 se crea en el mismo directorio, se vacía y sincroniza, se vuelve a validar y se
 aplica `os.replace`.
 
-Los events se construyen en memoria con el modelo común y se validan contra su
-schema en tests. No se persisten en 03E/03F; manifests, health y automatización
-diaria pertenecen a fases posteriores. Las razones del Privacy Gate no copian
-valores sensibles.
+Desde 03I los Events canónicos admiten sólo `create` y `update`, y se pueden
+persistir en `EventStore` únicamente después de Privacy Gate `allow` y
+Publication Review `approved`. El caller debe proporcionar la configuración
+de revisión; un ID no listado queda en `hold`. La ingesta preflighta todos los
+Records/Events antes de escribir, y después escribe Event seguido de Record.
+No hay transacción filesystem multiarchivo: un error de I/O puede dejar un
+Event temporalmente sin Record, que es recuperable con un retry de la
+transición. Un Record actualizado sin Event no es recuperable de forma fiable,
+por lo que se prefiere Event-first. La ausencia entre días sigue sin generar
+evento. El primer Record real histórico no se retrorellena y `data/events/`
+permanece vacío salvo `.gitkeep`.

@@ -76,7 +76,7 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Criterio de aceptación:** las fechas autorizadas se procesan sin persistencia real y el informe recomienda o rechaza explícitamente la primera persistencia.
 - **Fuera de alcance:** records, events, respuestas raw, documentos y automatización.
 
-### Fase 03H — Primera persistencia BOE controlada (en revisión)
+### Fase 03H — Primera persistencia BOE controlada (cerrada)
 
 - **Objetivo:** persistir sólo IDs aprobados explícitamente tras revisión humana separada de Privacy Gate.
 - **Dependencias:** Fases 03E–03G y allowlist versionada por `official_id`.
@@ -84,6 +84,15 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Tests necesarios:** allow/hold/rejected, gate que prevalece, ID desconocido en hold, aprobación ausente, preflight sin escrituras parciales, idempotencia y hash/ID estables.
 - **Criterio de aceptación:** sólo Records aprobados y con Privacy Gate `allow` llegan a `RecordStore`; el segundo procesamiento es `no_change`; no hay automatización ni contenido documental.
 - **Fuera de alcance:** aprobación automática, Events reales, manifests, health, Actions, UI, documentos BOE y siguientes fuentes.
+
+### Fase 03I — Events canónicos v1
+
+- **Objetivo:** definir Events persistibles append-only `create`/`update` y su almacén común sin backfill ni ejecución BOE real.
+- **Dependencias:** RecordStore, Privacy Gate, Publication Review y diff semántico.
+- **Entregables:** schema estricto, identidad determinista de Event, EventStore seguro, preflight Record/Event y documentación del límite transaccional.
+- **Tests necesarios:** schema condicional, idempotencia, colisión append-only, orden por Record, create/update/no_change, hash continuity, metadata derivada sin evento, privacy/publication denial y cero datos reales.
+- **Criterio de aceptación:** Records/Eventos sintéticos pasan contrato; sólo `create`/`update` aprobados llegan a EventStore; `data/events/` no recibe backfill en esta fase.
+- **Fuera de alcance:** backfill del Record BOE real existente, llamadas de red, daily ingestion, manifests, health, automation, nuevas fuentes y rollback multiarchivo.
 
 ## Fase 04 — BDNS
 

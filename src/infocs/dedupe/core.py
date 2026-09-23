@@ -25,7 +25,8 @@ class DuplicateConflictError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
-class Event:
+class ObservationEvent:
+    """Transición interna de reconciliación; no es un Event público persistible."""
     schema_version: str
     type: str
     record_id: str
@@ -99,7 +100,7 @@ def reconcile(
     *,
     source_id: str,
     checked_at: str,
-) -> tuple[dict[str, dict[str, Any]], tuple[Event, ...]]:
+) -> tuple[dict[str, dict[str, Any]], tuple[ObservationEvent, ...]]:
     """Concilia una ejecución de una sola fuente con su estado anterior.
 
     ``checked_at`` es la hora real de esta observación, también para ausencias.
@@ -121,7 +122,7 @@ def reconcile(
         raise DataValidationError("Un record observado no puede llegar como missing_from_source.")
 
     result = {key: dict(value) for key, value in previous.items()}
-    events: list[Event] = []
+    events: list[ObservationEvent] = []
     for record_id, record in current.items():
         old = previous.get(record_id)
         record = deepcopy(record)
@@ -151,7 +152,7 @@ def reconcile(
             paths = tuple(change.path for change in diff(old, record))
         else:
             continue
-        events.append(Event("1.0", kind, record_id, source_id, checked_at, old_hash, new_hash, paths))
+        events.append(ObservationEvent("1.0", kind, record_id, source_id, checked_at, old_hash, new_hash, paths))
 
     if observation == ObservationStatus.COMPLETE_SUCCESS:
         for record_id, old in previous.items():
@@ -166,7 +167,7 @@ def reconcile(
             result[record_id] = missing
             if old["status"] == RecordStatus.ACTIVE.value:
                 old_hash = content_hash(old)
-                events.append(Event(
+                events.append(ObservationEvent(
                     "1.0", "missing_from_source", record_id, source_id,
                     checked_at, old_hash, old_hash,
                 ))

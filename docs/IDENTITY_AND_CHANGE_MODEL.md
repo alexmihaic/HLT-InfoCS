@@ -55,3 +55,16 @@ La deduplicación intrafuente agrupa por `record_id`. Dos candidatos activos con
 `missing_from_source` expresa solo ausencia tras una observación completa, no eliminación. Ningún número de ausencias convierte automáticamente el registro en `withdrawn`; se necesitará evidencia suficiente o estado oficial explícito, mecanismo aún fuera de alcance. `quarantine` es una decisión interna de privacidad y tampoco modifica el hash. Los records de fuentes distintas no se fusionan automáticamente ni se crean relaciones cross-source en este motor.
 
 Una reobservación no borra por sí sola una cuarentena o retirada evidenciada anterior; levantar esos estados requiere un flujo explícito posterior. El motor actual no implementa ese flujo ni la política completa de privacidad.
+
+## Events persistibles v1
+
+Las transiciones anteriores de reconciliación son internas y no definen el
+histórico público. El schema canónico permite únicamente `create` y `update`;
+BOE incremental no produce `missing_from_source` entre fechas. El `event_id`
+se calcula como `evt-v1-` + SHA-256 del JSON UTF-8 compacto
+`[record_id, type, previous_content_hash, content_hash]` (`null` como hash
+previo en create). La hora `observed_at` no forma parte de la identidad. Un
+Event de update usa `diff()` para producir solo rutas ordenadas,
+sin copiar valores. El flujo exige Privacy Gate `allow` y Publication Review
+`approved`; `hold`, `rejected`, `quarantine` o `reject` no emiten Event.
+Detalle del EventStore y su limitación multiarchivo en `docs/EVENT_MODEL.md`.

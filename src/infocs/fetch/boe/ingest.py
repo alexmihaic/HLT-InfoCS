@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 
-from infocs.dedupe.core import Event
+from infocs.events import Event, EventStore, create_event, update_event
 from infocs.diff.core import diff
 from infocs.fetch.boe.models import (
     BOEFetchResult,
@@ -21,6 +21,12 @@ from infocs.fetch.boe.territorial import (
 )
 from infocs.models import DataValidationError, Record
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate, PrivacyGateError
+from infocs.publication.review import (
+    PublicationDecisionType,
+    PublicationReviewConfig,
+    PublicationReviewError,
+    review_publication,
+)
 from infocs.store import RecordStore, RecordStoreError
 
 
@@ -60,6 +66,9 @@ class BOEIngestionMetrics:
     privacy_allowed: int = 0
     privacy_quarantined: int = 0
     privacy_rejected: int = 0
+    publication_approved: int = 0
+    publication_hold: int = 0
+    publication_rejected: int = 0
 
     def to_dict(self) -> dict[str, int]:
         return {
@@ -72,6 +81,9 @@ class BOEIngestionMetrics:
             "privacy_allowed": self.privacy_allowed,
             "privacy_quarantined": self.privacy_quarantined,
             "privacy_rejected": self.privacy_rejected,
+            "publication_approved": self.publication_approved,
+            "publication_hold": self.publication_hold,
+            "publication_rejected": self.publication_rejected,
         }
 
 
@@ -99,6 +111,8 @@ def ingest_boe_summary(
     store: RecordStore,
     detected_at: datetime,
     last_checked_at: datetime,
+    publication_review_config: PublicationReviewConfig,
+    event_store: EventStore | None = None,
     privacy_gate: PrivacyGate | None = None,
 ) -> BOEIngestionResult:
     """Procesa una edición BOE sin aplicar reconciliación de snapshots.
@@ -107,6 +121,13 @@ def ingest_boe_summary(
     llamar a ``store.write``. Una excepción contractual no produce ninguna
     escritura. La ausencia de un ítem en otro sumario no se examina.
     """
+    if not isinstance(publication_review_config, PublicationReviewConfig):
+        raise BOEIngestionError("La ingesta requiere una configuración de Publication Review válida.")
+    try:
+        publication_review_config.validate()
+    except PublicationReviewError:
+        raise BOEIngestionError("La configuración de Publication Review no es válida.") from None
+
     gate = privacy_gate if privacy_gate is not None else PrivacyGate.default()
     try:
         gate.validate()
@@ -121,6 +142,7 @@ def ingest_boe_summary(
         "seen": len(summary.items), "included": 0, "created": 0, "updated": 0,
         "unchanged": 0, "excluded": 0, "privacy_allowed": 0,
         "privacy_quarantined": 0, "privacy_rejected": 0,
+        "publication_approved": 0, "publication_hold": 0, "publication_rejected": 0,
     }
     planned: dict[str, tuple[Record, BOEOperation]] = {}
     events: list[Event] = []
@@ -160,6 +182,18 @@ def ingest_boe_summary(
             continue
         metrics["privacy_allowed"] += 1
 
+        try:
+            publication_decision = review_publication(record, privacy_decision, publication_review_config)
+        except PublicationReviewError:
+            raise BOEIngestionError("Publication Review falló; batch abortado antes de escribir.") from None
+        if publication_decision.decision is PublicationDecisionType.HOLD:
+            metrics["publication_hold"] += 1
+            continue
+        if publication_decision.decision is PublicationDecisionType.REJECTED:
+            metrics["publication_rejected"] += 1
+            continue
+        metrics["publication_approved"] += 1
+
         if record.id in planned:
             previous_batch_record, _ = planned[record.id]
             if previous_batch_record.technical.content_hash != record.technical.content_hash:
@@ -172,28 +206,55 @@ def ingest_boe_summary(
         if existing is None:
             operation = BOEOperation(BOEOperationType.CREATE, record)
             metrics["created"] += 1
-            events.append(_event_for("create", record, checked_at=record.dates.last_checked_at))
+            event = create_event(
+                record, observed_at=last_checked_at, privacy=privacy_decision,
+                publication=publication_decision,
+            )
         elif existing.technical.content_hash == record.technical.content_hash:
             operation = BOEOperation(BOEOperationType.NO_CHANGE, record)
             metrics["unchanged"] += 1
+            event = None
         else:
             changed_fields = tuple(change.path for change in diff(existing.to_dict(), record.to_dict()))
             operation = BOEOperation(BOEOperationType.UPDATE, record, changed_fields)
             metrics["updated"] += 1
-            events.append(
-                _event_for(
-                    "update",
-                    record,
-                    checked_at=record.dates.last_checked_at,
-                    previous=existing,
-                    changed_fields=changed_fields,
-                )
+            event = update_event(
+                existing, record, observed_at=last_checked_at,
+                privacy=privacy_decision, publication=publication_decision,
             )
+        if event is not None:
+            events.append(event)
         planned[record.id] = (record, operation)
 
     # Se escribe sólo después de finalizar y comparar todos los ítems. No hay
     # recorrido de records anteriores: BOE es un feed incremental, no snapshot.
     operations = tuple(planned[key][1] for key in sorted(planned))
+    try:
+        for operation in operations:
+            if operation.type in (BOEOperationType.CREATE, BOEOperationType.UPDATE):
+                store.validate(operation.record)
+                store.path_for(operation.record.source.id, operation.record.id)
+        if event_store is not None:
+            for event in events:
+                event_record = planned[event.record_id][0]
+                event_store.preflight(
+                    event, record=event_record,
+                    publication_review_config=publication_review_config,
+                    privacy_gate=gate,
+                )
+    except Exception:
+        raise BOEIngestionError("El preflight de Record/Event falló; no se inició escritura.") from None
+
+    # Event-first makes interrupted batches recoverable: if a later Record
+    # write fails, retrying the same transition hits the existing Event and
+    # can safely retry the Record write.
+    if event_store is not None:
+        for event in events:
+            event_store.write(
+                event, record=planned[event.record_id][0],
+                publication_review_config=publication_review_config,
+                privacy_gate=gate,
+            )
     for operation in operations:
         if operation.type in (BOEOperationType.CREATE, BOEOperationType.UPDATE):
             store.write(operation.record)
@@ -231,24 +292,3 @@ def _finalize_candidate(candidate):
         return finalize_record(candidate)
     except DataValidationError:
         raise
-
-
-def _event_for(
-    event_type: str,
-    record: Record,
-    *,
-    checked_at: datetime,
-    previous: Record | None = None,
-    changed_fields: tuple[str, ...] = (),
-) -> Event:
-    timestamp = checked_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
-    return Event(
-        schema_version="1.0",
-        type=event_type,
-        record_id=record.id,
-        source_id=record.source.id,
-        detected_at=timestamp,
-        previous_content_hash=previous.technical.content_hash if previous else None,
-        new_content_hash=record.technical.content_hash,
-        changed_fields=changed_fields,
-    )

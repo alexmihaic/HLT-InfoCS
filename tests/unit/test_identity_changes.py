@@ -2,7 +2,6 @@ from __future__ import annotations
 import copy, json
 from pathlib import Path
 import sys, unittest
-from jsonschema import Draft202012Validator, FormatChecker
 ROOT=Path(__file__).resolve().parents[2]; sys.path.insert(0,str(ROOT/'src'))
 from infocs.dedupe.core import DuplicateConflictError, ObservationStatus, dedupe, reconcile
 from infocs.diff.core import content_hash, diff
@@ -34,7 +33,7 @@ class IdentityAndChangeTests(unittest.TestCase):
   a=load('contract_v3_awardee_changed.json'); self.assertEqual(len(dedupe([a,copy.deepcopy(a)])),1); b=copy.deepcopy(a); b['title']='conflict'; self.assertRaises(DuplicateConflictError,dedupe,[a,b])
  def test_events_create_update_missing_failed_and_reappeared(self):
   a=load('contract_v3_awardee_changed.json'); state,ev=reconcile({},[a],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-23T09:15:00Z'); self.assertEqual(ev[0].type,'create'); changed=load('contract_v2_amount_changed.json'); state,ev=reconcile(state,[changed],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-24T09:15:00Z'); self.assertEqual(ev[0].type,'update'); state,ev=reconcile(state,[],ObservationStatus.FAILED,source_id='fixture_procurement',checked_at='2026-09-25T09:15:00Z'); self.assertEqual(ev,()); state,ev=reconcile(state,[],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-26T09:15:00Z'); self.assertEqual(ev[0].type,'missing_from_source'); state,ev=reconcile(state,[changed],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-27T09:15:00Z'); self.assertEqual(ev[0].type,'reappeared')
- def test_event_schema_accepts_generated_event(self):
-  record=load('contract_v3_awardee_changed.json'); _, events=reconcile({},[record],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-23T09:15:00Z'); schema=json.loads((ROOT/'schemas'/'event.schema.json').read_text(encoding='utf-8')); Draft202012Validator(schema,format_checker=FormatChecker()).validate(events[0].to_dict())
+ def test_reconciliation_transitions_are_internal_not_persistible_events(self):
+  record=load('contract_v3_awardee_changed.json'); _, events=reconcile({},[record],ObservationStatus.COMPLETE_SUCCESS,source_id='fixture_procurement',checked_at='2026-09-23T09:15:00Z'); self.assertEqual(events[0].type,'create'); self.assertNotIn('event_id',events[0].to_dict())
  def test_admin_mismatch_and_naive_timestamp_rejected(self):
   p=load('record_minimal_valid.json'); p['authority']['administration_level']='state'; self.assertRaises(DataValidationError,RecordCandidate.from_dict,p); p=load('record_minimal_valid.json'); p['dates']['detected_at']='2026-09-21T10:00:00'; self.assertRaises(DataValidationError,RecordCandidate.from_dict,p)

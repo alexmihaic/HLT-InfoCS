@@ -141,3 +141,14 @@ El `status` final (`active`, `missing_from_source`, `withdrawn`, `quarantine`) e
 ```
 
 Los fixtures completos están en `tests/fixtures/` y son íntegramente ficticios.
+
+## Events
+
+El contrato persistible de Event v1 está en `schemas/event.schema.json` y su
+modelo/store en `src/infocs/events.py`. Sólo se admiten `create` y `update`.
+El Event conserva identidad del record/fuente, `official_id` opcional,
+`observed_at`, hash actual y, en updates, hash previo y rutas `changed_fields`.
+No incorpora el payload del Record ni valores anteriores/nuevos. Las
+transiciones de observación de `reconcile()` (`missing_from_source`,
+`reappeared`) son eventos internos y no son persistibles mediante EventStore.
+Véase `docs/EVENT_MODEL.md` para identidad, append-only y orden de persistencia.

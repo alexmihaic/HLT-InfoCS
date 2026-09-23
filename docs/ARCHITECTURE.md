@@ -39,13 +39,13 @@ Antes de interpretar una respuesta se comprueban dominio permitido, redireccione
 
 El núcleo común de un record recoge versión de esquema, identidad InfoCs, fuente, organismo, nivel administrativo, categoría, título, fechas, URL oficial, hash de contenido y estado. Los bloques opcionales cubren expedientes, importes decimales exactos, CPV, adjudicatarios, documentos, relaciones y criterios territoriales.
 
-Los importes mantienen semántica explícita: una licitación, un presupuesto base, un valor estimado y una adjudicación no son intercambiables. El contrato v1 está definido en `docs/DATA_MODEL.md`, implementado en `src/infocs/models.py` y publicado de forma portable en JSON Schema. La identidad, el hash y los eventos se definen en `docs/IDENTITY_AND_CHANGE_MODEL.md`. El collector entrega un `RecordCandidate` activo, sin ID interno ni hash; `finalize_record()` es el único punto común que lo convierte en un `Record` persistible. Los estados de ausencia, retirada o cuarentena se crean únicamente en procesos internos de InfoCs. No escribe datos.
+Los importes mantienen semántica explícita: una licitación, un presupuesto base, un valor estimado y una adjudicación no son intercambiables. El contrato v1 está definido en `docs/DATA_MODEL.md`, implementado en `src/infocs/models.py` y publicado de forma portable en JSON Schema. La identidad y el hash se definen en `docs/IDENTITY_AND_CHANGE_MODEL.md`; los Events persistibles, en `docs/EVENT_MODEL.md`. El collector entrega un `RecordCandidate` activo, sin ID interno ni hash; `finalize_record()` es el único punto común que lo convierte en un `Record` persistible. Los estados de ausencia, retirada o cuarentena se crean únicamente en procesos internos de InfoCs. No escribe datos.
 
 ### Identidad, deduplicación y cambios
 
 La identidad prioriza identificador oficial estable, después combinación de expediente, fuente y organismo, URL canónica y, como último recurso, fingerprint compuesto. El `record_id` identifica el hecho; `content_hash` representa su estado normalizado; `document_sha256` y `raw_sha256` representan ficheros o respuestas concretas.
 
-Un mismo hecho publicado por dos fuentes conserva ambos records; una relación futura como `same_event_as` no los fusionará ni cambiará su hash de contenido. `content_hash` representa solo el contenido administrativo observado, no el estado, la categoría, las etiquetas o los criterios territoriales calculados por InfoCs. Un hash distinto para el mismo `record_id` genera `update`, salvo si reaparece desde `missing_from_source`: entonces se genera un solo `reappeared` con campos modificados. Una ausencia solo se registra una vez tras una ejecución completa y nunca se convierte automáticamente en retirada.
+Un mismo hecho publicado por dos fuentes conserva ambos records; una relación futura como `same_event_as` no los fusionará ni cambiará su hash de contenido. `content_hash` representa solo el contenido administrativo observado, no el estado, la categoría, las etiquetas o los criterios territoriales calculados por InfoCs. La reconciliación mantiene transiciones internas de observación; el contrato público de Events v1 admite solo `create` y `update`. BOE es un feed incremental y nunca genera missing por ausencia entre sumarios diarios.
 
 ### Privacidad y reutilización
 
@@ -78,7 +78,7 @@ La entrada normalizada debe pasar el schema de `RecordCandidate` y reglas semán
 Los formatos canónicos serán JSON/JSONL textuales y versionables. La estructura prevista contiene:
 
 - `records/`: estado actual por fuente.
-- `events/`: altas, actualizaciones, reapariciones, ausencias y correcciones detectadas por fecha.
+- `events/`: Events canónicos `create` y `update`, vinculados al Record mediante `record_id`.
 - `manifests/`: resultados de ejecución y hashes, encadenados con el manifiesto anterior.
 - `health/`: último intento, último éxito, último cambio, errores consecutivos, estado y métricas por fuente.
 - `exports/`: artefactos generados para consumo abierto.
@@ -102,10 +102,18 @@ fuente. El ID externo se codifica como segmento seguro y no se usa el hash de
 contenido como nombre de archivo. La escritura valida el `Record`, comprueba
 el hash semántico, serializa con `Record.canonical_json()` y newline final,
 escribe un temporal en el mismo directorio y ejecuta un reemplazo atómico.
-Esta abstracción no crea bases de datos ni persiste eventos, manifests o health.
-En BOE 03E/03F se utiliza sólo con temporales de test: la persistencia de datos
-administrativos BOE reales permanece bloqueada hasta una aprobación explícita
-de publicación posterior al gate.
+`EventStore` mantiene un JSON por Event, exige el Record asociado y la
+configuración de revisión, revalida privacidad/aprobación, schema e identidad,
+y lo añade atómicamente sin reemplazar historia. La ingesta preflighta ambos
+artefactos y escribe Event seguido de Record para que un fallo del Record sea
+reintentable. No existe transacción real multiarchivo: puede quedar un Event
+temporalmente sin Record, pero no perderse la transición. No hay backfill del
+Record BOE ya persistido. Los estados internos
+`missing_from_source` y `reappeared` de reconciliación no son Events públicos
+v1.
+En 03E/03F los stores se ejercitaron con temporales; 03H autorizó y persistió
+un único Record real revisado. 03I no modifica ese dataset ni retrorellena su
+Event.
 
 ## Automatización y publicación
 

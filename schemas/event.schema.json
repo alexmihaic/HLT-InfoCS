@@ -1,1 +1,48 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"InfoCs Event v1","type":"object","additionalProperties":false,"required":["schema_version","type","record_id","source_id","detected_at","changed_fields"],"properties":{"schema_version":{"const":"1.0"},"type":{"enum":["create","update","missing_from_source","reappeared"]},"record_id":{"type":"string","minLength":1},"source_id":{"type":"string","minLength":1},"detected_at":{"type":"string","format":"date-time"},"previous_content_hash":{"type":"string","pattern":"^[a-f0-9]{64}$"},"new_content_hash":{"type":"string","pattern":"^[a-f0-9]{64}$"},"changed_fields":{"type":"array","items":{"type":"string"}}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InfoCs Canonical Event v1",
+  "oneOf": [
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": { "type": { "const": "create" } },
+          "not": { "anyOf": [{ "required": ["previous_content_hash"] }, { "required": ["changed_fields"] }] }
+        }
+      ]
+    },
+    {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "properties": { "type": { "const": "update" } },
+          "required": ["previous_content_hash", "changed_fields"],
+          "properties": { "changed_fields": { "minItems": 1 } }
+        }
+      ]
+    }
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "event_id", "type", "record_id", "source_id", "observed_at", "content_hash"],
+      "properties": {
+        "schema_version": { "const": "1.0" },
+        "event_id": { "type": "string", "pattern": "^evt-v1-[a-f0-9]{64}$" },
+        "type": { "enum": ["create", "update"] },
+        "record_id": { "type": "string", "minLength": 1 },
+        "source_id": { "type": "string", "minLength": 1 },
+        "official_id": { "type": "string", "minLength": 1 },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "previous_content_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "changed_fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)*$" }
+        }
+      }
+    }
+  }
+}

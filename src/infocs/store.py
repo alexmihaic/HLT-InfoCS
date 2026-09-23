@@ -72,15 +72,7 @@ class RecordStore:
 
     def write(self, record: Record) -> Path:
         """Valida y reemplaza un JSON completo mediante un temporal del mismo dir."""
-        validated = _validated_record(record)
-        try:
-            decision = self.privacy_gate.evaluate(validated)
-        except Exception:
-            raise RecordStoreError("El Privacy Gate no pudo evaluar el Record.") from None
-        if not isinstance(decision, PrivacyDecision) or decision.record_id != validated.id:
-            raise RecordStoreError("El Privacy Gate devolvió una decisión inválida para el Record.")
-        if decision.decision != PrivacyDecisionType.ALLOW:
-            raise RecordStoreError("El Privacy Gate no permite escribir este Record.")
+        validated = self.validate(record)
         path = self.path_for(validated.source.id, validated.id)
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = validated.canonical_json() + "\n"
@@ -93,8 +85,6 @@ class RecordStore:
                 handle.write(payload)
                 handle.flush()
                 os.fsync(handle.fileno())
-            # Se vuelve a cargar antes de reemplazar para que el mismo contrato
-            # que se usa al leer valide exactamente el artefacto preparado.
             _validated_record(Record.from_json(temporary_path.read_bytes()))
             os.replace(temporary_path, path)
         except Exception as error:
@@ -106,6 +96,19 @@ class RecordStore:
                 raise
             raise RecordStoreError(f"No se pudo escribir {path.name} de forma atómica.") from error
         return path
+
+    def validate(self, record: Record) -> Record:
+        """Preflight público de modelo, hash y privacidad sin crear ni escribir paths."""
+        validated = _validated_record(record)
+        try:
+            decision = self.privacy_gate.evaluate(validated)
+        except Exception:
+            raise RecordStoreError("El Privacy Gate no pudo evaluar el Record.") from None
+        if not isinstance(decision, PrivacyDecision) or decision.record_id != validated.id:
+            raise RecordStoreError("El Privacy Gate devolvió una decisión inválida para el Record.")
+        if decision.decision != PrivacyDecisionType.ALLOW:
+            raise RecordStoreError("El Privacy Gate no permite escribir este Record.")
+        return validated
 
     def list_source(self, source_id: str) -> tuple[Record, ...]:
         """Lista records válidos de una fuente en orden estable por identidad."""
