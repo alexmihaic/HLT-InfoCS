@@ -63,9 +63,13 @@ def manifest_from_boe_result(
     else:
         status = RunStatus.FAILED
         error_summary = ErrorSummary(
-            stage="transport",
-            error_code=result.status.value,
-            safe_message="La ejecución de la fuente no produjo un resultado utilizable.",
+            stage="review_queue" if result.error == "review_queue_failure" else "transport",
+            error_code=result.error if result.error == "review_queue_failure" else result.status.value,
+            safe_message=(
+                "El procesamiento de la fuente falló antes de completar el lote."
+                if result.error == "review_queue_failure"
+                else "La ejecución de la fuente no produjo un resultado utilizable."
+            ),
         )
         errors = 1
 

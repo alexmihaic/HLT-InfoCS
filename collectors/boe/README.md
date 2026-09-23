@@ -160,7 +160,7 @@ importa `RecordStore`. Devuelve métricas y una vista minimizada por ítem; tít
 y detalles territoriales no se incluyen para decisiones de privacidad que no
 sean `allow`. La ejecución auditada de 2026-09-23 está documentada en
 [`LIVE_DRY_RUN_2026-09.md`](LIVE_DRY_RUN_2026-09.md). Las pruebas siguen siendo
-offline; no existe automatización ni escritura de resultados del dry-run.
+offline; el dry-run no escribe Records.
 
 ## Primera persistencia controlada 03H
 
@@ -170,7 +170,28 @@ un record sólo puede escribirse si ambos permiten la operación. Los IDs no
 listados quedan en `hold`; una cuarentena de privacidad no puede ser
 sobrescrita por una aprobación. El preflight prepara y valida el lote completo
 antes de invocar `RecordStore`; sólo los aprobados llegan al store, que vuelve
-a evaluar privacidad. No se persisten events y no existe automatización.
+a evaluar privacidad. La automatización y la cola operativa se describen a
+continuación; no hay aprobación automática.
 
 La ejecución, el lote mínimo y sus límites se documentan en
 [`FIRST_PERSISTENCE_2026-09.md`](FIRST_PERSISTENCE_2026-09.md).
+
+## Runner programado 03L.2 y cola de revisión segura
+
+El workflow `.github/workflows/boe-manual.yml` conserva la ejecución manual
+con fecha obligatoria `YYYY-MM-DD` y añade una ejecución diaria a las 12:17
+`Europe/Madrid`, también los domingos. El schedule llama al mismo runner con
+`--today`; la fecha se determina en Python mediante `zoneinfo`. Ambos triggers
+comparten concurrencia y el control de carrera contra `origin/main`.
+
+Los Records con Privacy Gate `allow` pero Publication Review `hold` se anotan
+en `data/review/boe/pending.json` mediante una lista minimizada de IDs, URL
+oficial, fecha, run y códigos objetivos. No se guarda título, descripción,
+datos de autoridad ni contenido del Record. `quarantine` y `reject` de
+privacidad nunca se ponen en cola. Al reprocesar un ID aprobado, se elimina de
+la cola; la aprobación sigue exigiendo un cambio explícito en la configuración
+versionada. Véase [`REVIEW_QUEUE_POLICY.md`](REVIEW_QUEUE_POLICY.md).
+
+El workflow sólo puede publicar JSON bajo `data/records/`, `data/events/`,
+`data/manifests/`, `data/health/` y `data/review/`. No ejecuta la suite de
+tests en cada colección y no se activa por el commit automático del bot.

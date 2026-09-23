@@ -3,9 +3,10 @@
 ## Health es una proyección, no un log
 
 `SourceHealth` se deriva exclusivamente de los `RunManifest` validados de una
-fuente. Los manifests son el historial; Health es un resumen regenerable. La
-fase 03L.1 materializa `data/health/boe.json` después de cada run manual; el
-archivo se regenera desde los manifests y no es una fuente de verdad aparte.
+fuente. Los manifests son el historial; Health es un resumen regenerable. El
+runner BOE materializa `data/health/boe.json` después de cada run manual o
+programado; el archivo se regenera desde los manifests y no es una fuente de
+verdad aparte.
 
 La función ordena los manifests por `finished_at`, `started_at` y `run_id`.
 Por ello el resultado no depende del orden de entrada ni del filesystem. Si
@@ -48,5 +49,6 @@ materializa JSON UTF-8 determinista con newline final mediante reemplazo
 atómico. El writer no obtiene el reloj ni altera los timestamps derivados.
 
 No existen notificaciones, SLA, checks de disponibilidad entre runs,
-monitorización externa ni reglas de anomalía en v1. La ejecución programada
-queda pendiente; 03L.1 sólo habilita un disparo manual.
+monitorización externa ni reglas de anomalía en v1. El schedule BOE diario se
+ejecuta a las 12:17 `Europe/Madrid`; `no_publication` es un resultado válido y
+mantiene Health `healthy`.

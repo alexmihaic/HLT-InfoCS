@@ -10,7 +10,9 @@ La fase 03E bloqueó la persistencia real hasta disponer de aprobación
 explícita. Desde 03H existe una aprobación versionada por ID; el runner manual
 03L.1 sólo puede persistir Records con Privacy Gate `allow` y Publication
 Review `approved`. Los IDs no listados quedan en `hold`; la aprobación nunca
-elude privacidad. No hay aprobación automática ni schedule.
+elude privacidad. No hay aprobación automática. Desde 03L.2 el runner puede
+ejecutarse manualmente o mediante schedule diario; el schedule no relaja
+ninguna barrera de publicación.
 
 El Privacy Gate v1 es una barrera técnica obligatoria en el flujo: clasifica
 cada `Record` antes de `RecordStore.write()`, y el store vuelve a comprobarlo.
@@ -121,7 +123,7 @@ por lo que se prefiere Event-first. La ausencia entre días sigue sin generar
 evento. El primer Record real histórico no se retrorellena y `data/events/`
 permanece vacío salvo `.gitkeep`.
 
-## Run Manifest y Health (contrato 03K / ejecución manual 03L.1)
+## Run Manifest, Health y review queue (03K–03L.2)
 
 BOE conserva `collection_mode: incremental_feed`. Un adaptador offline mapea el
 resultado ya agregado de `ingest_boe_summary()` a `RunManifest` en memoria;
@@ -139,8 +141,10 @@ el manifest final después del procesamiento. Luego deriva y materializa
 observabilidad segura y hace que la acción termine fallida después de intentar
 publicar esos artefactos.
 
-El workflow sólo admite `workflow_dispatch` con una fecha estricta
-`YYYY-MM-DD`; no hay schedule, rango ni alias `today`. El pipeline mantiene
+El workflow admite `workflow_dispatch` con una fecha estricta `YYYY-MM-DD` y
+un schedule diario a las 12:17 `Europe/Madrid`. El dispatch usa `--date`; el
+schedule usa `--today`, cuya fecha se resuelve con `zoneinfo` en Python. No hay
+rangos ni backfill. El pipeline mantiene
 Privacy Gate → Publication Review → Event → Record. Después se guarda Manifest
 y finalmente Health. Un error de I/O al finalizar observabilidad puede dejar
 datos previos del pipeline sin manifest; no hay transacción global
@@ -149,4 +153,7 @@ directorios canónicos de datos y falla cerrada si `origin/main` avanzó desde
 que empezó el run.
 
 La persistencia de 03H no recibe manifest retroactivo: no se inventan run ID ni
-timestamps. El workflow no activa aún automatización periódica.
+timestamps. Los IDs `allow + hold` aparecen en una cola derivada minimizada;
+los ítems de privacidad bloqueada nunca entran. La cola deduplica por fuente e
+ID y se limpia al reprocesar un ID explícitamente aprobado o rechazado. La
+ausencia de un ID entre sumarios diarios no lo elimina de la cola.

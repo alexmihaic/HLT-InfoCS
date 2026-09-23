@@ -81,6 +81,7 @@ Los formatos canónicos serán JSON/JSONL textuales y versionables. La estructur
 - `events/`: Events canónicos `create` y `update`, vinculados al Record mediante `record_id`.
 - `manifests/`: historial append-only de ejecuciones concretas, un JSON por run.
 - `health/`: proyección regenerable derivada de los manifests; no es otra historia.
+- `review/`: cola BOE minimizada y derivada de IDs con privacidad permitida y revisión humana pendiente; no es dataset canónico.
 - `exports/`: artefactos generados para consumo abierto.
 
 Git aporta historial público y reproducibilidad, pero no una certificación jurídica inmutable. Run Manifest v1 no implementa hash chain: orden y encadenamiento requieren una decisión explícita sobre ejecuciones concurrentes o tardías, y no sustituyen a un sellado de tiempo independiente.
@@ -124,7 +125,7 @@ Event.
 
 ## Automatización y publicación
 
-El workflow BOE manual (03L.1) ejecuta el pipeline en Python para una única fecha explícita. Mantiene Privacy Gate → Publication Review → Event → Record, escribe un Run Manifest al terminar y deriva después `data/health/boe.json`. Un fallo de fuente puede publicar un manifest `failed` y Health actualizado antes de propagar un exit code fallido a Actions. La acción sólo permite cambios bajo `data/records/`, `data/events/`, `data/manifests/` y `data/health/`; si `origin/main` avanzó desde el inicio, no publica. No hay `schedule`, rangos ni transacción multiarchivo global.
+El workflow BOE admite un dispatch manual de fecha explícita y una ejecución diaria a las 12:17 `Europe/Madrid`. El runner Python resuelve `--today` con `zoneinfo`; el workflow no calcula fechas ni reconstruye el pipeline. Mantiene Privacy Gate → Publication Review → Event → Record, actualiza la cola minimizada `data/review/boe/pending.json` sólo para IDs con `allow + hold`, escribe Run Manifest y deriva después `data/health/boe.json`. Una cuarentena nunca entra en la cola. Un fallo de fuente puede publicar un manifest `failed` y Health actualizado antes de propagar un exit code fallido a Actions. La acción sólo permite JSON bajo `data/records/`, `data/events/`, `data/manifests/`, `data/health/` y `data/review/`; si `origin/main` avanzó desde el inicio, no publica. Manual y schedule comparten grupo de concurrencia y no se cancelan entre sí.
 
 El portal futuro será una construcción Astro estática, con búsqueda e índices precalculados, sin cuentas, cookies de analítica, base de datos remota ni servidor de búsqueda. GitHub Pages será el destino de publicación previsto. La configuración de dominio y despliegue queda fuera de este bootstrap.
 

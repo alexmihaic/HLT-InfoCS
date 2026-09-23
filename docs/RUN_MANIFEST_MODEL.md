@@ -94,6 +94,8 @@ El primer Record BOE y su primera persistencia no reciben manifest
 retroactivamente: no se fabrica una identidad de run ni timestamps.
 
 La integración offline 03K construía manifests en memoria desde
-`BOEIngestionResult`. Desde 03L.1, el runner manual BOE finaliza y escribe el
-Manifest real al acabar cada dispatch; después deriva y materializa Health.
-El primer Record de 03H sigue sin Manifest retroactivo.
+`BOEIngestionResult`. Desde 03L.1, el runner BOE finaliza y escribe el Manifest
+al acabar cada ejecución, manual o programada; después deriva y materializa
+Health. La fecha del run diario se resuelve en `Europe/Madrid`, pero el
+`requested_scope` conserva la fecha BOE realmente consultada. El primer Record
+de 03H sigue sin Manifest retroactivo.

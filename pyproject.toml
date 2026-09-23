@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.15"
 license = { text = "TBD" }
 authors = [{ name = "InfoCs contributors" }]
-dependencies = ["jsonschema==4.26.0"]
+dependencies = ["jsonschema==4.26.0", "tzdata==2026.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -15,6 +15,7 @@ from infocs.fetch.boe.models import (
     BOESummary,
 )
 from infocs.fetch.boe.normalize import BOENormalizationError, normalize_boe_item
+from infocs.fetch.boe.review_queue import ReviewQueueEntry, ReviewQueueObservation
 from infocs.fetch.boe.territorial import (
     BOETerritorialRegistry,
     decide_boe_territorial_inclusion,
@@ -101,6 +102,7 @@ class BOEIngestionResult:
     collection_semantics: BOECollectionSemantics = BOE_COLLECTION_SEMANTICS
     operations: tuple[BOEOperation, ...] = ()
     events: tuple[Event, ...] = ()
+    review_queue_observations: tuple[ReviewQueueObservation, ...] = ()
     error: str | None = None
 
 
@@ -114,6 +116,7 @@ def ingest_boe_summary(
     publication_review_config: PublicationReviewConfig,
     event_store: EventStore | None = None,
     privacy_gate: PrivacyGate | None = None,
+    run_id: str | None = None,
 ) -> BOEIngestionResult:
     """Procesa una edición BOE sin aplicar reconciliación de snapshots.
 
@@ -146,6 +149,7 @@ def ingest_boe_summary(
     }
     planned: dict[str, tuple[Record, BOEOperation]] = {}
     events: list[Event] = []
+    review_observations: list[ReviewQueueObservation] = []
 
     for item in summary.items:
         decision = decide_boe_territorial_inclusion(item, registry)
@@ -176,9 +180,11 @@ def ingest_boe_summary(
             raise BOEIngestionError("El Privacy Gate falló; batch abortado antes de escribir.") from None
         if privacy_decision.decision == PrivacyDecisionType.QUARANTINE:
             metrics["privacy_quarantined"] += 1
+            review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
             continue
         if privacy_decision.decision == PrivacyDecisionType.REJECT:
             metrics["privacy_rejected"] += 1
+            review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
             continue
         metrics["privacy_allowed"] += 1
 
@@ -188,11 +194,28 @@ def ingest_boe_summary(
             raise BOEIngestionError("Publication Review falló; batch abortado antes de escribir.") from None
         if publication_decision.decision is PublicationDecisionType.HOLD:
             metrics["publication_hold"] += 1
+            if run_id is not None:
+                review_observations.append(ReviewQueueObservation(
+                    "boe", item.official_id,
+                    ReviewQueueEntry(
+                        source_id="boe",
+                        official_id=item.official_id,
+                        source_url=record.source_url,
+                        published_at=item.published_on.isoformat(),
+                        run_id=run_id,
+                        territorial_reason_codes=tuple(sorted({match.reason.value for match in decision.matches})),
+                        entity_codes=tuple(sorted({match.entity_code for match in decision.matches})),
+                        publication_decision="hold",
+                        reason_code=publication_decision.reason_code,
+                    ),
+                ))
             continue
         if publication_decision.decision is PublicationDecisionType.REJECTED:
             metrics["publication_rejected"] += 1
+            review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
             continue
         metrics["publication_approved"] += 1
+        review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
 
         if record.id in planned:
             previous_batch_record, _ = planned[record.id]
@@ -263,6 +286,7 @@ def ingest_boe_summary(
         metrics=BOEIngestionMetrics(**metrics),
         operations=operations,
         events=tuple(events),
+        review_queue_observations=tuple(review_observations),
     )
 
 

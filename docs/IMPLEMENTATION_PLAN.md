@@ -134,9 +134,9 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 
 - **Objetivo:** automatizar validación y recopilación futura con permisos mínimos y aislamiento por fuente.
 - **Dependencias:** Fases 01–07; revisión de seguridad de Actions.
-- **Entregables:** primero runner BOE Python y workflow manual de una fecha con paths de datos allowlisted, Manifest/Health y control de carrera remota; sólo ese dispatch recibe `contents: write`. Cualquier schedule requiere una fase/decisión posterior explícita.
+- **Entregables:** runner BOE Python con dispatch manual de una fecha y schedule diario Europe/Madrid; Review Queue derivada y minimizada; Manifest/Health, paths de datos allowlisted y control de carrera remota; sólo el workflow del collector recibe `contents: write`.
 - **Tests necesarios:** validación estática de workflows; ejecución controlada con fixtures; prueba de agregación `always`; revisión de permisos.
-- **Criterio de aceptación:** el dispatch manual valida y publica únicamente artefactos de datos canónicos; un fallo conserva observabilidad antes de fallar la acción; ningún cambio inesperado ni avance remoto se publica. Workflows futuros de validación sin publicación mantendrán permisos de sólo lectura.
+- **Criterio de aceptación:** ejecución manual/programada valida y publica únicamente artefactos de datos permitidos; un fallo conserva observabilidad antes de fallar la acción; ningún cambio inesperado ni avance remoto se publica; la cola no contiene contenido de Records y Privacy Gate/Publication Review siguen fail-closed. Workflows futuros de validación sin publicación mantendrán permisos de sólo lectura.
 - **Fuera de alcance:** despliegue de producción, acciones de terceros sin pin, almacenamiento de artefactos documentales y `pull_request_target`.
 
 ## Fase 09 — Portal Astro

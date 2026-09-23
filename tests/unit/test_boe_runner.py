@@ -27,7 +27,7 @@ from infocs.fetch.boe.models import (
     BOESection,
     BOESummary,
 )
-from infocs.fetch.boe.runner import parse_requested_date, run_boe_collection, runner_exit_code
+from infocs.fetch.boe.runner import parse_requested_date, resolve_collection_date, run_boe_collection, runner_exit_code
 from infocs.fetch.boe.territorial import load_castellon_registry
 from infocs.fetch.boe.workflow_safety import (
     WorkflowSafetyError,
@@ -46,12 +46,15 @@ RUN_ID = "run-v1-00000000-0000-4000-8000-000000000018"
 OFFICIAL_ID = "BOE-A-2099-1801"
 
 
-def fetched(status: BOEFetchStatus = BOEFetchStatus.COMPLETE_SUCCESS) -> BOEFetchResult:
+def fetched(
+    status: BOEFetchStatus = BOEFetchStatus.COMPLETE_SUCCESS,
+    *, title: str = "Resolución relativa a Borriana",
+) -> BOEFetchResult:
     if status is not BOEFetchStatus.COMPLETE_SUCCESS:
         return BOEFetchResult(status, 503 if status is BOEFetchStatus.SOURCE_FAILURE else 404, reason="synthetic")
     item = BOEItem(
         official_id=OFFICIAL_ID,
-        title="Resolución relativa a Borriana",
+        title=title,
         section_code="1",
         section_name="I. Disposiciones generales",
         department_code="9999",
@@ -86,6 +89,7 @@ class BOERunnerTests(unittest.TestCase):
             "event_store": EventStore(root / "events"),
             "manifest_store": ManifestStore(root / "manifests"),
             "health_path": root / "health" / "boe.json",
+            "review_queue_path": root / "review" / "boe" / "pending.json",
             "privacy_gate": gate,
         }
         transport = transport or SimpleNamespace(fetch_daily_summary=lambda requested_date: response)
@@ -145,11 +149,29 @@ class BOERunnerTests(unittest.TestCase):
         self.assertTrue((root / "health" / "boe.json").is_file())
 
     def test_publication_hold_writes_observability_but_no_record_or_event(self) -> None:
-        _, result, stores = self.run_in_temp(fetched(), approved=False)
+        root, result, stores = self.run_in_temp(fetched(), approved=False)
+        self.assertEqual(result.metrics.privacy_allowed, 1)
         self.assertEqual(result.metrics.publication_hold, 1)
         self.assertEqual(stores["manifest_store"].get(RUN_ID).metrics.publication_hold, 1)
         self.assertEqual(stores["record_store"].list_source("boe"), ())
         self.assertEqual(stores["event_store"].list_source("boe"), ())
+        pending_path = root / "review" / "boe" / "pending.json"
+        payload = json.loads(pending_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["records"][0]["official_id"], OFFICIAL_ID)
+        self.assertEqual(payload["records"][0]["reason_code"], "not_in_allowlist")
+        self.assertNotIn("Resolución relativa a Borriana", pending_path.read_text(encoding="utf-8"))
+
+    def test_privacy_quarantine_never_enters_review_queue(self) -> None:
+        root, result, stores = self.run_in_temp(
+            fetched(title="Resolución relativa a Borriana con DNI 12345678Z"), approved=False,
+        )
+        queue_path = root / "review" / "boe" / "pending.json"
+        self.assertEqual(result.metrics.privacy_quarantined, 1)
+        self.assertEqual(result.metrics.publication_hold, 0)
+        self.assertEqual(stores["record_store"].list_source("boe"), ())
+        self.assertEqual(stores["event_store"].list_source("boe"), ())
+        self.assertEqual(json.loads(queue_path.read_text(encoding="utf-8"))["records"], [])
+        self.assertNotIn("12345678Z", queue_path.read_text(encoding="utf-8"))
 
     def test_approved_no_change_writes_no_new_event(self) -> None:
         with TemporaryDirectory() as directory:
@@ -170,15 +192,58 @@ class RunnerContractTests(unittest.TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(argparse.ArgumentTypeError):
                 parse_requested_date(invalid)
 
+    def test_today_uses_europe_madrid_date_from_single_aware_timestamp(self) -> None:
+        from infocs.fetch.boe.runner import BOERunnerError
+
+        just_before_madrid_midnight = datetime(2026, 9, 22, 21, 59, tzinfo=UTC)
+        at_madrid_midnight = datetime(2026, 9, 22, 22, 0, tzinfo=UTC)
+        self.assertEqual(
+            resolve_collection_date(date_value=None, use_today=True, now=just_before_madrid_midnight),
+            date(2026, 9, 22),
+        )
+        self.assertEqual(
+            resolve_collection_date(date_value=None, use_today=True, now=at_madrid_midnight),
+            date(2026, 9, 23),
+        )
+        with self.assertRaises(BOERunnerError):
+            resolve_collection_date(date_value="2026-09-23", use_today=True, now=at_madrid_midnight)
+
+    def test_resolved_date_is_exposed_as_safe_github_step_output(self) -> None:
+        from unittest.mock import patch
+        from infocs.fetch.boe.runner import _write_requested_date_output
+
+        with TemporaryDirectory() as directory:
+            output_path = Path(directory) / "github-output.txt"
+            with patch.dict("os.environ", {"GITHUB_OUTPUT": str(output_path)}):
+                _write_requested_date_output(date(2026, 9, 23))
+            self.assertEqual(output_path.read_text(encoding="utf-8"), "requested_date=2026-09-23\n")
+
     def test_failed_status_has_nonzero_workflow_exit_code(self) -> None:
         self.assertEqual(runner_exit_code(RunStatus.FAILED), 1)
         self.assertEqual(runner_exit_code(RunStatus.SUCCESS), 0)
         self.assertEqual(runner_exit_code(RunStatus.NO_PUBLICATION), 0)
 
+    def test_workflow_has_manual_and_timezone_aware_schedule_without_push_trigger(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "boe-manual.yml").read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("required: true", workflow)
+        self.assertIn("schedule:", workflow)
+        self.assertIn("cron: '17 12 * * *'", workflow)
+        self.assertIn("timezone: 'Europe/Madrid'", workflow)
+        self.assertIn("runs-on: ubuntu-24.04", workflow)
+        self.assertIn("actions/checkout@v7", workflow)
+        self.assertIn("actions/setup-python@v7", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertNotIn("push:", workflow)
+
     def test_workflow_path_allowlist_is_fail_closed(self) -> None:
         self.assertEqual(
             validate_changed_paths(["data/manifests/boe/2026/09/run-v1-abc.json", "data/health/boe.json"]),
             ("data/health/boe.json", "data/manifests/boe/2026/09/run-v1-abc.json"),
+        )
+        self.assertEqual(
+            validate_changed_paths(["data/review/boe/pending.json"]),
+            ("data/review/boe/pending.json",),
         )
         for path in ("src/infocs/runner.py", "data/records/../secret.json", r"data\records\x.json", "data/records/note.txt"):
             with self.subTest(path=path), self.assertRaises(WorkflowSafetyError):
@@ -203,6 +268,7 @@ class RunnerContractTests(unittest.TestCase):
             root = Path(temporary)
             (root / "schemas").mkdir()
             shutil.copy2(ROOT / "schemas" / "source-health.schema.json", root / "schemas" / "source-health.schema.json")
+            shutil.copy2(ROOT / "schemas" / "review-queue.schema.json", root / "schemas" / "review-queue.schema.json")
             health = SourceHealth("boe", HealthStatus.UNKNOWN, 0)
             path = root / "data" / "health" / "boe.json"
             write_source_health(path, health)
@@ -212,6 +278,26 @@ class RunnerContractTests(unittest.TestCase):
             )
             with self.assertRaises(WorkflowSafetyError):
                 validate_generated_artifacts(root, ["data/health/other.json"])
+
+    def test_generated_review_queue_requires_canonical_path_and_schema(self) -> None:
+        from infocs.fetch.boe.review_queue import BOEReviewQueueStore, ReviewQueueEntry, ReviewQueueObservation
+
+        with TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "schemas").mkdir()
+            shutil.copy2(ROOT / "schemas" / "review-queue.schema.json", root / "schemas" / "review-queue.schema.json")
+            queue_path = root / "data" / "review" / "boe" / "pending.json"
+            entry = ReviewQueueEntry(
+                "boe", OFFICIAL_ID, f"https://www.boe.es/doc.html?id={OFFICIAL_ID}", "2026-09-18", RUN_ID,
+                ("municipality_exact",), ("12040",), "hold", "territorial_review_required",
+            )
+            BOEReviewQueueStore(queue_path).update((ReviewQueueObservation("boe", OFFICIAL_ID, entry),))
+            self.assertEqual(
+                validate_generated_artifacts(root, ["data/review/boe/pending.json"]),
+                ("data/review/boe/pending.json",),
+            )
+            with self.assertRaises(WorkflowSafetyError):
+                validate_generated_artifacts(root, ["data/review/other/pending.json"])
 
 
 if __name__ == "__main__":

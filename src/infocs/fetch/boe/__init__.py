@@ -59,6 +59,12 @@ from infocs.fetch.boe.controlled import (
     prepare_boe_publication_preview,
 )
 from infocs.fetch.boe.manifest import manifest_from_boe_result
+from infocs.fetch.boe.review_queue import (
+    BOEReviewQueueStore,
+    ReviewQueueEntry,
+    ReviewQueueError,
+    ReviewQueueObservation,
+)
 
 __all__ = [
     "BOEContractError",
@@ -88,6 +94,10 @@ __all__ = [
     "BOETerritorialRegistry",
     "BOETerritorialRegistryError",
     "BOETransport",
+    "BOEReviewQueueStore",
+    "ReviewQueueEntry",
+    "ReviewQueueError",
+    "ReviewQueueObservation",
     "BOEDryRunError",
     "BOEDryRunItemAudit",
     "BOEDryRunMatchAudit",

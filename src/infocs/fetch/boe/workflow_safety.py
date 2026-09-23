@@ -15,15 +15,17 @@ from infocs.diff.core import content_hash
 from infocs.events import Event, EventStore
 from infocs.manifests import ManifestStore, RunManifest, SourceHealth
 from infocs.models import Record, validate_record_payload
+from infocs.fetch.boe.review_queue import validate_review_queue_payload
 from infocs.store import RecordStore
 
 
-_ALLOWED_ROOTS = ("data/records/", "data/events/", "data/manifests/", "data/health/")
+_ALLOWED_ROOTS = ("data/records/", "data/events/", "data/manifests/", "data/health/", "data/review/")
 _SCHEMA_FOR_ROOT = {
     "data/records/": "record.schema.json",
     "data/events/": "event.schema.json",
     "data/manifests/": "run-manifest.schema.json",
     "data/health/": "source-health.schema.json",
+    "data/review/": "review-queue.schema.json",
 }
 
 
@@ -32,7 +34,7 @@ class WorkflowSafetyError(ValueError):
 
 
 def validate_changed_paths(paths: Iterable[str]) -> tuple[str, ...]:
-    """Acepta sólo JSON bajo los cuatro directorios canónicos de datos."""
+    """Acepta sólo JSON bajo los directorios de artefactos permitidos."""
     normalized: set[str] = set()
     for raw in paths:
         if not isinstance(raw, str) or not raw or "\\" in raw or "\x00" in raw:
@@ -89,10 +91,16 @@ def validate_generated_artifacts(repo_root: str | Path, paths: Iterable[str]) ->
             manifest = RunManifest.from_mapping(payload)
             expected = ManifestStore(root / "data" / "manifests").path_for(manifest)
         else:
-            health = SourceHealth.from_mapping(payload)
-            if relative != "data/health/boe.json" or health.source_id != "boe":
-                raise WorkflowSafetyError("El workflow manual sólo puede materializar Health de BOE.")
-            expected = root / "data" / "health" / "boe.json"
+            if data_root == "data/health/":
+                health = SourceHealth.from_mapping(payload)
+                if relative != "data/health/boe.json" or health.source_id != "boe":
+                    raise WorkflowSafetyError("El workflow sólo puede materializar Health de BOE.")
+                expected = root / "data" / "health" / "boe.json"
+            else:
+                validate_review_queue_payload(payload)
+                if relative != "data/review/boe/pending.json":
+                    raise WorkflowSafetyError("La review queue sólo puede materializarse en su ruta BOE canónica.")
+                expected = root / "data" / "review" / "boe" / "pending.json"
         if expected.resolve() != path:
             raise WorkflowSafetyError("El artefacto no está en su ruta canónica.")
     return accepted

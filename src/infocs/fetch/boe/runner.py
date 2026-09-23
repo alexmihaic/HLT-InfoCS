@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from zoneinfo import ZoneInfo
 from typing import Callable
 
 from infocs.events import EventStore
@@ -20,6 +21,7 @@ from infocs.fetch.boe.ingest import (
 )
 from infocs.fetch.boe.manifest import manifest_from_boe_result
 from infocs.fetch.boe.models import BOEFetchResult, BOEFetchStatus
+from infocs.fetch.boe.review_queue import BOEReviewQueueStore
 from infocs.fetch.boe.territorial import load_castellon_registry
 from infocs.fetch.boe.transport import BOETransport
 from infocs.manifests import (
@@ -56,6 +58,25 @@ def parse_requested_date(value: str) -> date:
     return parsed
 
 
+def resolve_collection_date(
+    *, date_value: date | str | None, use_today: bool, now: datetime,
+) -> date:
+    """Resuelve exactamente una fecha manual o la fecha local Europe/Madrid."""
+    _validate_aware(now, "now")
+    if use_today == (date_value is not None):
+        raise BOERunnerError("Debe proporcionarse exactamente una de --date o --today.")
+    if use_today:
+        return now.astimezone(ZoneInfo("Europe/Madrid")).date()
+    if isinstance(date_value, str):
+        try:
+            return parse_requested_date(date_value)
+        except argparse.ArgumentTypeError as error:
+            raise BOERunnerError("La fecha manual no es válida.") from error
+    if isinstance(date_value, date) and not isinstance(date_value, datetime):
+        return date_value
+    raise BOERunnerError("La fecha manual debe ser una fecha explícita.")
+
+
 def run_boe_collection(
     requested_date: date,
     *,
@@ -67,6 +88,7 @@ def run_boe_collection(
     event_store: EventStore | None = None,
     manifest_store: ManifestStore | None = None,
     health_path: str | Path | None = None,
+    review_queue_path: str | Path | None = None,
     review_config: PublicationReviewConfig | None = None,
     privacy_gate: PrivacyGate | None = None,
     software_metadata: SoftwareMetadata | None = None,
@@ -83,6 +105,10 @@ def run_boe_collection(
 
     active_manifest_store = manifest_store or ManifestStore(PROJECT_ROOT / "data" / "manifests")
     active_health_path = Path(health_path) if health_path is not None else PROJECT_ROOT / "data" / "health" / "boe.json"
+    active_review_queue_path = (
+        Path(review_queue_path) if review_queue_path is not None
+        else PROJECT_ROOT / "data" / "review" / "boe" / "pending.json"
+    )
     active_software = software_metadata or SoftwareMetadata(
         collector_version="0.1.0",
         source_contract_version="1",
@@ -107,7 +133,22 @@ def run_boe_collection(
             last_checked_at=started_at,
             publication_review_config=active_review,
             privacy_gate=active_gate,
+            run_id=run_id,
         )
+        if result.review_queue_observations:
+            try:
+                BOEReviewQueueStore(active_review_queue_path).update(result.review_queue_observations)
+            except Exception:
+                # Record/Event ya pudieron escribirse; conservar sus métricas
+                # y señalar fallo operativo sin filtrar detalles de la excepción.
+                result = BOEIngestionResult(
+                    status=BOEIngestionStatus.SOURCE_FAILURE,
+                    metrics=result.metrics,
+                    operations=result.operations,
+                    events=result.events,
+                    review_queue_observations=result.review_queue_observations,
+                    error="review_queue_failure",
+                )
     except Exception:
         # El artefacto público no recibe mensajes de excepción ni contenido de
         # Records. La ejecución fallida queda observable con un código estable.
@@ -152,14 +193,21 @@ def _utc_now() -> datetime:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Ejecuta una fecha del sumario diario BOE.")
-    parser.add_argument("--date", required=True, type=parse_requested_date, help="Fecha BOE YYYY-MM-DD")
+    date_group = parser.add_mutually_exclusive_group(required=True)
+    date_group.add_argument("--date", type=parse_requested_date, help="Fecha BOE YYYY-MM-DD")
+    date_group.add_argument("--today", action="store_true", help="Fecha actual de Europe/Madrid (sólo schedule)")
     args = parser.parse_args(argv)
 
     started_at = _utc_now()
+    try:
+        requested_date = resolve_collection_date(date_value=args.date, use_today=args.today, now=started_at)
+    except BOERunnerError as error:
+        parser.error(str(error))
+    _write_requested_date_output(requested_date)
     run_id = new_run_id()
     try:
         result = run_boe_collection(
-            args.date,
+            requested_date,
             started_at=started_at,
             run_id=run_id,
             clock=_utc_now,
@@ -176,11 +224,19 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({
         "run_id": run_id,
         "source_id": "boe",
-        "requested_date": args.date.isoformat(),
+        "requested_date": requested_date.isoformat(),
         "status": manifest.status.value,
         "metrics": manifest.metrics.to_dict(),
     }, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
     return runner_exit_code(manifest.status)
+
+
+def _write_requested_date_output(requested_date: date) -> None:
+    """Publica fecha resuelta como output seguro para el mensaje de commit de Actions."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if output_path:
+        with Path(output_path).open("a", encoding="utf-8", newline="\n") as output:
+            output.write(f"requested_date={requested_date.isoformat()}\n")
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised via CLI smoke tests
