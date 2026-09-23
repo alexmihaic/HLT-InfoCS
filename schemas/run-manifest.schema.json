@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infocs.local/schemas/run-manifest.schema.json",
+  "title": "InfoCs Run Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version", "run_id", "source_id", "collection_mode",
+    "started_at", "finished_at", "status", "requested_scope", "metrics",
+    "software_metadata"
+  ],
+  "properties": {
+    "manifest_version": { "const": "1.0" },
+    "run_id": { "type": "string", "pattern": "^run-v1-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "source_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "collection_mode": { "enum": ["incremental_feed", "snapshot"] },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["success", "partial", "failed", "no_publication"] },
+    "requested_scope": { "$ref": "#/$defs/requested_scope" },
+    "metrics": { "$ref": "#/$defs/metrics" },
+    "software_metadata": { "$ref": "#/$defs/software_metadata" },
+    "error_summary": { "$ref": "#/$defs/error_summary" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "failed" } }, "required": ["status"] },
+      "then": { "required": ["error_summary"], "properties": { "metrics": { "properties": { "errors": { "minimum": 1 } } } } }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["success", "no_publication"] } }, "required": ["status"] },
+      "then": { "not": { "required": ["error_summary"] } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "partial" } }, "required": ["status"] },
+      "then": { "required": ["error_summary"], "properties": { "metrics": { "properties": { "errors": { "minimum": 1 } } } } }
+    }
+  ],
+  "$defs": {
+    "requested_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+        "value": {
+          "type": "string", "minLength": 1, "maxLength": 160,
+          "allOf": [
+            { "pattern": "^[^\\r\\n]+$" },
+            { "not": { "pattern": "/" } },
+            { "not": { "pattern": "\\\\" } }
+          ]
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "seen", "included", "excluded", "normalized", "finalized",
+        "privacy_allowed", "privacy_quarantined", "privacy_rejected",
+        "publication_approved", "publication_hold", "publication_rejected",
+        "created", "updated", "unchanged", "events_created", "events_updated", "errors"
+      ],
+      "properties": {
+        "seen": { "type": "integer", "minimum": 0 },
+        "included": { "type": "integer", "minimum": 0 },
+        "excluded": { "type": "integer", "minimum": 0 },
+        "normalized": { "type": "integer", "minimum": 0 },
+        "finalized": { "type": "integer", "minimum": 0 },
+        "privacy_allowed": { "type": "integer", "minimum": 0 },
+        "privacy_quarantined": { "type": "integer", "minimum": 0 },
+        "privacy_rejected": { "type": "integer", "minimum": 0 },
+        "publication_approved": { "type": "integer", "minimum": 0 },
+        "publication_hold": { "type": "integer", "minimum": 0 },
+        "publication_rejected": { "type": "integer", "minimum": 0 },
+        "created": { "type": "integer", "minimum": 0 },
+        "updated": { "type": "integer", "minimum": 0 },
+        "unchanged": { "type": "integer", "minimum": 0 },
+        "events_created": { "type": "integer", "minimum": 0 },
+        "events_updated": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "software_metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["collector_version"],
+      "properties": {
+        "collector_version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,79}$" },
+        "source_contract_version": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,79}$" },
+        "git_commit_sha": { "type": "string", "pattern": "^[a-fA-F0-9]{40,64}$" }
+      }
+    },
+    "error_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "error_code", "safe_message"],
+      "properties": {
+        "stage": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+        "error_code": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+        "safe_message": {
+          "enum": [
+            "La ejecución de la fuente no produjo un resultado utilizable.",
+            "La ejecución terminó parcialmente.",
+            "El procesamiento de la fuente falló antes de completar el lote."
+          ]
+        }
+      }
+    }
+  }
+}

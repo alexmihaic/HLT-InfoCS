@@ -79,11 +79,18 @@ Los formatos canónicos serán JSON/JSONL textuales y versionables. La estructur
 
 - `records/`: estado actual por fuente.
 - `events/`: Events canónicos `create` y `update`, vinculados al Record mediante `record_id`.
-- `manifests/`: resultados de ejecución y hashes, encadenados con el manifiesto anterior.
-- `health/`: último intento, último éxito, último cambio, errores consecutivos, estado y métricas por fuente.
+- `manifests/`: historial append-only de ejecuciones concretas, un JSON por run.
+- `health/`: proyección regenerable derivada de los manifests; no es otra historia.
 - `exports/`: artefactos generados para consumo abierto.
 
-Git aporta historial público y reproducibilidad, pero no una certificación jurídica inmutable. Los manifiestos encadenados y hashes aumentan la detectabilidad de cambios retrospectivos; no sustituyen a un sellado de tiempo independiente.
+Git aporta historial público y reproducibilidad, pero no una certificación jurídica inmutable. Run Manifest v1 no implementa hash chain: orden y encadenamiento requieren una decisión explícita sobre ejecuciones concurrentes o tardías, y no sustituyen a un sellado de tiempo independiente.
+
+`RunManifest` identifica una ocurrencia con UUIDv4 y registra alcance, UTC,
+estado, métricas cerradas, versiones y un resumen de error seguro. Su store es
+append-only e idempotente por `run_id`; no contiene Records/Events. `SourceHealth`
+se deriva de estos manifests, con `unknown`, `healthy`, `degraded` o `failing`;
+`no_publication` cuenta como éxito operacional. Los contratos e invariantes
+están en `docs/RUN_MANIFEST_MODEL.md` y `docs/SOURCE_HEALTH_MODEL.md`.
 
 SQLite o DuckDB podrán generarse localmente para análisis, validación o descargas, pero nunca serán la verdad canónica sin una decisión documentada posterior.
 
@@ -117,7 +124,7 @@ Event.
 
 ## Automatización y publicación
 
-La automatización futura ejecutará collectors de forma aislada, agregará sus resultados aunque una fuente falle, validará y solo después actualizará los datos válidos. Cada fuente publicará salud diferenciando `last_success` de `last_change_detected`. No se añaden workflows en esta fase.
+La automatización futura ejecutará collectors de forma aislada, agregará sus resultados aunque una fuente falle, validará y solo después actualizará los datos válidos. Source Health diferencia último intento y último éxito; no expone `last_publication_at` sin evidencia específica. El manifest se escribiría al final del run: una falla de su I/O podría dejar Records/Events sin manifest, pues no hay transacción multiarchivo. No se añaden workflows en esta fase.
 
 El portal futuro será una construcción Astro estática, con búsqueda e índices precalculados, sin cuentas, cookies de analítica, base de datos remota ni servidor de búsqueda. GitHub Pages será el destino de publicación previsto. La configuración de dominio y despliegue queda fuera de este bootstrap.
 

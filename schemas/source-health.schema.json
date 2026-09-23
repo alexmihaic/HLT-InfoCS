@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://infocs.local/schemas/source-health.schema.json",
+  "title": "InfoCs Source Health v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_id", "status", "consecutive_failures"],
+  "properties": {
+    "source_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "status": { "enum": ["healthy", "degraded", "failing", "unknown"] },
+    "last_run_id": { "type": "string", "pattern": "^run-v1-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "last_attempt_at": { "type": "string", "format": "date-time" },
+    "last_success_at": { "type": "string", "format": "date-time" },
+    "consecutive_failures": { "type": "integer", "minimum": 0 },
+    "last_error_code": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]{0,63}$" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "unknown" } }, "required": ["status"] },
+      "then": { "not": { "anyOf": [{ "required": ["last_run_id"] }, { "required": ["last_attempt_at"] }, { "required": ["last_success_at"] }, { "required": ["last_error_code"] }, { "required": ["updated_at"] }] } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "healthy" } }, "required": ["status"] },
+      "then": { "properties": { "consecutive_failures": { "const": 0 } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "failing" } }, "required": ["status"] },
+      "then": { "properties": { "consecutive_failures": { "minimum": 3 } } }
+    }
+  ]
+}

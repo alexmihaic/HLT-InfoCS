@@ -73,7 +73,7 @@ No se aceptan `float`, notación exponencial ni valores monetarios sin moneda. L
 
 Una definición de fuente independiente se valida con `source.schema.json`. Debe indicar ID, nombre, organismo responsable, URL oficial, tipo de acceso, estado de configuración, hosts permitidos y política de reutilización. La política incorpora si se permiten metadatos, datos transformados, mirroring documental, texto completo y la política por defecto `link_and_hash`. `terms.checked_at` registra la fecha de revisión de condiciones cuando exista.
 
-El estado de una fuente (`active`, `disabled`, `under_review`) es configuración. No debe confundirse con su salud operativa, que pertenece a una fase posterior.
+El estado de una fuente (`active`, `disabled`, `under_review`) es configuración y no debe confundirse con salud operativa. `RunManifest` registra una ocurrencia de ejecución; `SourceHealth` es una proyección regenerable de manifests, no un estado de configuración ni un log. Sus contratos están en `docs/RUN_MANIFEST_MODEL.md` y `docs/SOURCE_HEALTH_MODEL.md`.
 
 ## Documentos y privacidad
 
@@ -152,3 +152,13 @@ No incorpora el payload del Record ni valores anteriores/nuevos. Las
 transiciones de observación de `reconcile()` (`missing_from_source`,
 `reappeared`) son eventos internos y no son persistibles mediante EventStore.
 Véase `docs/EVENT_MODEL.md` para identidad, append-only y orden de persistencia.
+
+## Ejecuciones y salud de fuentes
+
+`RunManifest` es el historial append-only de cada ejecución: ID de ocurrencia
+UUIDv4, fuente, modo de colección, alcance, tiempos UTC, status, métricas y
+versiones. `ManifestStore` valida y añade JSON canónico, sin modificar Records
+ni Events. `SourceHealth` se calcula a partir de manifests y puede regenerarse;
+no se guarda en v1 como estado independiente. BOE declara `incremental_feed`;
+la ausencia de un día no es una ausencia de Records. Véanse
+`docs/RUN_MANIFEST_MODEL.md` y `docs/SOURCE_HEALTH_MODEL.md`.

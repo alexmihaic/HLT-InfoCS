@@ -58,6 +58,7 @@ from infocs.fetch.boe.controlled import (
     persist_approved_preview,
     prepare_boe_publication_preview,
 )
+from infocs.fetch.boe.manifest import manifest_from_boe_result
 
 __all__ = [
     "BOEContractError",
@@ -105,6 +106,7 @@ __all__ = [
     "category_for_boe_section",
     "load_castellon_registry",
     "ingest_boe_summary",
+    "manifest_from_boe_result",
     "normalize_boe_item",
     "parse_boe_summary",
 ]

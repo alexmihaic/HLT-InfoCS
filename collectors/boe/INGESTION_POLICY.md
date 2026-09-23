@@ -119,3 +119,21 @@ transición. Un Record actualizado sin Event no es recuperable de forma fiable,
 por lo que se prefiere Event-first. La ausencia entre días sigue sin generar
 evento. El primer Record real histórico no se retrorellena y `data/events/`
 permanece vacío salvo `.gitkeep`.
+
+## Run Manifest y Health (contrato 03K)
+
+BOE conserva `collection_mode: incremental_feed`. Un adaptador offline mapea el
+resultado ya agregado de `ingest_boe_summary()` a `RunManifest` en memoria;
+`complete_success`, `no_daily_publication` y fallos se representan como
+`success`, `no_publication` y `failed`. `normalized`/`finalized` se derivan de
+`included` solo tras `complete_success`, que es fail-closed. Los contadores de
+Events son los Events producidos en memoria, no prueba de escritura. El
+adaptador omite mensajes de error originales y usa un resumen fijo seguro.
+
+ManifestStore y `derive_source_health()` son reutilizables y se prueban con
+temporales/manifests sintéticos. No se ejecuta BOE ni se escriben manifests o
+health reales en esta fase. La primera persistencia 03H no recibe manifest
+retroactivo; no se inventan run ID ni timestamps. Una integración productiva
+futura finalizará con la escritura del manifest: un error al escribirlo puede
+dejar Records/Events ya escritos sin manifest, porque aún no hay transacción
+multiarchivo global.

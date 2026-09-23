@@ -121,14 +121,14 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Criterio de aceptación:** un posible dato sensible no llega a datos públicos y las políticas bloquean técnicamente acciones prohibidas.
 - **Fuera de alcance:** dictamen jurídico sustitutivo, OCR masivo, índice de personas y archivo universal.
 
-## Fase 07 — Manifests y health
+## Fase 07 — Manifests y health (core reusable offline cerrado)
 
 - **Objetivo:** hacer visibles y reproducibles las ejecuciones, cambios y salud por fuente.
 - **Dependencias:** Fases 01–06.
-- **Entregables:** manifests encadenados, `health` por fuente, eventos operativos y reglas de anomalía.
-- **Tests necesarios:** encadenamiento de hashes; diferencia entre último éxito y último cambio; umbrales de anomalía; conservación de estado ante error.
-- **Criterio de aceptación:** cada ejecución sintética deja trazabilidad de fuente, resultados y fallo sin invalidar otras fuentes.
-- **Fuera de alcance:** monitorización SaaS, Issue automation real y dashboard público funcional.
+- **Entregables:** RunManifest v1 append-only, ManifestStore JSON atómico, adaptador BOE en memoria y SourceHealth derivado con estados y umbral documentados.
+- **Tests necesarios:** validación de timestamps y métricas; idempotencia/conflicto de run ID; paths; orden independiente del filesystem; health sin runs, éxito, no publicación, fallos y reset; sanitización de error BOE.
+- **Criterio de aceptación:** manifests sintéticos describen runs sin copiar Records/Events; Health es regenerable y determinista; directorios productivos siguen vacíos.
+- **Fuera de alcance:** hash chain de manifests, persistencia productiva de manifests/health, monitorización SaaS, notificaciones, GitHub Actions y dashboard público funcional.
 
 ## Fase 08 — GitHub Actions
 
