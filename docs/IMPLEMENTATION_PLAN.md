@@ -47,7 +47,25 @@ Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita
 - **Entregables:** `RecordStore`, orquestador `ingest_boe_summary()`, operaciones create/update/no_change, métricas y policy de privacidad de persistencia.
 - **Tests necesarios:** idempotencia, actualización con `changed_fields`, ausencia entre días sin missing, no_daily_publication, fallos sin writes, invalid_request, paths seguros, atomicidad y round-trip de records.
 - **Criterio de aceptación:** los datos sintéticos se escriben como JSON individual válido y estable; un fallo contractual aborta el batch antes de escribir; no se persisten records o events BOE reales.
-- **Fuera de alcance:** ejecución diaria, GitHub Actions, manifests, health real, eventos persistidos, privacy gate completo, XML/PDF crawling y cualquier otra fuente.
+- **Fuera de alcance:** ejecución diaria, GitHub Actions, manifests, health real, Privacy Gate v1 (Fase 03F), XML/PDF crawling y cualquier otra fuente.
+
+### Fase 03F — Privacy Gate v1 (implementada, revisión de falsos positivos en curso)
+
+- **Objetivo:** impedir técnicamente que un `Record` llegue al almacén público sin una decisión de privacidad explícita.
+- **Dependencias:** Fases 01–03E y política de reutilización de cada fuente.
+- **Entregables:** gate configurable en JSON, decisiones `allow`/`quarantine`/`reject`, integración obligatoria con ingesta BOE y `RecordStore`, métricas y documentación.
+- **Tests necesarios:** patrones de alto riesgo y negativos, datos institucionales permitidos, cero writes para quarantine/reject, fallo del gate sin writes y coexistencia de records seguros y aislados.
+- **Criterio de aceptación:** ninguna escritura pasa sin `allow`; no se almacenan valores sensibles en razones ni logs; `data/records/` y `data/events/` no reciben datos BOE reales.
+- **Fuera de alcance:** redacción automática, OCR, IA, mirroring, DLP completo, automatización diaria y siguiente fuente.
+
+### Fase 03F.1 — Endurecimiento de falsos positivos
+
+- **Objetivo:** reducir cuarentenas indebidas antes de evaluar datos reales con el gate.
+- **Dependencias:** Fase 03F y corpus sintético de patrones.
+- **Entregables:** separación estructural de identificadores personales/empresariales/ambiguos, teléfonos con contexto explícito, emails de proveedores personales conocidos, fallos cerrados y pruebas anti-bypass.
+- **Tests necesarios:** positivos y negativos sintéticos para los patrones y configuraciones; cero escrituras ante error de privacidad.
+- **Criterio de aceptación:** teléfonos genéricos y dominios organizativos desconocidos no se clasifican como personales; reglas ambiguas son explícitas; errores del gate no permiten escritura.
+- **Fuera de alcance:** run BOE real, persistencia de datos reales, DLP completo, OCR, IA y otra fuente.
 
 ## Fase 04 — BDNS
 

@@ -1,0 +1,50 @@
+{
+  "schema_version": "1",
+  "rules": {
+    "spanish_personal_identifier": {
+      "enabled": true,
+      "decision": "quarantine"
+    },
+    "ambiguous_tax_identifier": {
+      "enabled": true,
+      "decision": "quarantine"
+    },
+    "iban": {
+      "enabled": true,
+      "decision": "quarantine"
+    },
+    "personal_email": {
+      "enabled": true,
+      "decision": "quarantine"
+    },
+    "personal_phone": {
+      "enabled": true,
+      "decision": "quarantine"
+    },
+    "structured_private_address": {
+      "enabled": true,
+      "decision": "quarantine"
+    }
+  },
+  "personal_email_providers": [
+    "gmail.com",
+    "googlemail.com",
+    "hotmail.com",
+    "outlook.com",
+    "yahoo.com",
+    "yahoo.es",
+    "icloud.com",
+    "proton.me",
+    "protonmail.com"
+  ],
+  "personal_phone_context_terms": [
+    "telefono particular",
+    "teléfono particular",
+    "movil particular",
+    "móvil particular",
+    "telefono personal",
+    "teléfono personal",
+    "movil personal",
+    "móvil personal"
+  ]
+}

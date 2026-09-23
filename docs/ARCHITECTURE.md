@@ -51,11 +51,17 @@ Un mismo hecho publicado por dos fuentes conserva ambos records; una relación f
 
 La zona temporal de cada ejecución precede al repositorio público. Antes de publicar se aplican detección preventiva, minimización, exclusión o cuarentena de posibles datos personales. Un resultado en cuarentena puede conservar metadatos y URL oficial, pero no texto completo público.
 
+El `PrivacyGate` v1 es obligatorio entre `Record` y `RecordStore`: clasifica
+cada record como `allow`, `quarantine` o `reject`. El store vuelve a comprobar
+la decisión, de modo que un collector no puede publicar por olvidar una llamada
+al gate. Un fallo del motor o de su configuración aborta el batch antes de
+nuevas escrituras; una detección sensible sólo aísla el record afectado.
+
 La política es individual por fuente: metadatos y enlaces por defecto; documentos, texto completo o capturas solo si su política de reutilización lo permite expresamente. `archive/` existe para copias permitidas y debe permanecer prácticamente vacío mientras no haya políticas aprobadas.
 
 ### Validación
 
-La entrada normalizada debe pasar el schema de `RecordCandidate` y reglas semánticas antes de llegar a datos canónicos. El finalizador asigna identidad y `technical.content_hash` y valida el resultado contra el schema más estricto de `Record`; la reconciliación requiere records anteriores con hash coherente. Los controles completos de privacidad y políticas de fuente siguen pendientes. Los errores graves del conjunto impedirán publicar ese conjunto; los errores aislados no destruirán datos válidos de otras fuentes.
+La entrada normalizada debe pasar el schema de `RecordCandidate` y reglas semánticas antes de llegar a datos canónicos. El finalizador asigna identidad y `technical.content_hash` y valida el resultado contra el schema más estricto de `Record`; el Privacy Gate decide antes de cualquier escritura; la reconciliación requiere records anteriores con hash coherente. Los errores graves del conjunto impedirán publicar ese conjunto; los errores aislados no destruirán datos válidos de otras fuentes.
 
 ## Datos versionados e histórico
 
@@ -87,8 +93,9 @@ contenido como nombre de archivo. La escritura valida el `Record`, comprueba
 el hash semántico, serializa con `Record.canonical_json()` y newline final,
 escribe un temporal en el mismo directorio y ejecuta un reemplazo atómico.
 Esta abstracción no crea bases de datos ni persiste eventos, manifests o health.
-En BOE 03E se utiliza sólo con temporales de test: la persistencia de datos
-administrativos reales permanece bloqueada hasta el privacy gate.
+En BOE 03E/03F se utiliza sólo con temporales de test: la persistencia de datos
+administrativos BOE reales permanece bloqueada hasta una aprobación explícita
+de publicación posterior al gate.
 
 ## Automatización y publicación
 

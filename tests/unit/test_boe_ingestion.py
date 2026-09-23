@@ -32,6 +32,7 @@ from infocs.fetch.boe import (
     load_castellon_registry,
 )
 from infocs.models import RecordStatus
+from infocs.privacy import PrivacyGate, PrivacyGateError
 from infocs.store import RecordStore
 
 
@@ -111,6 +112,9 @@ class BOEIngestionTests(unittest.TestCase):
                 "updated": 0,
                 "unchanged": 0,
                 "excluded": 1,
+                "privacy_allowed": 1,
+                "privacy_quarantined": 0,
+                "privacy_rejected": 0,
             })
             self.assertEqual([operation.type.value for operation in result.operations], ["create"])
             self.assertEqual([event.type for event in result.events], ["create"])
@@ -225,7 +229,7 @@ class BOEIngestionTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             store = RecordStore(directory)
             invalid = item("", title="Resolución relativa a Borriana")
-            with self.assertRaises(BOEIngestionError):
+            with self.assertRaises(BOEIngestionError) as raised:
                 ingest_boe_summary(
                     summary(included_item("BOE-A-2099-8"), invalid),
                     registry=REGISTRY, store=store,
@@ -245,6 +249,44 @@ class BOEIngestionTests(unittest.TestCase):
             for event in result.events:
                 Draft202012Validator(event_schema, format_checker=FormatChecker()).validate(event.to_dict())
             self.assertFalse((Path(directory) / "events").exists())
+
+    def test_privacy_quarantine_is_per_record_and_safe_record_is_written(self) -> None:
+        with TemporaryDirectory() as directory:
+            store = RecordStore(directory)
+            result = ingest_boe_summary(
+                summary(
+                    included_item("BOE-A-2099-PRIV-SAFE"),
+                    included_item("BOE-A-2099-PRIV-SENSITIVE", "Resolución relativa a Borriana. DNI 12345678Z"),
+                ),
+                registry=REGISTRY, store=store, detected_at=NOW, last_checked_at=NOW,
+            )
+            self.assertEqual(result.metrics.privacy_allowed, 1)
+            self.assertEqual(result.metrics.privacy_quarantined, 1)
+            self.assertEqual(result.metrics.privacy_rejected, 0)
+            self.assertEqual(result.metrics.created, 1)
+            self.assertEqual(len(store.list_source("boe")), 1)
+            self.assertEqual(result.events[0].type, "create")
+            result_text = repr(result) + str(result.metrics.to_dict())
+            self.assertNotIn("12345678Z", result_text)
+
+    def test_privacy_engine_failure_aborts_before_any_write(self) -> None:
+        class FailingGate(PrivacyGate):
+            def evaluate(self, record):  # type: ignore[no-untyped-def]
+                raise PrivacyGateError("internal failure near DNI 12345678Z")
+
+        with TemporaryDirectory() as directory:
+            gate = FailingGate()
+            store = RecordStore(directory, privacy_gate=gate)
+            with self.assertRaises(BOEIngestionError) as raised:
+                ingest_boe_summary(
+                    summary(included_item("BOE-A-2099-PRIV-FAIL", "Resolución relativa a Borriana. DNI 12345678Z")),
+                    registry=REGISTRY, store=store, detected_at=NOW, last_checked_at=NOW,
+                    privacy_gate=gate,
+                )
+            self.assertNotIn("12345678Z", str(raised.exception))
+            self.assertNotIn("12345678Z", repr(raised.exception))
+            self.assertTrue(raised.exception.__suppress_context__)
+            self.assertEqual(tuple(Path(directory).iterdir()), ())
 
 
 if __name__ == "__main__":

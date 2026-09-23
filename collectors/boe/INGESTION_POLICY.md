@@ -7,11 +7,13 @@ se escriben records BOE reales en `data/records/`, ni eventos reales en
 `data/events/`.
 
 ```text
-LIVE REAL DATA PERSISTENCE BLOCKED until privacy gate exists
+LIVE REAL DATA PERSISTENCE BLOCKED pending explicit publication approval
 ```
 
-No se implementa todavía el privacy gate completo; la barrera se aplica por
-el contrato de ejecución y por los tests que usan `TemporaryDirectory`.
+El Privacy Gate v1 es una barrera técnica obligatoria en el flujo: clasifica
+cada `Record` antes de `RecordStore.write()`, y el store vuelve a comprobarlo.
+La persistencia de datos administrativos BOE reales sigue bloqueada en esta
+fase; los tests usan `TemporaryDirectory` y datos sintéticos.
 
 ## Semántica de colección
 
@@ -36,6 +38,7 @@ BOESummary / BOEFetchResult
   -> decisión territorial
   -> normalización
   -> finalize_record()
+  -> Privacy Gate
   -> comparación por record.id y content_hash
   -> RecordStore
 ```
@@ -47,6 +50,8 @@ Para cada `BOEItem`:
 - El mismo hash produce `no_change` y ningún evento ni escritura.
 - Un hash distinto produce `update`, reemplaza el JSON del record y devuelve
   `changed_fields` usando `infocs.diff`; no se reimplementa el diff.
+- Un record `quarantine` o `reject` no produce operación ni evento público.
+  Los records seguros de la misma edición sí pueden continuar.
 
 Los duplicados semánticamente iguales del mismo batch se colapsan. Dos
 observaciones del mismo ID con contenido incompatible hacen fallar el batch de
@@ -57,7 +62,8 @@ forma explícita.
 `ingest_boe_summary()` devuelve un estado y métricas:
 
 ```text
-seen, included, created, updated, unchanged, excluded
+seen, included, created, updated, unchanged, excluded,
+privacy_allowed, privacy_quarantined, privacy_rejected
 ```
 
 Los estados proceden del transporte BOE:
@@ -103,5 +109,6 @@ se crea en el mismo directorio, se vacía y sincroniza, se vuelve a validar y se
 aplica `os.replace`.
 
 Los events se construyen en memoria con el modelo común y se validan contra su
-schema en tests. No se persisten en 03E; manifests, health y automatización
-diaria pertenecen a fases posteriores.
+schema en tests. No se persisten en 03E/03F; manifests, health y automatización
+diaria pertenecen a fases posteriores. Las razones del Privacy Gate no copian
+valores sensibles.

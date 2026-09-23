@@ -20,6 +20,7 @@ from infocs.fetch.boe.territorial import (
     decide_boe_territorial_inclusion,
 )
 from infocs.models import DataValidationError, Record
+from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate, PrivacyGateError
 from infocs.store import RecordStore, RecordStoreError
 
 
@@ -56,6 +57,9 @@ class BOEIngestionMetrics:
     updated: int = 0
     unchanged: int = 0
     excluded: int = 0
+    privacy_allowed: int = 0
+    privacy_quarantined: int = 0
+    privacy_rejected: int = 0
 
     def to_dict(self) -> dict[str, int]:
         return {
@@ -65,6 +69,9 @@ class BOEIngestionMetrics:
             "updated": self.updated,
             "unchanged": self.unchanged,
             "excluded": self.excluded,
+            "privacy_allowed": self.privacy_allowed,
+            "privacy_quarantined": self.privacy_quarantined,
+            "privacy_rejected": self.privacy_rejected,
         }
 
 
@@ -92,6 +99,7 @@ def ingest_boe_summary(
     store: RecordStore,
     detected_at: datetime,
     last_checked_at: datetime,
+    privacy_gate: PrivacyGate | None = None,
 ) -> BOEIngestionResult:
     """Procesa una edición BOE sin aplicar reconciliación de snapshots.
 
@@ -99,11 +107,21 @@ def ingest_boe_summary(
     llamar a ``store.write``. Una excepción contractual no produce ninguna
     escritura. La ausencia de un ítem en otro sumario no se examina.
     """
+    gate = privacy_gate if privacy_gate is not None else PrivacyGate.default()
+    try:
+        gate.validate()
+    except PrivacyGateError as error:
+        raise BOEIngestionError("La configuración del Privacy Gate no es válida.") from error
+
     summary = _summary_or_status(fetched)
     if isinstance(summary, BOEIngestionResult):
         return summary
 
-    metrics = {"seen": len(summary.items), "included": 0, "created": 0, "updated": 0, "unchanged": 0, "excluded": 0}
+    metrics = {
+        "seen": len(summary.items), "included": 0, "created": 0, "updated": 0,
+        "unchanged": 0, "excluded": 0, "privacy_allowed": 0,
+        "privacy_quarantined": 0, "privacy_rejected": 0,
+    }
     planned: dict[str, tuple[Record, BOEOperation]] = {}
     events: list[Event] = []
 
@@ -127,6 +145,20 @@ def ingest_boe_summary(
             raise BOEIngestionError(
                 f"El ítem BOE {item.official_id!r} no puede incorporarse; batch abortado."
             ) from error
+
+        try:
+            privacy_decision = gate.evaluate(record)
+            if not isinstance(privacy_decision, PrivacyDecision) or privacy_decision.record_id != record.id:
+                raise PrivacyGateError("El Privacy Gate devolvió una decisión inválida.")
+        except Exception:
+            raise BOEIngestionError("El Privacy Gate falló; batch abortado antes de escribir.") from None
+        if privacy_decision.decision == PrivacyDecisionType.QUARANTINE:
+            metrics["privacy_quarantined"] += 1
+            continue
+        if privacy_decision.decision == PrivacyDecisionType.REJECT:
+            metrics["privacy_rejected"] += 1
+            continue
+        metrics["privacy_allowed"] += 1
 
         if record.id in planned:
             previous_batch_record, _ = planned[record.id]

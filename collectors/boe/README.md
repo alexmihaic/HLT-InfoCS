@@ -1,4 +1,4 @@
-# BOE — Transporte, parser, territorialidad y normalización (Fases 03B–03D)
+# BOE — Transporte, parser, territorialidad, normalización e ingesta (03B–03F)
 
 ## Finalidad y límite
 
@@ -8,6 +8,7 @@ Este módulo implementa exclusivamente la primera parte del adaptador BOE:
 API BOE -> transporte HTTP seguro -> validación -> BOESummary / BOEItem
                                                         -> decisión territorial explicable
                                                         -> normalizador -> RecordCandidate
+                                                        -> finalize_record() -> Privacy Gate -> RecordStore
 ```
 
 El normalizador sólo crea un `RecordCandidate` activo para una decisión
@@ -121,7 +122,7 @@ documentos, procedencia y límites están en
 persistencia, reconciliación BOE, eventos BOE, manifests ni inspección de
 documentos individuales.
 
-## Ingesta incremental 03E
+## Ingesta incremental 03E y Privacy Gate 03F
 
 El sumario diario BOE está declarado como `collection_semantics:
 incremental_feed` en `source_contract.yaml`: cada edición contiene
@@ -139,9 +140,14 @@ devuelven en memoria para validar el contrato, pero no se guardan todavía en
 caller (en producción futura sería `data/records/<fuente>/`). La ruta del ID
 se codifica de forma determinista, la representación es UTF-8 con newline
 final y cada reemplazo usa un temporal del mismo directorio y `os.replace`.
+Antes de `RecordStore.write()` el `PrivacyGate` v1 detecta patrones de alto
+riesgo en textos seleccionados. `allow` permite escribir, mientras que
+`quarantine` y `reject` no escriben payload ni evento público. El store vuelve a
+evaluar el record, por lo que el gate no depende de un recuerdo del collector.
 Los tests utilizan exclusivamente directorios temporales. La persistencia de
-datos BOE reales está bloqueada explícitamente hasta disponer del privacy gate:
+datos BOE reales sigue bloqueada en esta fase aunque la barrera técnica ya esté
+implementada:
 
 ```text
-LIVE REAL DATA PERSISTENCE BLOCKED until privacy gate exists
+LIVE REAL DATA PERSISTENCE BLOCKED pending explicit publication approval
 ```

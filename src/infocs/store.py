@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from infocs.diff.core import content_hash
 from infocs.models import DataValidationError, Record, validate_record_payload
+from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate
 
 
 _SAFE_SOURCE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*\Z")
@@ -32,8 +33,13 @@ class RecordStore:
     ejecución futura podrá apuntar a ``data/records`` explícitamente.
     """
 
-    def __init__(self, root: str | os.PathLike[str]) -> None:
+    def __init__(self, root: str | os.PathLike[str], *, privacy_gate: PrivacyGate | None = None) -> None:
         self.root = Path(root)
+        # El gate siempre existe; el valor por defecto carga la política
+        # versionada. La opción sólo permite inyectar una configuración de test
+        # o de una futura fuente, no desactivar el control.
+        self.privacy_gate = privacy_gate if privacy_gate is not None else PrivacyGate.default()
+        self.privacy_gate.validate()
 
     def path_for(self, source_id: str, record_id: str) -> Path:
         """Devuelve el path estable sin interpolar IDs externos como rutas."""
@@ -67,6 +73,14 @@ class RecordStore:
     def write(self, record: Record) -> Path:
         """Valida y reemplaza un JSON completo mediante un temporal del mismo dir."""
         validated = _validated_record(record)
+        try:
+            decision = self.privacy_gate.evaluate(validated)
+        except Exception:
+            raise RecordStoreError("El Privacy Gate no pudo evaluar el Record.") from None
+        if not isinstance(decision, PrivacyDecision) or decision.record_id != validated.id:
+            raise RecordStoreError("El Privacy Gate devolvió una decisión inválida para el Record.")
+        if decision.decision != PrivacyDecisionType.ALLOW:
+            raise RecordStoreError("El Privacy Gate no permite escribir este Record.")
         path = self.path_for(validated.source.id, validated.id)
         path.parent.mkdir(parents=True, exist_ok=True)
         payload = validated.canonical_json() + "\n"

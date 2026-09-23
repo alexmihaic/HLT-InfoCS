@@ -85,6 +85,13 @@ enlace oficial + metadatos + hash cuando exista
 
 `not_archived` con `has_local_copy: false` es válido. En cambio, `archived` exige copia local y autorización de publicación. Este modelo no crea archivos locales ni consulta condiciones de ninguna fuente.
 
+Antes de persistir un `Record`, el `PrivacyGate` común produce una decisión
+`allow`, `quarantine` o `reject`. `quarantine` y `reject` no modifican el
+record ni su `content_hash`: simplemente impiden escribir el payload público.
+Las razones son técnicas (`rule` y `field`) y no contienen el valor detectado.
+La persistencia de datos BOE reales continúa bloqueada; las pruebas usan
+directorios temporales.
+
 ## Procedencia y territorialidad
 
 `provenance` es obligatorio y contiene `collector`, `collector_version`, `transformed_by_infocs` y una lista, que puede estar vacía, de `territorial_matches`.

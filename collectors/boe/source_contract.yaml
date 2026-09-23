@@ -3,6 +3,7 @@ source_id: boe
 status: verified
 verified_at: "2026-09-21"
 collection_semantics: incremental_feed
+privacy_gate_required: true
 
 source_definition:
   id: boe
@@ -133,6 +134,8 @@ territoriality:
 
 documents:
   default_policy: link_and_hash
+  mirror_documents: false
+  fulltext_publication: false
   published_from_daily_summary:
     - url_pdf
     - url_html
