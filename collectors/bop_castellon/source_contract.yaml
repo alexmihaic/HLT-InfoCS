@@ -1,0 +1,201 @@
+schema_version: "1"
+source_id: bop_castellon
+status: partially_verified
+verified_at: "2026-09-24"
+collection_semantics: incremental_feed
+collection_scope: province
+province_code: "12"
+privacy_gate_required: true
+publication_review_required: true
+
+source_definition:
+  id: bop_castellon
+  name: Boletín Oficial de la Provincia de Castellón
+  responsible_authority:
+    id: diputacion_castellon
+    name: Diputación Provincial de Castellón
+    administration_level: provincial
+  official_url: https://bop.dipcas.es/PortalBOP/
+  access_type: html
+  status: active
+  reuse:
+    status: unknown
+    metadata_publication: false
+    transformed_data_publication: false
+    mirror_documents: false
+    fulltext_publication: false
+    default_document_policy: link_and_hash
+  allowed_hosts:
+    - bop.dipcas.es
+  terms:
+    checked_at: "2026-09-24"
+    source: https://www.dipcas.es/es/aviso-legal.html
+    notes: >-
+      No se encontró licencia específica del BOP que aclare la reutilización de
+      anuncios. Los booleanos de publicación son una política preventiva de
+      InfoCs, no una conclusión jurídica.
+
+access:
+  type: observed_undocumented
+  transport_readiness: ready_for_transport
+  primary:
+    name: Archivo de boletines del Portal BOP
+    retrieval_contract: observed_undocumented_jsf_ajax
+    direct_entry_url: https://bop.dipcas.es/PortalBOP/boletinesAntiguos/
+    navigation_entry_url: https://bop.dipcas.es/PortalBOP/buscador/
+    method_sequence:
+      - GET direct_entry_url, or GET navigation_entry_url
+      - optional POST buttons:j_idt72 from form buttons; partial redirect to direct_entry_url
+      - POST buscadorForm:j_idt152 with a fresh ViewState
+    form:
+      id: buscadorForm
+      method: POST
+      action: /PortalBOP/boletinesAntiguos/;jsessionid={session}
+      date_format: dd/mm/yy
+      edition_number_field: buscadorForm:numBoletinAntiguo
+      date_start_field: buscadorForm:fechaInicialAntiguo_input
+      date_end_field: buscadorForm:fechaFinalAntiguo_input
+      submit_name: buscadorForm:j_idt152
+      required_hidden_fields:
+        - buscadorForm
+        - javax.faces.ViewState
+      ajax: true
+      response_content_type: text/xml;charset=UTF-8
+      updated_result_component: formListBoletinAntiguos
+    session:
+      cookies_observed:
+        - JSESSIONID
+        - TS019819ec
+        - TS01dc4fc6
+      view_state: fresh_per_get_per_form
+      cookie_values_versioned: false
+    documented_api: false
+    format: html
+    observed_content_type: text/html;charset=UTF-8
+    ajax_transport_content_type: text/xml;charset=UTF-8
+    pagination: not_verified
+    date_query_contract: observed_reproducible
+    observed_date_to_edition_mappings:
+      - requested_date: "2026-09-24"
+        displayed_edition_number: "115"
+        displayed_edition_code: B260924
+        idBoletin: "26878"
+      - requested_date: "2026-09-22"
+        displayed_edition_number: "114"
+        displayed_edition_code: B260922
+        idBoletin: "26877"
+  downloads:
+    - name: Boletín completo
+      type: observed_undocumented
+      method: GET
+      url_template: https://bop.dipcas.es/PortalBOP/api/descargarBoletin?idBoletin={idBoletin}&idioma={idioma}
+      response_body: not_requested
+    - name: Anuncio individual
+      type: observed_undocumented
+      method: GET
+      url_template: https://bop.dipcas.es/PortalBOP/api/descargarAnuncio?idAnuncio={idAnuncio}&idioma={idioma}
+      observed_head_status: 200
+      observed_content_type: application/octet-stream; charset=UTF-8
+      observed_content_disposition_suffix: .pdf
+      response_body: not_downloaded
+
+formats:
+  preferred: html
+  alternatives:
+    - pdf
+  unavailable_or_not_found:
+    - json_listing_contract
+    - xml_listing_contract
+    - rss_atom_feed
+
+identity:
+  bulletin:
+    observed_parameter: idBoletin
+    observed_type: numeric_string
+    status: observed_undocumented
+    proposed_source_edition_id: idBoletin
+    stable_within_observed_views: true
+    stable_across_languages: not_verified
+    official_legal_identifier: not_established
+  announcement:
+    observed_parameter: idAnuncio
+    observed_type: numeric_string
+    status: observed_undocumented
+    observed_sample: "168123"
+    repeated_in_listing: true
+    linked_download_head_status: 200
+    proposed_source_official_id: idAnuncio
+    stability_note: stable portal identifier observed, not documented public identifier
+    stable_across_languages: not_verified
+  fallback: >-
+    No inventar identificadores oficiales. Una futura integración conservará el
+    ID de portal si su estabilidad se verifica; si falta, aplicará la estrategia
+    común del Core y registrará la estrategia utilizada.
+
+dates:
+  ordinary_publication_days:
+    documented: [tuesday, thursday, saturday]
+    applies: all_year
+  issue_publication_date_field: observed_in_archive_row
+  issue_date_format: dd/mm/yyyy
+  field_name_documented: false
+  no_publication_http_semantics: not_verified
+  internal_observation_timestamps:
+    - detected_at
+    - last_checked_at
+
+territoriality:
+  source_scope: province
+  province_code: "12"
+  include_by_publication_in_source: true
+  municipality_field: not_found
+  authority_field_contract: not_found_per_announcement
+  raw_section_headings: observed_in_html_not_authority
+
+documents:
+  default_policy: link_and_hash
+  mirror_documents: false
+  fulltext_publication: false
+  bulletin_pdf_link_observed: true
+  individual_pdf_link_observed: true
+  individual_pdf_head_content_type: application/octet-stream; charset=UTF-8
+  html_or_xml_individual_document: not_verified
+  official_document_hash: not_found
+  local_copy_required: false
+
+privacy:
+  privacy_gate_required: true
+  personal_data_risk: high
+  public_payload_fixtures: prohibited
+
+health:
+  valid_listing_status: 200
+  no_publication: not_verified
+  invalid_request: not_verified
+  missing_announcement: not_verified
+  server_failure: not_verified
+  robots_txt_status: 404
+
+reuse:
+  status: unknown
+  metadata_publication: blocked_pending_review
+  transformed_data_publication: blocked_pending_review
+  technical_collection_for_development: allowed
+  public_record_publication: not_authorized_by_this_audit
+  source_specific_terms: not_found
+  policy: >-
+    No publicar títulos ni texto de anuncios hasta una revisión específica.
+    Metadatos mínimos y enlaces siguen sujetos a revisión de reutilización;
+    estos flags no constituyen una conclusión jurídica.
+
+automation:
+  documented_rate_limit: not_found
+  documented_frequency: not_found
+  documented_user_agent_requirement: not_found
+  proposed_initial_usage: >-
+    Una consulta de listado por ejecución, sin paralelismo ni polling; no
+    descargar documentos automáticamente y detenerse ante respuestas inesperadas.
+
+security:
+  allowed_hosts:
+    - bop.dipcas.es
