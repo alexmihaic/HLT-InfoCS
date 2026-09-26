@@ -193,6 +193,14 @@ class BOPParserTests(unittest.TestCase):
         self.assertEqual(items[0].document_url, "https://bop.dipcas.es/PortalBOP/api/descargarAnuncio?idAnuncio=100001&idioma=es")
         self.assertEqual(len(items), 3)  # el enlace general usa otra clase y queda fuera de las parejas
         self.assertEqual(items, parse_announcements_page(ANNOUNCEMENTS_HTML))
+        self.assertEqual(
+            items[0].heading_path,
+            ("Grupo de ejemplo", "AYUNTAMIENTO DE EJEMPLO"),
+        )
+        self.assertEqual(
+            items[2].heading_path,
+            ("Grupo de ejemplo", "AYUNTAMIENTO DE EJEMPLO", "Grupo secundario"),
+        )
 
     def test_sanitized_public_dom_structure_preserves_local_announcement_pairs(self) -> None:
         """Captured DOM sample: synthetic text/IDs, with its observed structure retained."""
@@ -214,6 +222,14 @@ class BOPParserTests(unittest.TestCase):
         )
         self.assertTrue(all(item.document_url.startswith("https://bop.dipcas.es/PortalBOP/api/descargarAnuncio?") for item in items))
         self.assertNotIn("200001", [item.portal_id for item in items])  # link general del boletín excluido
+        self.assertEqual(
+            items[0].heading_path,
+            ("AYUNTAMIENTO DE EJEMPLO",),
+        )
+        self.assertEqual(
+            items[2].heading_path,
+            ("AYUNTAMIENTO DE EJEMPLO",),
+        )
 
     def test_sanitized_public_dom_structure_rejects_ambiguous_and_duplicate_pairs(self) -> None:
         no_title = REAL_STRUCTURE_HTML.replace(

@@ -271,6 +271,7 @@ def parse_announcements_page(html: str) -> tuple[BOPAnnouncement, ...]:
     ]
     if not components:
         raise BOPContractError("announcement_structure_invalid")
+    heading_paths = _heading_paths_for_components(container, components)
 
     # El portal no siempre crea un contenedor por anuncio. En varios grupos,
     # el wrapper de descarga y el título son hermanos directos repetidos;
@@ -321,7 +322,14 @@ def parse_announcements_page(html: str) -> tuple[BOPAnnouncement, ...]:
             raise BOPContractError("duplicate_announcement_id")
         seen_ids.add(ids[0])
         try:
-            announcements.append(BOPAnnouncement(ids[0], title.all_text(), document_url))
+            announcements.append(
+                BOPAnnouncement(
+                    ids[0],
+                    title.all_text(),
+                    document_url,
+                    heading_path=heading_paths.get(id(component), ()),
+                )
+            )
         except ValueError as error:
             raise BOPContractError("announcement_fields_invalid") from error
 
@@ -340,6 +348,36 @@ def parse_announcements_page(html: str) -> tuple[BOPAnnouncement, ...]:
             ),
         )
     return tuple(announcements)
+
+
+def _heading_paths_for_components(root: _Node, components: list[_Node]) -> dict[int, tuple[str, ...]]:
+    """Conserva headings semánticos previos por nivel, sin exponer clases HTML."""
+    targets = {id(component) for component in components}
+    found: dict[int, tuple[str, ...]] = {}
+
+    def visit(parent: _Node, inherited: dict[int, str]) -> None:
+        active = dict(inherited)
+        for child in parent.children:
+            classes = _classes(child)
+            heading_level: int | None = None
+            if "ui-accordion-header" in classes:
+                heading_level = 1
+            else:
+                for level in (1, 2, 3):
+                    if f"titulo{level}" in classes:
+                        heading_level = level
+                        break
+            if heading_level is not None:
+                text = child.all_text().strip()
+                if text:
+                    active = {level: value for level, value in active.items() if level < heading_level}
+                    active[heading_level] = text
+            if id(child) in targets:
+                found[id(child)] = tuple(active[level] for level in sorted(active))
+            visit(child, active)
+
+    visit(root, {})
+    return found
 
 
 def diagnose_announcement_structure(

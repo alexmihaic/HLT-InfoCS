@@ -17,12 +17,13 @@ class BOPFetchStatus(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class BOPAnnouncement:
-    """Anuncio listado; su ID es técnico del portal, no identificador jurídico."""
+    """Anuncio listado; su ID es de portal observado, no ID jurídico documentado."""
 
     portal_id: str
     title: str
     document_url: str
     group_heading: str | None = None
+    heading_path: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.portal_id or not re.fullmatch(r"\d+", self.portal_id):
@@ -31,6 +32,11 @@ class BOPAnnouncement:
             raise ValueError("El título del anuncio no puede estar vacío.")
         if not self.document_url:
             raise ValueError("El anuncio requiere una URL documental oficial.")
+        if not isinstance(self.heading_path, tuple) or any(
+            not isinstance(heading, str) or not heading.strip()
+            for heading in self.heading_path
+        ):
+            raise ValueError("heading_path debe contener sólo encabezados textuales no vacíos.")
 
 
 @dataclass(frozen=True, slots=True)

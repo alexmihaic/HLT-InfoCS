@@ -6,6 +6,11 @@ from infocs.fetch.bop_castellon.models import (
     BOPFetchStatus,
     BOPIssue,
 )
+from infocs.fetch.bop_castellon.normalize import (
+    BOPNormalizationError,
+    category_for_bop_title,
+    normalize_bop_announcement,
+)
 from infocs.fetch.bop_castellon.parser import (
     BOPContractError,
     parse_bop_partial_response,
@@ -18,6 +23,9 @@ __all__ = [
     "BOPFetchResult",
     "BOPFetchStatus",
     "BOPIssue",
+    "BOPNormalizationError",
     "BOPTransport",
+    "category_for_bop_title",
+    "normalize_bop_announcement",
     "parse_bop_partial_response",
 ]
