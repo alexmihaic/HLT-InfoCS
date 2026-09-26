@@ -1,0 +1,175 @@
+schema_version: "1"
+source_id: bdns
+status: partially_verified
+verified_at: "2026-09-26"
+collection_semantics: snapshot
+privacy_gate_required: true
+
+source_definition:
+  id: bdns
+  name: Base de Datos Nacional de Subvenciones — SNPSAP
+  responsible_authority:
+    id: igae
+    name: Intervención General de la Administración del Estado
+    administration_level: state
+  official_url: https://www.infosubvenciones.es/bdnstrans/GE/es/inicio
+  access_type: official_api
+  status: active
+  reuse:
+    status: conditional
+    metadata_publication: true
+    transformed_data_publication: true
+    mirror_documents: false
+    fulltext_publication: false
+    default_document_policy: link_and_hash
+  allowed_hosts:
+    - www.infosubvenciones.es
+  terms:
+    checked_at: "2026-09-26"
+    source: https://www.infosubvenciones.es/bdnstrans/GE/es/avisolegal
+    notes: >-
+      Aviso Legal SNPSAP permite reutilización comercial/no comercial bajo
+      atribución, no desnaturalización, mención de actualización cuando conste,
+      no patrocinio y conservación de metadatos. Los datos personales tienen
+      limitación de finalidad y deben anonimizarse antes de reutilizarse.
+
+access:
+  type: official_documented
+  documentation_status: official_openapi_and_user_guide
+  api_version: "1.1.0"
+  primary:
+    name: SNPSAP API — búsqueda de convocatorias públicas
+    method: GET
+    url_template: https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda
+    response_mime: application/json
+    authentication: public_query_no_auth_documented
+    query:
+      pagination:
+        page: zero_based_example_0
+        pageSize: example_50_maximum_not_documented
+      sort:
+        fields: [numeroConvocatoria, mrr, nivel1, nivel2, nivel3, fechaRecepcion, descripcion, descripcionLeng]
+        direction: [asc, desc]
+      filters:
+        - numeroConvocatoria
+        - descripcion
+        - fechaDesde
+        - fechaHasta
+        - tipoAdministracion
+        - organos
+        - regiones
+        - tiposBeneficiario
+        - instrumentos
+        - finalidad
+        - ayudaEstado
+    response_pagination:
+      - content
+      - totalPages
+      - totalElements
+      - numberOfElements
+      - pageable.pageNumber
+      - pageable.pageSize
+      - pageable.offset
+      - empty
+    documentation: https://www.infosubvenciones.es/bdnstrans/estaticos/doc/snpsap-api.json
+  detail:
+    method: GET
+    url_template: https://www.infosubvenciones.es/bdnstrans/api/convocatorias?numConv={numeroConvocatoria}&vpd={optional_portal_id}
+    response_mime: application/json
+    documentation: https://www.infosubvenciones.es/bdnstrans/estaticos/doc/snpsap-api.json
+  document_download:
+    method: GET
+    url_template: https://www.infosubvenciones.es/bdnstrans/api/convocatorias/documentos?idDocumento={idDocumento}
+    response_mime: application/octet-stream
+    use: not_selected; retain official link only
+    documentation: https://www.infosubvenciones.es/bdnstrans/estaticos/doc/snpsap-api.json
+  constraints:
+    cookies: not_documented_as_required
+    custom_headers: not_documented_as_required
+    redirects: not_specified
+    timeout: not_specified
+    maximum_response_size: not_specified
+    rate_limit: numeric_limit_not_found; access_restriction_for_abuse_documented
+    dynamic_data_warning: results_may_be_corrected_inserted_modified_or_removed
+
+identity:
+  convocatoria:
+    primary_external_field: numeroConvocatoria
+    detail_field: codigoBDNS
+    meaning: Código BDNS de la convocatoria
+    status: documented
+    internal_numeric_field: id
+    internal_field_note: API also describes id as convocatoria identifier; do not equate with public code without further evidence
+  concesion:
+    fields: [id, idConcesion, idConvocatoria, numeroConvocatoria]
+    meaning: separate individual grant award linked to a convocatoria
+  extracto:
+    fields: [numAnuncio, cve, url, desDiarioOficial, datPublicacion]
+    meaning: official-diary extract associated with the convocatoria; independent global identity stability not documented
+
+fields:
+  list:
+    structured: [numeroConvocatoria, fechaRecepcion, nivel1, nivel2, nivel3, codigoInvente, mrr]
+    text: [descripcion, descripcionLeng]
+  detail:
+    structured: [codigoBDNS, fechaRecepcion, presupuestoTotal, tipoConvocatoria, organo.nivel1, organo.nivel2, organo.nivel3, regiones, tiposBeneficiarios, fechaInicioSolicitud, fechaFinSolicitud, abierto, sePublicaDiarioOficial]
+    text: [descripcion, descripcionLeng, descripcionFinalidad, descripcionBasesReguladoras, textInicio, textFin]
+    documents_metadata: [documentos.id, documentos.nombreFic, documentos.descripcion, documentos.long, documentos.datMod, documentos.datPublicacion]
+    extract_metadata: [anuncios.numAnuncio, anuncios.titulo, anuncios.tituloLeng, anuncios.url, anuncios.cve, anuncios.desDiarioOficial, anuncios.datPublicacion]
+    extract_text_field_contract: ambiguous_schema_do_not_use_yet
+  dates:
+    fechaRecepcion: registration_or_receipt_date_not_publication_date
+    search_period_mapping: fechaDesde_fechaHasta_field_mapping_not_explicit_in_openapi
+    extract_publication: anuncios.datPublicacion_when_present
+    application_period: [fechaInicioSolicitud, fechaFinSolicitud]
+    concession_fields_not_convocatoria_dates: [fechaConcesion, fechaAlta]
+  status:
+    general_status_field: not_found_in_documented_convocatoria_schema
+    related_flags: [abierto, sePublicaDiarioOficial]
+
+territoriality:
+  direct_castellon_municipality_field: not_found
+  available_signals:
+    - organo administrative hierarchy and codigoInvente
+    - tipoAdministracion filter
+    - regiones impact filter and official region tree
+    - extract/document official URLs
+  municipality_mapping: not_audited
+  province_mapping: not_audited
+  future_filter: not_defined
+
+documents:
+  default_policy: link_and_hash
+  mirror_documents: false
+  fulltext_publication: false
+  document_download_endpoint_documented: true
+  individual_document_mime: application/octet-stream
+  zip_endpoint_documented: true
+  extract_official_diary_url_field: anuncios.url
+  boe_cross_reference_fields: [anuncios.url, anuncios.cve, anuncios.desDiarioOficial, anuncios.datPublicacion]
+  local_copy_required: false
+
+reuse:
+  decision: REUSE_CONFIRMED_WITH_CONDITIONS
+  basis: explicit_SNPSAP_legal_notice
+  attribution: "Origen de los datos: Intervención General de la Administración del Estado"
+  requirements:
+    - do_not_distort_meaning
+    - mention_latest_update_when_present
+    - disclose_personal_data_dissociation_and_actor
+    - do_not_imply_IGAE_sponsorship_or_support
+    - preserve_update_and_reuse_metadata_when_present
+  personal_data: purpose_limited_and_anonymization_required_before_reuse
+  initial_scope_excludes: [individual_beneficiary_records, personal_identifiers, fulltext, local_document_mirroring]
+  privacy_gate_required: true
+  prior_case_by_case_authorization_found: false
+
+collection_notes:
+  request_budget_for_future_smoke: one_small_search_plus_one_detail_if_needed
+  no_live_data_request_in_audit: true
+  uncertainty:
+    - no_live_response_or_size_sample
+    - no_numeric_rate_limit_or_timeout
+    - castellon_region_and_municipality_mapping_not_verified
+    - independent_extract_identifier_stability_not_documented
+    - text_and_textLeng_extract_schema_semantics_unclear
