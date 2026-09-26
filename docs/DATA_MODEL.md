@@ -26,8 +26,8 @@ Los únicos campos obligatorios para todo tipo de actividad son:
 | `schema_version` | InfoCs | Versión fija del contrato, actualmente `1.0`. |
 | `id` | InfoCs | Identidad estable generada por el motor de Fase 02. |
 | `source.id` | InfoCs/configuración | Fuente configurada que originó el record. |
-| `authority.id`, `authority.name`, `authority.administration_level` | Mixto | ID estable InfoCs, nombre oficial y nivel administrativo. |
-| `administration_level` | Normalizado InfoCs | Nivel del hecho: `municipal`, `provincial`, `autonomous` o `state`. |
+| `authority.id`, `authority.name`, `authority.administration_level` | Mixto | Identidad de autoridad cuando se conoce; el nivel puede ser `null` si InfoCs v1 no lo clasifica. |
+| `administration_level` | Normalizado InfoCs | Nivel del hecho (`municipal`, `provincial`, `autonomous` o `state`), o `null` si no se puede determinar. |
 | `category` | Normalizado InfoCs | Categoría controlada inicial. |
 | `title` | Oficial | Título comunicado por la fuente o su representación fiel. |
 | `dates.detected_at` | InfoCs | Primera detección, timestamp ISO 8601 con zona horaria. |
@@ -69,7 +69,7 @@ No se aceptan `float`, notación exponencial ni valores monetarios sin moneda. L
 
 ## Organismos y fuentes
 
-`authority` contiene el ID InfoCs, nombre oficial, aliases futuros opcionales y nivel administrativo. Aún no existe catálogo de organismos reales.
+`authority` puede ser `null` cuando la fuente no permite identificar el organismo. Si se conoce la autoridad, contiene su ID InfoCs, nombre observado y aliases opcionales; `administration_level: null` significa únicamente que InfoCs v1 no la ha clasificado entre los cuatro niveles admitidos, no que carezca de nivel jurídico. El campo de nivel del record repite el nivel clasificado de la autoridad y ambos deben coincidir; si falta uno de los dos conocimientos, ambos valores son `null`. Las definiciones de fuente conservan su requisito independiente de autoridad responsable conocida y clasificada. Las fuentes no deben fabricar una autoridad para satisfacer el schema. Aún no existe catálogo general de organismos reales.
 
 Una definición de fuente independiente se valida con `source.schema.json`. Debe indicar ID, nombre, organismo responsable, URL oficial, tipo de acceso, estado de configuración, hosts permitidos y política de reutilización. La política incorpora si se permiten metadatos, datos transformados, mirroring documental, texto completo y la política por defecto `link_and_hash`. `terms.checked_at` registra la fecha de revisión de condiciones cuando exista.
 

@@ -33,7 +33,7 @@ def finalize_record(candidate: RecordCandidate | Mapping[str, Any]) -> Record:
     for money in result.get("financial", {}).values():
         money["value"] = canonical_decimal(money["value"])
 
-    if "aliases" in result["authority"]:
+    if result["authority"] is not None and "aliases" in result["authority"]:
         result["authority"]["aliases"] = canonical_set(result["authority"]["aliases"])
     for key in ("tags", "documents", "relations"):
         if key in result:

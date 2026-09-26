@@ -37,18 +37,19 @@ def canonical_url(value: str) -> str:
 
 def identify(record: Mapping[str, Any]) -> RecordIdentity:
     source = str(record["source"]["id"])
-    authority = str(record["authority"]["id"])
+    authority_data = record.get("authority")
+    authority_id = str(authority_data.get("id", "")) if isinstance(authority_data, Mapping) else ""
     official_id = record["source"].get("official_id")
     if official_id:
         strategy, stable = "official_id", str(official_id)
     elif record.get("procurement", {}).get("expediente"):
-        strategy, stable = "case_number", f"{authority}:{record['procurement']['expediente']}"
+        strategy, stable = "case_number", f"{authority_id}:{record['procurement']['expediente']}"
     elif record.get("source_url"):
         strategy, stable = "canonical_url", canonical_url(str(record["source_url"]))
     else:
         strategy = "composite_fingerprint"
         dates = record.get("dates", {})
-        raw = "\x1f".join((source, authority, str(record.get("title", "")).casefold().strip(), str(dates.get("published_at", "")), str(record.get("procurement", {}).get("expediente", ""))))
+        raw = "\x1f".join((source, authority_id, str(record.get("title", "")).casefold().strip(), str(dates.get("published_at", "")), str(record.get("procurement", {}).get("expediente", ""))))
         stable = sha256(raw.encode("utf-8")).hexdigest()
     # El sufijo evita colisiones de valores oficiales distintos que comparten slug.
     digest = sha256(stable.encode("utf-8")).hexdigest()[:16]

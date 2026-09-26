@@ -350,7 +350,7 @@ def _allowed_audit_item(
         official_id=item.official_id,
         privacy_decision=privacy.decision,
         title=record.title,
-        authority_name=record.authority.name,
+        authority_name=record.authority.name if record.authority is not None else None,
         category=_enum_value(record.category),
         published_at=record.dates.published_at.isoformat() if record.dates.published_at else None,
         identity_strategy=_enum_value(record.technical.identity_strategy),

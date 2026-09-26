@@ -21,8 +21,8 @@
       "properties": {
         "schema_version": {"const": "1.0"},
         "source": {"$ref": "#/$defs/source_reference"},
-        "authority": {"$ref": "#/$defs/authority"},
-        "administration_level": {"$ref": "#/$defs/administration_level"},
+        "authority": {"anyOf": [{"$ref": "#/$defs/authority"}, {"type": "null"}]},
+        "administration_level": {"anyOf": [{"$ref": "#/$defs/administration_level"}, {"type": "null"}]},
         "category": {"$ref": "#/$defs/category"},
         "title": {"$ref": "#/$defs/non_empty_string"},
         "description": {"type": "string"},
@@ -39,10 +39,11 @@
         "status": {"enum": ["active", "missing_from_source", "withdrawn", "quarantine"]}
       },
       "allOf": [
-        {"if": {"properties": {"administration_level": {"const": "municipal"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "municipal"}}}}}},
-        {"if": {"properties": {"administration_level": {"const": "provincial"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "provincial"}}}}}},
-        {"if": {"properties": {"administration_level": {"const": "autonomous"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "autonomous"}}}}}},
-        {"if": {"properties": {"administration_level": {"const": "state"}}}, "then": {"properties": {"authority": {"properties": {"administration_level": {"const": "state"}}}}}}
+        {"if": {"properties": {"administration_level": {"const": "municipal"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "municipal"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "provincial"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "provincial"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "autonomous"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "autonomous"}}}}}},
+        {"if": {"properties": {"administration_level": {"const": "state"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "state"}}}}}},
+        {"if": {"properties": {"administration_level": {"type": "null"}}}, "then": {"properties": {"authority": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["administration_level"], "properties": {"administration_level": {"type": "null"}}}]}}}}
       ]
     },
     "non_empty_string": {"type": "string", "minLength": 1},
@@ -62,7 +63,7 @@
       "properties": {
         "id": {"$ref": "#/$defs/non_empty_string"},
         "name": {"$ref": "#/$defs/non_empty_string"},
-        "administration_level": {"$ref": "#/$defs/administration_level"},
+        "administration_level": {"anyOf": [{"$ref": "#/$defs/administration_level"}, {"type": "null"}]},
         "aliases": {"type": "array", "items": {"$ref": "#/$defs/non_empty_string"}, "uniqueItems": true}
       }
     },

@@ -24,10 +24,12 @@ Todo candidato normalizado debe pasar por `infocs.finalize.finalize_record()` an
 | `status` | no | Ciclo de observación y publicación de InfoCs; no equivale a un estado oficial. |
 | `category`, `tags`, `relations` | no | Clasificación o relación derivada por InfoCs. |
 | `provenance`, incluidos `territorial_matches`, collector, versión y transformación | no | Procedencia y criterio de inclusión gestionados por InfoCs. |
-| `geography`, `administration_level`, `authority`, `source.id`, `source.official_id`, `id`, `schema_version` | no | Identidad, fuente o clasificación normalizada; no una modificación del contenido observado. |
+| `geography`, `administration_level`, `authority`, `source.id`, `source.official_id`, `id`, `schema_version` | no | Identidad, fuente o clasificación normalizada; no una modificación del contenido observado. La ausencia explícita de autoridad/nivel (`null`) tampoco altera esta proyección. |
 | `dates.detected_at`, `dates.last_checked_at`, `technical.*` | no | Observación y metadatos internos, incluidos los propios hashes. |
 
 `title` y `description` se tratan como representaciones fieles del contenido de la fuente; una reescritura editorial de InfoCs debería modelarse en un campo derivado diferente. La exclusión de `authority.name` y `geography` refleja su clasificación como metadatos normalizados en el contrato actual, no que un cambio oficial de organismo carezca de interés. Si en el futuro una fuente aporta un estado administrativo oficial u otro campo observado, deberá modelarse por separado, añadirse deliberadamente a esta proyección, documentarse y probarse. `status=withdrawn` **no** es prueba por sí mismo de retirada oficial.
+
+La identidad de autoridad y su clasificación son conocimiento parcial: `authority: null` significa que no se identificó una autoridad; `authority.administration_level: null` junto con `administration_level: null` significa que se conoce el organismo pero InfoCs v1 no lo clasifica. En ninguno de los casos `null` afirma una condición jurídica. La autoridad y el nivel siguen fuera de `content_hash` y `diff()` conforme a la proyección v1 existente.
 
 ## Canonicalización y diferencias
 

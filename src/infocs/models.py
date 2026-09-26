@@ -161,11 +161,11 @@ class SourceReference:
 
 @dataclass(frozen=True, slots=True)
 class Authority:
-    """Organismo: ID InfoCs estable, nombre oficial y nivel administrativo."""
+    """Organismo observado; el nivel ``None`` significa no clasificado por InfoCs v1."""
 
     id: str
     name: str
-    administration_level: AdministrationLevel
+    administration_level: AdministrationLevel | None = None
     aliases: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
@@ -176,7 +176,9 @@ class Authority:
         result: dict[str, Any] = {
             "id": self.id,
             "name": self.name,
-            "administration_level": self.administration_level.value,
+            "administration_level": (
+                self.administration_level.value if self.administration_level is not None else None
+            ),
         }
         if self.aliases:
             result["aliases"] = list(self.aliases)
@@ -453,8 +455,8 @@ class RecordCandidate:
 
     schema_version: str
     source: SourceReference
-    authority: Authority
-    administration_level: AdministrationLevel
+    authority: Authority | None
+    administration_level: AdministrationLevel | None
     category: Category
     title: str
     dates: RecordDates
@@ -499,8 +501,8 @@ class Record:
     schema_version: str
     id: str
     source: SourceReference
-    authority: Authority
-    administration_level: AdministrationLevel
+    authority: Authority | None
+    administration_level: AdministrationLevel | None
     category: Category
     title: str
     dates: RecordDates
@@ -602,6 +604,8 @@ class SourceDefinition:
         _non_empty(self.id, "source_definition.id")
         _non_empty(self.name, "source_definition.name")
         _non_empty(self.official_url, "source_definition.official_url")
+        if self.responsible_authority.administration_level is None:
+            raise DataValidationError("La autoridad responsable de una fuente requiere un nivel clasificado.")
         if not self.allowed_hosts:
             raise DataValidationError("source_definition.allowed_hosts no puede estar vacío.")
 
@@ -665,7 +669,12 @@ def _validate_common_record_fields(record: RecordCandidate | Record) -> None:
         raise DataValidationError(f"schema_version debe ser {SCHEMA_VERSION}.")
     _non_empty(record.title, "title")
     _non_empty(record.source_url, "source_url")
-    if record.authority.administration_level is not record.administration_level:
+    if record.authority is None and record.administration_level is not None:
+        raise DataValidationError("administration_level requiere una authority conocida.")
+    if (
+        record.authority is not None
+        and record.authority.administration_level is not record.administration_level
+    ):
         raise DataValidationError("authority.administration_level debe coincidir con administration_level.")
 
 
@@ -673,8 +682,10 @@ def _common_record_to_dict(record: RecordCandidate | Record) -> dict[str, Any]:
     result: dict[str, Any] = {
         "schema_version": record.schema_version,
         "source": record.source.to_dict(),
-        "authority": record.authority.to_dict(),
-        "administration_level": record.administration_level.value,
+        "authority": record.authority.to_dict() if record.authority is not None else None,
+        "administration_level": (
+            record.administration_level.value if record.administration_level is not None else None
+        ),
         "category": record.category.value,
         "title": record.title,
         "dates": record.dates.to_dict(),
@@ -708,13 +719,25 @@ def _common_record_from_payload(data: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": data["schema_version"],
         "source": SourceReference(**data["source"]),
-        "authority": Authority(
-            id=authority_data["id"],
-            name=authority_data["name"],
-            administration_level=AdministrationLevel(authority_data["administration_level"]),
-            aliases=tuple(authority_data.get("aliases", ())),
+        "authority": (
+            Authority(
+                id=authority_data["id"],
+                name=authority_data["name"],
+                administration_level=(
+                    AdministrationLevel(authority_data["administration_level"])
+                    if authority_data["administration_level"] is not None
+                    else None
+                ),
+                aliases=tuple(authority_data.get("aliases", ())),
+            )
+            if authority_data is not None
+            else None
         ),
-        "administration_level": AdministrationLevel(data["administration_level"]),
+        "administration_level": (
+            AdministrationLevel(data["administration_level"])
+            if data["administration_level"] is not None
+            else None
+        ),
         "category": Category(data["category"]),
         "title": data["title"],
         "dates": RecordDates(
