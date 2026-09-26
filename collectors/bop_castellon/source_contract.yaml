@@ -44,14 +44,16 @@ access:
     direct_entry_url: https://bop.dipcas.es/PortalBOP/boletinesAntiguos/
     navigation_entry_url: https://bop.dipcas.es/PortalBOP/buscador/
     method_sequence:
-      - GET direct_entry_url, or GET navigation_entry_url
-      - optional POST buttons:j_idt72 from form buttons; partial redirect to direct_entry_url
-      - POST buscadorForm:j_idt152 with a fresh ViewState
+      - GET direct_entry_url with a fresh CookieJar and form ViewState
+      - POST date search; parse JSF partial-response update formListBoletinAntiguos
+      - POST PrimeFaces selection using the source component derived from the matched issue card
+      - parse JSF redirect and GET the validated same-origin announcements route using the same CookieJar
+    successful_issue_request_count: 4
     form:
       id: buscadorForm
       method: POST
       action: /PortalBOP/boletinesAntiguos/;jsessionid={session}
-      date_format: dd/mm/yy
+      date_format: dd/mm/YYYY
       edition_number_field: buscadorForm:numBoletinAntiguo
       date_start_field: buscadorForm:fechaInicialAntiguo_input
       date_end_field: buscadorForm:fechaFinalAntiguo_input
@@ -62,6 +64,17 @@ access:
       ajax: true
       response_content_type: text/xml;charset=UTF-8
       updated_result_component: formListBoletinAntiguos
+    announcement_navigation:
+      selection_component: derived_from_matched_issue_card
+      selection_partial_execute: "@all"
+      selection_response: jsf_partial_redirect
+      destination: validated_same_origin_path_under_PortalBOP
+      announcements_container_id: busquedaBoletinesForm:resultadoBusquedaBoletines
+      download_component_class: linkDownloadFileCurrentAnuncioIcon
+      title_class: titulo4
+      observed_interstitial_sibling: script
+      pairing: local_following_title_before_next_announcement_download
+      bulletin_download_class_excluded: linkDownloadFileCurrentBoletinIcon
     session:
       cookies_observed:
         - JSESSIONID

@@ -192,6 +192,23 @@ comprobó una vista valenciana ni el comportamiento del ID en años distintos.
 La consulta de ediciones y la extracción de sus listados no requirió PDF. Los
 PDF quedan como documentos enlazados; no se descargaron.
 
+### Selección de edición y recuperación del listado
+
+El flujo de fecha con edición se confirmó end-to-end el 2026-09-26 y requiere
+cuatro peticiones HTTP: GET inicial de sesión, POST JSF de búsqueda, POST AJAX
+PrimeFaces para seleccionar la tarjeta de edición y GET a la ruta de resultados
+indicada por la redirección JSF. La fuente de la selección se deriva de la
+tarjeta encontrada; sus IDs posicionales no son constantes contractuales.
+
+En el HTML de resultados, cada componente
+`span.linkDownloadFileCurrentAnuncioIcon` se empareja localmente con el
+`span.titulo4` siguiente. La respuesta observada puede insertar un nodo
+`script` entre ambos; el emparejamiento lo omite junto con `<br>` sin cruzar al
+siguiente componente de descarga. El enlace del boletín completo usa
+`linkDownloadFileCurrentBoletinIcon` y queda fuera del listado de anuncios.
+Esta observación describe el DOM actual, no una API documentada ni una garantía
+de estabilidad futura.
+
 La secuencia exacta, los nombres de controles, cabeceras AJAX y cookies
 observados se detallan en «Technical retrieval contract». El transporte futuro
 deberá tratar este formulario como interfaz HTML observada, no como API pública

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<partial-response>
+  <changes>
+    <update id="formListBoletinAntiguos"><![CDATA[
+      <div id="formListBoletinAntiguos"><table><tbody></tbody></table></div>
+    ]]></update>
+    <update id="formListAnunciosBolAnt"><![CDATA[<div id="formListAnunciosBolAnt"></div>]]></update>
+  </changes>
+</partial-response>
