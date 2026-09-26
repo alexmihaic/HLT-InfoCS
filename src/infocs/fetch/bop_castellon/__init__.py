@@ -6,6 +6,12 @@ from infocs.fetch.bop_castellon.models import (
     BOPFetchStatus,
     BOPIssue,
 )
+from infocs.fetch.bop_castellon.ingest import (
+    BOPIngestionMetrics,
+    BOPIngestionResult,
+    BOPIngestionStatus,
+    ingest_bop_fetch_result,
+)
 from infocs.fetch.bop_castellon.normalize import (
     BOPNormalizationError,
     category_for_bop_title,
@@ -29,6 +35,9 @@ __all__ = [
     "BOPFetchResult",
     "BOPFetchStatus",
     "BOPIssue",
+    "BOPIngestionMetrics",
+    "BOPIngestionResult",
+    "BOPIngestionStatus",
     "BOPNormalizationError",
     "BOPPublicationEvaluation",
     "BOPPublicationPolicyError",
@@ -36,6 +45,7 @@ __all__ = [
     "bop_source_publication_eligibility",
     "category_for_bop_title",
     "evaluate_bop_publication",
+    "ingest_bop_fetch_result",
     "normalize_bop_announcement",
     "parse_bop_partial_response",
 ]
