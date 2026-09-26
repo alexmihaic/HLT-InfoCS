@@ -8,6 +8,13 @@ from infocs.publication.review import (
     PublicationReviewEntry,
     review_publication,
 )
+from infocs.publication.source_policy import (
+    SourcePublicationEligibilityDecision,
+    SourcePublicationEligibilityError,
+    SourcePublicationEligibilityType,
+    source_eligible,
+    source_hold,
+)
 
 __all__ = [
     "PublicationDecision",
@@ -16,4 +23,9 @@ __all__ = [
     "PublicationReviewError",
     "PublicationReviewEntry",
     "review_publication",
+    "SourcePublicationEligibilityDecision",
+    "SourcePublicationEligibilityError",
+    "SourcePublicationEligibilityType",
+    "source_eligible",
+    "source_hold",
 ]
