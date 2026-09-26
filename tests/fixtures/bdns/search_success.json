@@ -1,0 +1,28 @@
+{
+  "content": [
+    {
+      "id": 700001,
+      "numeroConvocatoria": "900001",
+      "mrr": false,
+      "descripcion": "Convocatoria sintética de ejemplo",
+      "descripcionLeng": null,
+      "fechaRecepcion": "2026-09-25",
+      "nivel1": "ADMINISTRACIÓN DE EJEMPLO",
+      "nivel2": "ÓRGANO DE EJEMPLO",
+      "nivel3": null,
+      "codigoInvente": "INV00000001",
+      "campoFuturo": "ignorado sin copiar payload"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 25,
+    "offset": 0
+  },
+  "totalPages": 1,
+  "totalElements": 1,
+  "last": true,
+  "numberOfElements": 1,
+  "first": true,
+  "empty": false
+}

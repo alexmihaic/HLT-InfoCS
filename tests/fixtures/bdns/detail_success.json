@@ -1,0 +1,50 @@
+{
+  "id": 700001,
+  "organo": {
+    "nivel1": "ADMINISTRACIÓN DE EJEMPLO",
+    "nivel2": "ÓRGANO DE EJEMPLO",
+    "nivel3": null
+  },
+  "sedeElectronica": "https://sede.example.invalid/convocatorias",
+  "codigoBDNS": "900001",
+  "fechaRecepcion": "2026-09-25",
+  "instrumentos": [{"descripcion": "SUBVENCIÓN SINTÉTICA"}],
+  "tipoConvocatoria": "Concurrencia competitiva",
+  "presupuestoTotal": 123456.78,
+  "descripcion": "Convocatoria sintética de ejemplo",
+  "descripcionLeng": null,
+  "tiposBeneficiarios": [{"codigo": "ASO", "descripcion": "ASOCIACIONES"}],
+  "sectores": [{"codigo": "S01", "descripcion": "SECTOR SINTÉTICO"}],
+  "regiones": [{"descripcion": "ES - REGIÓN SINTÉTICA"}],
+  "descripcionFinalidad": "Finalidad sintética",
+  "descripcionBasesReguladoras": "Bases sintéticas",
+  "urlBasesReguladoras": "https://example.invalid/bases",
+  "sePublicaDiarioOficial": true,
+  "abierto": false,
+  "fechaInicioSolicitud": "2026-10-01",
+  "fechaFinSolicitud": "2026-10-31",
+  "textInicio": "Inicio según texto sintético",
+  "textFin": "Fin según texto sintético",
+  "documentos": [
+    {
+      "id": 800001,
+      "nombreFic": "bases-sinteticas.pdf",
+      "descripcion": "Documento sintético",
+      "long": 1024,
+      "datMod": "2026-09-25",
+      "datPublicacion": "2026-09-25"
+    }
+  ],
+  "anuncios": [
+    {
+      "numAnuncio": 1,
+      "titulo": "Extracto sintético",
+      "tituloLeng": null,
+      "cve": "BOE-B-2026-90001",
+      "desDiarioOficial": "BOLETÍN OFICIAL DEL ESTADO",
+      "datPublicacion": "2026-09-26",
+      "url": "https://www.boe.es/diario_boe/verifica.php?c=BOE-B-2026-90001"
+    }
+  ],
+  "campoFuturo": {"secreto": "no se conserva en el modelo"}
+}
