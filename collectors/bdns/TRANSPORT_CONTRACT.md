@@ -10,7 +10,7 @@ El cliente usa únicamente los endpoints públicos documentados de SNPSAP:
 
 | Operación | Método y ruta | Parámetros v1 | Resultado |
 | --- | --- | --- | --- |
-| Búsqueda | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda` | `page` (base cero), `pageSize`, `order`, `direccion`; filtro opcional `numeroConvocatoria` | Página JSON con `content`, totales y metadatos de paginación. |
+| Búsqueda | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda` | `page` (base cero), `pageSize`, `order`, `direccion`; filtros opcionales `numeroConvocatoria` y `regiones` (IDs enteros del catálogo) | Página JSON con `content`, totales y metadatos de paginación. |
 | Detalle | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias` | `numConv=<numeroConvocatoria>` | Objeto JSON de la convocatoria. El parámetro opcional `vpd` no se usa. |
 
 Cabeceras explícitas: `Accept: application/json` y User-Agent de InfoCs. No se envían autenticación ni cookies. Cada llamada crea una petición GET independiente; no se persiste estado de sesión. El cliente no sigue redirecciones automáticamente: una respuesta distinta de HTTP 200 se clasifica y no se sigue a otro destino.
@@ -28,7 +28,7 @@ Los resultados y errores conservan sólo modelos tipados y códigos de error seg
 
 ## Modelos observados y paginación
 
-La búsqueda modela `content[]`, `pageable.pageNumber`, `pageable.pageSize`, `pageable.offset`, `totalPages`, `totalElements`, `numberOfElements`, `first`, `last` y `empty`. Los campos de convocatoria preservados son `numeroConvocatoria`, `id` técnico opcional, `descripcion`, `descripcionLeng`, `fechaRecepcion`, `nivel1`–`nivel3`, `codigoInvente` y `mrr`. La lista y el detalle son contratos distintos; no se presupone que tengan los mismos campos.
+La búsqueda modela `content[]`, `pageable.pageNumber`, `pageable.pageSize`, `pageable.offset`, `totalPages`, `totalElements`, `numberOfElements`, `first`, `last` y `empty`. Los campos de convocatoria preservados son `numeroConvocatoria`, `id` técnico opcional, `descripcion`, `descripcionLeng`, `fechaRecepcion`, `nivel1`–`nivel3`, `codigoInvente` y `mrr`. El filtro v1 de territorio usa el parámetro documentado `regiones` con IDs de catálogo BDNS; para Castellón el ID auditado es 56. La lista y el detalle son contratos distintos; no se presupone que tengan los mismos campos.
 
 El detalle conserva, cuando están presentes, `codigoBDNS`, `id` técnico, título y variante lingüística, `organo.nivel1`–`nivel3`, `sedeElectronica`, `fechaRecepcion`, `presupuestoTotal`, tipo, instrumentos, tipos de beneficiario, sectores, regiones, finalidad, bases reguladoras, banderas y fechas del periodo de solicitud, metadata de documentos y metadata de `anuncios`/extractos. No conserva el payload completo ni campos desconocidos.
 

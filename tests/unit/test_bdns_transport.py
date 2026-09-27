@@ -88,6 +88,25 @@ class BDNSUrlTests(unittest.TestCase):
     def test_detail_query_is_exactly_numConv(self) -> None:
         self.assertEqual(parse_qs(urlsplit(detail_url_for("900001")).query), {"numConv": ["900001"]})
 
+    def test_region_filter_uses_documented_regiones_parameter(self) -> None:
+        query = BDNSSearchQuery(page=0, page_size=3, region_ids=(56,))
+        self.assertEqual(
+            parse_qs(urlsplit(search_url_for(query)).query),
+            {
+                "page": ["0"],
+                "pageSize": ["3"],
+                "order": ["fechaRecepcion"],
+                "direccion": ["desc"],
+                "regiones": ["56"],
+            },
+        )
+
+    def test_invalid_region_filter_is_rejected_before_any_network_call(self) -> None:
+        for region_ids in ((0,), (-1,), (True,), (56, 56), [56]):
+            with self.subTest(region_ids=region_ids):
+                with self.assertRaises(ValueError):
+                    search_url_for(BDNSSearchQuery(region_ids=region_ids))
+
     def test_invalid_query_rejected_before_any_network_call(self) -> None:
         opener = FakeOpener(FakeResponse(200, fixture_bytes("search_success.json")))
         transport = BDNSTransport(opener=opener)

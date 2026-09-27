@@ -25,6 +25,7 @@ class BDNSSearchQuery:
     order: str = "fechaRecepcion"
     direction: str = "desc"
     numero_convocatoria: str | None = None
+    region_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

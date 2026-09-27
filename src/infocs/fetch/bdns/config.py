@@ -45,6 +45,10 @@ def validate_search_query(query: BDNSSearchQuery) -> None:
         not isinstance(query.numero_convocatoria, str) or not query.numero_convocatoria.strip()
     ):
         raise ValueError("numero_convocatoria debe ser texto no vacío si se proporciona.")
+    if not isinstance(query.region_ids, tuple) or len(set(query.region_ids)) != len(query.region_ids):
+        raise ValueError("region_ids debe ser una tupla de IDs de región distintos.")
+    if any(isinstance(region_id, bool) or not isinstance(region_id, int) or region_id <= 0 for region_id in query.region_ids):
+        raise ValueError("Cada ID de región debe ser un entero positivo.")
 
 
 def search_url_for(query: BDNSSearchQuery) -> str:
@@ -57,6 +61,7 @@ def search_url_for(query: BDNSSearchQuery) -> str:
     ]
     if query.numero_convocatoria is not None:
         params.append(("numeroConvocatoria", query.numero_convocatoria))
+    params.extend(("regiones", str(region_id)) for region_id in query.region_ids)
     return f"{BDNS_SEARCH_URL}?{urlencode(params)}"
 
 
