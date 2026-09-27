@@ -31,6 +31,14 @@ from infocs.fetch.bdns.dry_run import (
     BDNSDryRunStatus,
     run_bdns_dry_run,
 )
+from infocs.fetch.bdns.ingest import (
+    BDNSEventStatus,
+    BDNSIngestionMetrics,
+    BDNSIngestionResult,
+    BDNSIngestionStatus,
+    BDNSRecordOperation,
+    ingest_bdns,
+)
 from infocs.fetch.bdns.transport import BDNSTransport
 
 __all__ = [
@@ -41,12 +49,17 @@ __all__ = [
     "BDNSDryRunMetrics",
     "BDNSDryRunReport",
     "BDNSDryRunStatus",
+    "BDNSEventStatus",
+    "BDNSIngestionMetrics",
+    "BDNSIngestionResult",
+    "BDNSIngestionStatus",
     "BDNSMetadataPublicationDecision",
     "BDNSMetadataPublicationDecisionType",
     "BDNSNormalizationError",
     "BDNSNormalizationResult",
     "BDNSPage",
     "BDNSRequestStatus",
+    "BDNSRecordOperation",
     "BDNSTerritorialDecision",
     "BDNSTerritorialStatus",
     "BDNSPublicationEvaluation",
@@ -56,6 +69,7 @@ __all__ = [
     "evaluate_bdns_territory",
     "evaluate_bdns_publication",
     "bdns_source_publication_eligibility",
+    "ingest_bdns",
     "normalize_bdns_detail",
     "parse_bdns_detail",
     "parse_bdns_search",

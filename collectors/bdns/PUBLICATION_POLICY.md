@@ -1,6 +1,6 @@
 # BDNS — política de publicación de metadata v1
 
-**Estado:** decisión source-specific implementada; aún no hay persistencia BDNS.
+**Estado:** decisión source-specific implementada; la primera persistencia controlada queda limitada al alcance descrito en [INGESTION_POLICY.md](INGESTION_POLICY.md).
 
 ## Orden de decisiones
 
@@ -27,7 +27,7 @@ Quedan fuera: concesiones individuales, beneficiarios, identificadores personale
 
 ## Atribución y reutilización
 
-La atribución exigida no se almacena dentro de `Record`, `RecordCandidate`, identidad, `content_hash` ni diff. La futura capa de publicación/export debe incluir exactamente:
+La atribución exigida no se almacena dentro de `Record`, `RecordCandidate`, identidad, `content_hash` ni diff. La superficie durable y visible junto al dataset es [`data/records/bdns/README.md`](../../data/records/bdns/README.md), que debe acompañar cualquier exportación del conjunto y contiene exactamente:
 
 > Origen de los datos: Intervención General de la Administración del Estado
 
@@ -35,4 +35,4 @@ También debe preservar, cuando conste, la fecha de actualización; no desnatura
 
 ## Límites operativos
 
-Esta evaluación es pura/en memoria. No llama al transporte, Privacy Gate, Publication Review, Stores, Review Queue, ManifestStore ni Health. La política no participa en identidad, `content_hash` ni diff administrativo. Este contrato no habilita por sí solo persistencia pública ni sustituye una revisión futura de las condiciones de reutilización.
+La evaluación de publicación es pura/en memoria: no llama al transporte, Privacy Gate, Publication Review, Stores, Review Queue, ManifestStore ni Health. La política no participa en identidad, `content_hash` ni diff administrativo. La escritura sólo puede hacerse a través del orquestador controlado y tras verificar nuevamente los gates y la superficie de atribución.
