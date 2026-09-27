@@ -158,6 +158,8 @@ Cada decisión usa: ID, fecha, estado, contexto, decisión, alternativas conside
 - **Alternativas consideradas:** interpretar Privacy Gate `allow` como aprobación; flag `persist=False`; aceptar IDs nuevos automáticamente; añadir una decisión de publicación al modelo Record.
 - **Consecuencias:** la revisión humana queda fuera de `Record.status`, procedencia y `content_hash`. Los anuncios de riesgo o con contenido enlazado no revisado permanecen en `hold`. Los reemplazos son atómicos por archivo, pero la primera versión no hace rollback multiarchivo ante una falla de I/O.
 
+> Nota de alcance (2026-09-27): ADR-016 documenta la ruta BOE/manual. La autorización de Events para varias fuentes se generalizó después según ADR-022; no cambia la decisión histórica de revisión manual BOE.
+
 ## ADR-017 — Events canónicos append-only separados de transiciones internas
 
 - **Fecha:** 2026-09-23
@@ -166,6 +168,8 @@ Cada decisión usa: ID, fecha, estado, contexto, decisión, alternativas conside
 - **Decisión:** el Event persistible v1 admite únicamente `create` y `update`. Su ID determinista es `evt-v1-` + SHA-256 del JSON UTF-8 compacto `[record_id, type, previous_content_hash, content_hash]`; para create el hash previo es `null`. No depende de hora, aprobación ni metadata derivada. `changed_fields` toma rutas ordenadas del diff semántico sin valores. EventStore es append-only: retry con transición igual ignora una diferencia exclusiva de `observed_at` y conserva la primera hora persistida; cualquier otra diferencia bajo el mismo ID falla. Crear/persistir Events requiere Privacy Gate `allow` y Publication Review `approved`.
 - **Alternativas consideradas:** permitir todos los eventos de reconciliación en el histórico público; UUID/tiempo como identidad; sobrescribir Events; incluir diffs con valores; acoplar una lista mutable de Events al Record.
 - **Consecuencias:** las transiciones `missing_from_source`/`reappeared` permanecen internas; el orden por Record se deriva del store. Ingesta preflighta Records y Events y escribe Event antes de Record; una caída puede dejar Event sin Record, estado recuperable por retry idempotente. No existe transacción multiarchivo. Repetir más tarde una transición administrativa idéntica reutiliza su ID y no representa una segunda ocurrencia temporal; run/recurrence IDs quedan como deuda. El Event del primer Record BOE persistido no se retrorellena sin decisión y timestamp verificable.
+
+> Nota de alcance (2026-09-27): la referencia de ADR-017 a Privacy + Publication Review describe la ruta BOE vigente al redactarla. La autorización multi-source posterior y la responsabilidad actual de EventStore se registran en ADR-022.
 
 ## ADR-018 — Run Manifests append-only y Health derivado
 
@@ -202,3 +206,12 @@ Cada decisión usa: ID, fecha, estado, contexto, decisión, alternativas conside
 - **Decisión:** `RecordCandidate` y `Record` representan `authority` como objeto o `null`, y `administration_level` como uno de los niveles existentes o `null`. Una autoridad conocida puede llevar nivel nulo; en tal caso ambos niveles (interno a autoridad y nivel del record) son nulos. Autoridad nula requiere nivel nulo. Si ambos niveles están clasificados, deben coincidir. No se añade `unknown`/`other` al enum ni se usan sentinel strings. `SourceDefinition.responsible_authority` conserva su requisito estricto.
 - **Alternativas consideradas:** asignar la autoridad editora como anunciante por defecto; introducir strings como “Unknown Authority”; añadir un nivel jurídico genérico no sustentado; relajar la definición de autoridad responsable de fuente.
 - **Consecuencias:** serializers representan la ausencia con JSON `null`, y los schemas mantienen cerrados los demás campos. Identidad y hash conservan sus fórmulas: `official_id` sigue dominando; autoridad/nivel permanecen excluidos de `content_hash` y `diff()` como antes. El conocimiento nulo no expresa ausencia legal ni cambia el contenido administrativo.
+
+## ADR-022 — Autorización de Events multi-source
+
+- **Fecha:** 2026-09-27
+- **Estado:** aceptada
+- **Contexto:** `EventStore` estaba acoplado a `Publication Review` BOE y repetía políticas de privacidad/publicación. BDNS no podía emitir su Event sin fingir una aprobación BOE.
+- **Decisión:** cada política/adaptador source-specific que supera sus barreras puede emitir una `PublicationAuthorization` transitoria e inmutable, ligada a `record_id`, `source_id`, `content_hash` y `policy_id`. BOE requiere Privacy `ALLOW` y revisión manual `APPROVED`; BDNS requiere Privacy `ALLOW`, Source Eligibility `ELIGIBLE` y metadata `PUBLISHABLE_METADATA`; BOP permanece en source `HOLD / reuse_policy_unresolved` y no emite autorización. EventStore valida Event, Record y binding; no reevalúa políticas.
+- **Alternativas consideradas:** mantener revisión BOE dentro de EventStore; introducir un bypass por fuente; guardar autorización o estado de publicación en Record/Event.
+- **Consecuencias:** la autorización no forma parte de Record, Event, identidad, hash ni diff. Es un artefacto interno para prevenir bypass accidental de arquitectura, no una frontera frente a código local malicioso. No cambia schema ni algoritmo de identidad de Event.

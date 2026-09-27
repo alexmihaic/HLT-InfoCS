@@ -4,6 +4,11 @@
 
 **Alcance:** búsqueda y detalle de convocatorias públicas. Sin normalización Core, persistencia ni solicitudes a documentos.
 
+> Estado actual: las incertidumbres territoriales anotadas durante 04B se
+> resolvieron después. Véanse [TERRITORIAL_POLICY.md](TERRITORIAL_POLICY.md),
+> [NORMALIZATION_POLICY.md](NORMALIZATION_POLICY.md) y
+> [LIVE_DRY_RUN.md](LIVE_DRY_RUN.md) para el contrato vigente y su evidencia.
+
 ## Operaciones
 
 El cliente usa únicamente los endpoints públicos documentados de SNPSAP:

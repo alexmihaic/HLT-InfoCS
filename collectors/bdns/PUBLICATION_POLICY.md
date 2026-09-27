@@ -1,6 +1,6 @@
 # BDNS — política de publicación de metadata v1
 
-**Estado:** decisión source-specific implementada; la primera persistencia controlada queda limitada al alcance descrito en [INGESTION_POLICY.md](INGESTION_POLICY.md).
+**Estado:** política source-specific implementada; la primera publicación controlada de metadata ya se realizó dentro del alcance descrito en [INGESTION_POLICY.md](INGESTION_POLICY.md). La política y las condiciones de atribución no cambian.
 
 ## Orden de decisiones
 

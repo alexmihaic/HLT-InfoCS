@@ -2,6 +2,9 @@
 
 ## Regla de avance
 
+`IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; `docs/PROJECT_STATE.md`
+es la referencia breve del estado operativo actual y no un ledger de fases.
+
 Cada fase termina con revisión de cambios y tests reales. Ninguna fase habilita por sí misma archivo público de documentos ni publicación de datos personales. PCSP se incorpora antes de la beta pública y DOGV se intentará incorporar también antes de ella, conforme a la resolución de `OPEN-001`.
 
 ## Fase 00 — Bootstrap

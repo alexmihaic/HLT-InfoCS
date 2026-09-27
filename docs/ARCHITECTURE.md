@@ -57,15 +57,14 @@ la decisión, de modo que un collector no puede publicar por olvidar una llamada
 al gate. Un fallo del motor o de su configuración aborta el batch antes de
 nuevas escrituras; una detección sensible sólo aísla el record afectado.
 
-`allow` no es aprobación humana. Antes de la primera publicación BOE, una capa
-separada de `Publication Review` resuelve `approved`, `hold` o `rejected` a
-partir de una lista versionada de `official_id`. La ausencia de entrada es
-`hold` (fail closed). El orden de publicación es
-`finalize -> Privacy Gate -> Publication Review -> preflight de lote ->
-RecordStore`; una aprobación nunca omite privacidad. Esta decisión no modifica
-`Record.status`, procedencia ni `content_hash`. El primer lote controlado no
-persiste eventos y no tiene rollback multiarchivo ante un fallo de I/O, aunque
-cada archivo individual es atómico.
+`allow` no es aprobación humana. BOE mantiene `Publication Review` manual,
+fail-closed y versionada por `official_id`; otras fuentes pueden tener
+elegibilidad source-wide y políticas específicas de metadata. Estas políticas
+se evalúan fuera de los stores. Tras superarlas, el adaptador de la fuente
+puede emitir una `PublicationAuthorization` transitoria ligada a
+`record_id`, `source_id`, `content_hash` y `policy_id`. La autorización no
+modifica `Record.status`, procedencia ni `content_hash`, ni se incorpora al
+Record o al Event.
 
 La política es individual por fuente: metadatos y enlaces por defecto; documentos, texto completo o capturas solo si su política de reutilización lo permite expresamente. `archive/` existe para copias permitidas y debe permanecer prácticamente vacío mientras no haya políticas aprobadas.
 
@@ -110,13 +109,16 @@ fuente. El ID externo se codifica como segmento seguro y no se usa el hash de
 contenido como nombre de archivo. La escritura valida el `Record`, comprueba
 el hash semántico, serializa con `Record.canonical_json()` y newline final,
 escribe un temporal en el mismo directorio y ejecuta un reemplazo atómico.
-`EventStore` mantiene un JSON por Event, exige el Record asociado y la
-configuración de revisión, revalida privacidad/aprobación, schema e identidad,
-y lo añade atómicamente sin reemplazar historia. La ingesta preflighta ambos
-artefactos y escribe Event seguido de Record para que un fallo del Record sea
-reintentable. No existe transacción real multiarchivo: puede quedar un Event
-temporalmente sin Record, pero no perderse la transición. No hay backfill del
-Record BOE ya persistido. Los estados internos
+`EventStore` mantiene un JSON por Event, exige el Record asociado y una
+`PublicationAuthorization` válida ligada exactamente al Record y al hash
+actual; valida además modelo, schema, identidad y path, y añade el Event
+atómicamente sin reemplazar historia. No conoce BOE/BDNS/BOP, no carga
+`PublicationReviewConfig` y no reevalúa Privacy ni políticas de publicación:
+esa autorización la emite el adaptador source-specific después de superar
+sus barreras. La ingesta preflighta ambos artefactos y escribe Event seguido de
+Record para que un fallo del Record sea reintentable. No existe transacción
+real multiarchivo: puede quedar un Event temporalmente sin Record, pero no
+perderse la transición. No hay backfill del Record BOE ya persistido. Los estados internos
 `missing_from_source` y `reappeared` de reconciliación no son Events públicos
 v1.
 En 03E/03F los stores se ejercitaron con temporales; 03H autorizó y persistió

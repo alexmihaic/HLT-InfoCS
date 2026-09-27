@@ -6,7 +6,7 @@ collection_semantics: incremental_feed
 collection_scope: province
 province_code: "12"
 privacy_gate_required: true
-publication_review_required: true
+manual_publication_review: not_reached_while_source_hold
 
 source_definition:
   id: bop_castellon

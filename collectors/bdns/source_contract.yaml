@@ -174,8 +174,7 @@ collection_notes:
   request_budget_for_future_smoke: one_small_search_plus_one_detail_if_needed
   no_live_data_request_in_audit: true
   uncertainty:
-    - no_live_response_or_size_sample
     - no_numeric_rate_limit_or_timeout
-    - castellon_region_and_municipality_mapping_not_verified
+    - municipal_region_mapping_not_demonstrated
     - independent_extract_identifier_stability_not_documented
     - text_and_textLeng_extract_schema_semantics_unclear

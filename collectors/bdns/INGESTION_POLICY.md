@@ -1,4 +1,4 @@
-# BDNS — primera persistencia controlada
+# BDNS — política de ingestión y persistencia
 
 El flujo v1 es:
 
@@ -19,13 +19,21 @@ visibles junto al dataset en [README.md](../../data/records/bdns/README.md).
 El preflight comprueba que esa superficie existe y contiene la atribución y
 las condiciones necesarias antes de escribir.
 
-El EventStore v1 exige revalidar Publication Review manual BOE para crear o
-actualizar Events. BDNS no debe llamar esa revisión ni fabricar una aprobación
-BOE; por tanto, en esta fase `create`/`update` Event se difiere y se informa
-como `BDNS_CREATE_EVENT_DEFERRED` o `BDNS_UPDATE_EVENT_DEFERRED`. Un
-`no_change` no necesita Event. No se altera el modelo Event ni el EventStore.
+Tras 04F, EventStore no ejecuta Publication Review ni políticas de fuente.
+Cada ruta pasa sus gates source-specific y entrega una
+`PublicationAuthorization` ligada al Record/hash. Con EventStore configurado,
+una operación `create`/`update` autorizada preflighta y escribe Event antes de
+Record; `no_change` no necesita Event.
 
-La fase procesa como máximo tres detalles y persiste como máximo un Record.
-No ejecuta concesiones, Review Queue, manifests, health, descargas ni
-automatización. Un fallo de escritura no elimina ni invalida Records
-anteriores.
+El orquestador aún permite una ruta de compatibilidad sin EventStore, que
+puede informar `BDNS_CREATE_EVENT_DEFERRED` o
+`BDNS_UPDATE_EVENT_DEFERRED`. No es el modo productivo futuro: antes de
+automatizar BDNS, EventStore debe ser obligatorio para cualquier `create` o
+`update`, de modo que no se publique un Record sin su transición autorizada.
+
+La primera persistencia controlada ya ocurrió: existe un Record BDNS público y
+su Event `create` se materializó posteriormente bajo la autorización
+multi-source. La atribución IGAE sigue visible junto al dataset y el alcance
+publicable no cambia. No se ejecutan concesiones, descargas ni mirroring. BDNS
+aún no tiene automatización, Manifest productivo ni Health propio. Un fallo de
+escritura no elimina ni invalida Records anteriores.
