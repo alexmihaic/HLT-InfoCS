@@ -15,6 +15,7 @@ from infocs.fetch.boe.models import (
     BOESummary,
 )
 from infocs.fetch.boe.normalize import BOENormalizationError, normalize_boe_item
+from infocs.fetch.boe.publication import authorize_boe_event
 from infocs.fetch.boe.review_queue import ReviewQueueEntry, ReviewQueueObservation
 from infocs.fetch.boe.territorial import (
     BOETerritorialRegistry,
@@ -28,6 +29,7 @@ from infocs.publication.review import (
     PublicationReviewError,
     review_publication,
 )
+from infocs.publication.authorization import PublicationAuthorization
 from infocs.store import RecordStore, RecordStoreError
 
 
@@ -147,7 +149,7 @@ def ingest_boe_summary(
         "privacy_quarantined": 0, "privacy_rejected": 0,
         "publication_approved": 0, "publication_hold": 0, "publication_rejected": 0,
     }
-    planned: dict[str, tuple[Record, BOEOperation]] = {}
+    planned: dict[str, tuple[Record, BOEOperation, PublicationAuthorization]] = {}
     events: list[Event] = []
     review_observations: list[ReviewQueueObservation] = []
 
@@ -216,9 +218,15 @@ def ingest_boe_summary(
             continue
         metrics["publication_approved"] += 1
         review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
+        try:
+            authorization = authorize_boe_event(record, privacy_decision, publication_decision)
+        except ValueError:
+            raise BOEIngestionError("No se pudo autorizar el Event tras aprobación BOE.") from None
+        if authorization is None:
+            raise BOEIngestionError("Publication Review aprobó el Record pero no emitió autorización Event.")
 
         if record.id in planned:
-            previous_batch_record, _ = planned[record.id]
+            previous_batch_record, _, _ = planned[record.id]
             if previous_batch_record.technical.content_hash != record.technical.content_hash:
                 raise BOEIngestionError(
                     f"El sumario contiene contenido incompatible para {record.id}."
@@ -230,8 +238,7 @@ def ingest_boe_summary(
             operation = BOEOperation(BOEOperationType.CREATE, record)
             metrics["created"] += 1
             event = create_event(
-                record, observed_at=last_checked_at, privacy=privacy_decision,
-                publication=publication_decision,
+                record, observed_at=last_checked_at, authorization=authorization,
             )
         elif existing.technical.content_hash == record.technical.content_hash:
             operation = BOEOperation(BOEOperationType.NO_CHANGE, record)
@@ -243,11 +250,11 @@ def ingest_boe_summary(
             metrics["updated"] += 1
             event = update_event(
                 existing, record, observed_at=last_checked_at,
-                privacy=privacy_decision, publication=publication_decision,
+                authorization=authorization,
             )
         if event is not None:
             events.append(event)
-        planned[record.id] = (record, operation)
+        planned[record.id] = (record, operation, authorization)
 
     # Se escribe sólo después de finalizar y comparar todos los ítems. No hay
     # recorrido de records anteriores: BOE es un feed incremental, no snapshot.
@@ -261,9 +268,7 @@ def ingest_boe_summary(
             for event in events:
                 event_record = planned[event.record_id][0]
                 event_store.preflight(
-                    event, record=event_record,
-                    publication_review_config=publication_review_config,
-                    privacy_gate=gate,
+                    event, record=event_record, authorization=planned[event.record_id][2],
                 )
     except Exception:
         raise BOEIngestionError("El preflight de Record/Event falló; no se inició escritura.") from None
@@ -275,8 +280,7 @@ def ingest_boe_summary(
         for event in events:
             event_store.write(
                 event, record=planned[event.record_id][0],
-                publication_review_config=publication_review_config,
-                privacy_gate=gate,
+                authorization=planned[event.record_id][2],
             )
     for operation in operations:
         if operation.type in (BOEOperationType.CREATE, BOEOperationType.UPDATE):

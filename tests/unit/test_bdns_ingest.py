@@ -23,6 +23,7 @@ from infocs.fetch.bdns.ingest import (  # noqa: E402
 )
 from infocs.fetch.bdns.models import BDNSFetchResult, BDNSRequestStatus  # noqa: E402
 from infocs.fetch.bdns.parser import parse_bdns_detail, parse_bdns_search  # noqa: E402
+from infocs.events import EventStore  # noqa: E402
 from infocs.models import Record, SourceReference  # noqa: E402
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate  # noqa: E402
 from infocs.store import RecordStore  # noqa: E402
@@ -89,7 +90,7 @@ class BDNSIngestionTests(unittest.TestCase):
             **kwargs,
         )
 
-    def test_publicable_first_observation_writes_one_record_and_defers_event(self) -> None:
+    def test_publicable_first_observation_writes_record_and_reports_missing_event_store(self) -> None:
         page, detail = fixture_models()
         summaries = tuple(
             replace(page.items[0], numero_convocatoria=f"90000{index}")
@@ -110,7 +111,7 @@ class BDNSIngestionTests(unittest.TestCase):
         self.assertEqual(result.status, BDNSIngestionStatus.COMPLETE_SUCCESS)
         self.assertEqual(result.operation, BDNSRecordOperation.CREATE)
         self.assertEqual(result.event_status, BDNSEventStatus.DEFERRED)
-        self.assertEqual(result.safe_reason, "BDNS_CREATE_EVENT_DEFERRED")
+        self.assertEqual(result.safe_reason, "event_store_not_configured")
         self.assertEqual(result.request_count, 2)
         self.assertEqual(result.metrics.search_seen, 3)
         self.assertEqual(result.metrics.records_created, 1)
@@ -141,6 +142,34 @@ class BDNSIngestionTests(unittest.TestCase):
         self.assertIsNone(second.safe_reason)
         record_write.assert_not_called()
 
+    def test_authorized_eventstore_supports_bdns_create_and_update(self) -> None:
+        page, first = fixture_models()
+        event_store = EventStore(self.root / "events")
+        created = self.run_ingest(
+            FakeTransport(page, (first,)), event_store=event_store
+        )
+        self.assertEqual(created.operation, BDNSRecordOperation.CREATE)
+        self.assertEqual(created.event_status, BDNSEventStatus.CREATED)
+        self.assertEqual(created.metrics.events_created, 1)
+        create_event = event_store.list_source("bdns")[0]
+        self.assertEqual(create_event.type, "create")
+        self.assertIsNone(create_event.previous_content_hash)
+        self.assertEqual(create_event.changed_fields, ())
+        self.assertEqual(create_event.content_hash, created.content_hash)
+
+        _, changed = fixture_models(title="Convocatoria sintética con cambio")
+        updated = self.run_ingest(
+            FakeTransport(page, (changed,)), event_store=event_store
+        )
+        self.assertEqual(updated.operation, BDNSRecordOperation.UPDATE)
+        self.assertEqual(updated.metrics.events_created, 1)
+        events = event_store.list_source("bdns")
+        self.assertEqual(len(events), 2)
+        update_event = next(event for event in events if event.type == "update")
+        self.assertEqual(update_event.type, "update")
+        self.assertEqual(update_event.previous_content_hash, created.content_hash)
+        self.assertEqual(update_event.content_hash, updated.content_hash)
+
     def test_administrative_change_updates_record_and_defers_update_event(self) -> None:
         page, first = fixture_models()
         _, changed = fixture_models(title="Convocatoria sintética actualizada")
@@ -151,7 +180,7 @@ class BDNSIngestionTests(unittest.TestCase):
         self.assertEqual(updated.metrics.records_updated, 1)
         self.assertEqual(updated.metrics.events_created, 0)
         self.assertEqual(updated.event_status, BDNSEventStatus.DEFERRED)
-        self.assertEqual(updated.safe_reason, "BDNS_UPDATE_EVENT_DEFERRED")
+        self.assertEqual(updated.safe_reason, "event_store_not_configured")
 
     def test_privacy_quarantine_and_reject_never_reach_record_store(self) -> None:
         page, detail = fixture_models(title="DNI sintético 12345678Z")

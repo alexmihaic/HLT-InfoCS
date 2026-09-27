@@ -20,6 +20,7 @@ from infocs.fetch.bdns.parser import parse_bdns_detail, parse_bdns_search  # noq
 from infocs.fetch.bdns.publication import (  # noqa: E402
     BDNSMetadataPublicationDecisionType,
     BDNSPublicationPolicyError,
+    authorize_bdns_event,
     bdns_source_publication_eligibility,
     evaluate_bdns_publication,
 )
@@ -78,6 +79,10 @@ class BDNSPublicationPolicyTests(unittest.TestCase):
             BDNSMetadataPublicationDecisionType.PUBLISHABLE_METADATA,
         )
         self.assertIsNone(result.metadata_publication.reason_code)
+        authorization = authorize_bdns_event(record, result)
+        self.assertIsNotNone(authorization)
+        self.assertTrue(authorization.matches(record))
+        self.assertEqual(authorization.policy_id, "bdns.metadata-publication.v1")
 
     def test_quarantine_and_reject_stop_before_source_eligibility(self) -> None:
         quarantined = finalized_record(title="DNI sintético 12345678Z")
@@ -86,12 +91,14 @@ class BDNSPublicationPolicyTests(unittest.TestCase):
         self.assertEqual(privacy_quarantine.decision, PrivacyDecisionType.QUARANTINE)
         self.assertIsNone(quarantine_result.source_eligibility)
         self.assertIsNone(quarantine_result.metadata_publication)
+        self.assertIsNone(authorize_bdns_event(quarantined, quarantine_result))
 
         record = finalized_record()
         privacy_reject = PrivacyDecision(PrivacyDecisionType.REJECT, record.id)
         reject_result = evaluate_bdns_publication(record, privacy_reject)
         self.assertIsNone(reject_result.source_eligibility)
         self.assertIsNone(reject_result.metadata_publication)
+        self.assertIsNone(authorize_bdns_event(record, reject_result))
 
     def test_source_contract_errors_and_identity_mismatch_raise(self) -> None:
         record = finalized_record()
@@ -130,6 +137,7 @@ class BDNSPublicationPolicyTests(unittest.TestCase):
                 self.assertEqual(result.source_eligibility.decision, SourcePublicationEligibilityType.ELIGIBLE)
                 self.assertEqual(result.metadata_publication.decision, BDNSMetadataPublicationDecisionType.HOLD)
                 self.assertEqual(result.metadata_publication.reason_code, "metadata_scope_not_publishable")
+                self.assertIsNone(authorize_bdns_event(variant, result))
 
     def test_only_approved_territorial_provenance_is_publishable(self) -> None:
         record = finalized_record()

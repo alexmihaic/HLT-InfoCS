@@ -9,6 +9,7 @@ from enum import StrEnum
 from pathlib import Path
 import re
 
+from infocs.events import EventStore, EventStoreError, create_event, update_event
 from infocs.fetch.bdns.models import BDNSRequestStatus, BDNSSearchQuery
 from infocs.fetch.bdns.normalize import (
     BDNSNormalizationError,
@@ -18,6 +19,7 @@ from infocs.fetch.bdns.normalize import (
 from infocs.fetch.bdns.publication import (
     BDNSMetadataPublicationDecisionType,
     BDNSPublicationPolicyError,
+    authorize_bdns_event,
     evaluate_bdns_publication,
 )
 from infocs.fetch.bdns.transport import BDNSTransport
@@ -122,6 +124,7 @@ def ingest_bdns(
     started_at: datetime,
     transport: BDNSTransport | None = None,
     privacy_gate: PrivacyGate | None = None,
+    event_store: EventStore | None = None,
     clock: Callable[[], datetime] | None = None,
     attribution_path: Path = BDNS_ATTRIBUTION_PATH,
     page_size: int = 3,
@@ -130,9 +133,8 @@ def ingest_bdns(
 ) -> BDNSIngestionResult:
     """Procesa hasta tres detalles y persiste como máximo un Record elegible.
 
-    No usa EventStore porque su contrato v1 exige Publication Review manual
-    BOE. En create/update informa ``BDNS_CREATE_EVENT_DEFERRED`` sin fabricar
-    una aprobación BOE ni cambiar el contrato Event actual.
+    Si se proporciona EventStore, construye/preflighta Events usando la
+    autorización BDNS emitida tras superar sus tres gates de publicación.
     """
     if not isinstance(record_store, RecordStore):
         raise TypeError("record_store debe ser RecordStore.")
@@ -270,6 +272,20 @@ def ingest_bdns(
             counts["metadata_hold"] += 1
             continue
         counts["metadata_publishable"] += 1
+        try:
+            authorization = authorize_bdns_event(record, publication)
+        except BDNSPublicationPolicyError:
+            counts["errors"] += 1
+            continue
+        if authorization is None:
+            counts["errors"] += 1
+            return _result(
+                BDNSIngestionStatus.PERSISTENCE_BLOCKED,
+                counts,
+                requests,
+                statuses,
+                safe_reason="event_authorization_missing",
+            )
 
         if not _attribution_preflight(attribution_path):
             counts["errors"] += 1
@@ -305,21 +321,50 @@ def ingest_bdns(
 
         if operation is BDNSRecordOperation.CREATE:
             counts["records_created"] += 1
+            event = create_event(record, observed_at=observed_at, authorization=authorization)
         elif operation is BDNSRecordOperation.UPDATE:
             counts["records_updated"] += 1
+            event = update_event(existing, record, observed_at=observed_at, authorization=authorization)
         else:
             counts["records_unchanged"] += 1
+            event = None
+
+        if operation is not BDNSRecordOperation.NO_CHANGE and event is None:
+            counts["errors"] += 1
+            return _result(
+                BDNSIngestionStatus.PERSISTENCE_BLOCKED,
+                counts,
+                requests,
+                statuses,
+                safe_reason="event_preparation_failed",
+            )
+
+        try:
+            if event is not None and event_store is not None:
+                event_store.preflight(event, record=record, authorization=authorization)
+        except Exception:
+            counts["errors"] += 1
+            return _result(
+                BDNSIngestionStatus.PERSISTENCE_BLOCKED,
+                counts,
+                requests,
+                statuses,
+                safe_reason="event_preflight_failed",
+            )
 
         event_status = BDNSEventStatus.NOT_REQUIRED
-        if operation in {BDNSRecordOperation.CREATE, BDNSRecordOperation.UPDATE}:
-            event_status = BDNSEventStatus.DEFERRED
+        event_created = False
         try:
+            if event is not None and event_store is not None:
+                event_created = event_store.write(
+                    event, record=record, authorization=authorization
+                ).created
             if operation is not BDNSRecordOperation.NO_CHANGE:
                 _assert_persistence_gates(record, privacy)
                 written_path = record_store.write(record)
             else:
                 written_path = target_path
-        except (RecordStoreError, OSError):
+        except (EventStoreError, RecordStoreError, OSError):
             counts["errors"] += 1
             return _result(
                 BDNSIngestionStatus.PERSISTENCE_BLOCKED,
@@ -329,8 +374,12 @@ def ingest_bdns(
                 safe_reason="record_write_failed",
             )
 
-        # Event v1 writes are coupled to manual Publication Review; BDNS has its
-        # own source metadata policy, so no EventStore call is safe in this phase.
+        if event_created:
+            counts["events_created"] += 1
+            event_status = BDNSEventStatus.CREATED
+        elif event is not None and event_store is None:
+            event_status = BDNSEventStatus.DEFERRED
+
         return _result(
             BDNSIngestionStatus.COMPLETE_SUCCESS,
             counts,
@@ -340,13 +389,7 @@ def ingest_bdns(
             event_status=event_status,
             record_path=written_path,
             content_hash=record.technical.content_hash,
-            safe_reason=(
-                "BDNS_CREATE_EVENT_DEFERRED"
-                if operation is BDNSRecordOperation.CREATE
-                else "BDNS_UPDATE_EVENT_DEFERRED"
-                if operation is BDNSRecordOperation.UPDATE
-                else None
-            ),
+            safe_reason="event_store_not_configured" if event is not None and event_store is None else None,
         )
 
     status = BDNSIngestionStatus.SOURCE_FAILURE if counts["errors"] else BDNSIngestionStatus.COMPLETE_SUCCESS

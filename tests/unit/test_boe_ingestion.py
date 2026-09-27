@@ -36,13 +36,26 @@ from infocs.fetch.boe import (
 )
 from infocs.models import RecordStatus
 from infocs.events import EventStore
-from infocs.privacy import PrivacyGate, PrivacyGateError
-from infocs.publication.review import PublicationReviewConfig
+from infocs.fetch.boe.publication import authorize_boe_event
+from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate, PrivacyGateError
+from infocs.publication.review import (
+    PublicationDecision,
+    PublicationDecisionType,
+    PublicationReviewConfig,
+)
 from infocs.store import RecordStore
 
 
 NOW = datetime(2026, 9, 23, 9, 0, tzinfo=UTC)
 REGISTRY = load_castellon_registry()
+
+
+def approved_event_authorization(record):
+    return authorize_boe_event(
+        record,
+        PrivacyDecision(PrivacyDecisionType.ALLOW, record.id),
+        PublicationDecision(PublicationDecisionType.APPROVED, "reviewed_safe", True),
+    )
 
 
 def item(
@@ -362,11 +375,6 @@ class BOEIngestionTests(unittest.TestCase):
             )
             event_store = EventStore(Path(directory) / "events")
             conflicting = replace(seed.events[0], changed_fields=("description",))
-            config = PublicationReviewConfig.from_mapping({
-                "schema_version": "1", "source_id": "boe", "records": [{
-                    "official_id": "BOE-A-2099-995", "decision": "approved", "reason_code": "reviewed_safe",
-                }],
-            })
             target_store = RecordStore(Path(directory) / "target-records")
             initial = ingest_boe_summary(
                 summary(a), registry=REGISTRY, store=target_store,
@@ -374,7 +382,7 @@ class BOEIngestionTests(unittest.TestCase):
             )
             event_store.write(
                 conflicting, record=seed.operations[0].record,
-                publication_review_config=config,
+                authorization=approved_event_authorization(seed.operations[0].record),
             )
             with self.assertRaises(BOEIngestionError):
                 ingest_boe_summary(
@@ -453,14 +461,9 @@ class BOEIngestionTests(unittest.TestCase):
             )
             event = legacy_result.events[0]
             record_b = legacy_result.operations[0].record
-            config = PublicationReviewConfig.from_mapping({
-                "schema_version": "1", "source_id": "boe", "records": [{
-                    "official_id": b.official_id, "decision": "approved", "reason_code": "reviewed_safe",
-                }],
-            })
             with self.assertRaises(OSError):
                 FailingEventStore(Path(directory) / "legacy-events").write(
-                    event, record=record_b, publication_review_config=config,
+                    event, record=record_b, authorization=approved_event_authorization(record_b),
                 )
 
             recovered_store = EventStore(Path(directory) / "legacy-events")

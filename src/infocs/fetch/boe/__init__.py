@@ -65,6 +65,7 @@ from infocs.fetch.boe.review_queue import (
     ReviewQueueError,
     ReviewQueueObservation,
 )
+from infocs.fetch.boe.publication import authorize_boe_event
 
 __all__ = [
     "BOEContractError",
@@ -94,6 +95,7 @@ __all__ = [
     "BOETerritorialRegistry",
     "BOETerritorialRegistryError",
     "BOETransport",
+    "authorize_boe_event",
     "BOEReviewQueueStore",
     "ReviewQueueEntry",
     "ReviewQueueError",

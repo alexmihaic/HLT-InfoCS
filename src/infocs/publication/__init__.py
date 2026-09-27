@@ -15,6 +15,11 @@ from infocs.publication.source_policy import (
     source_eligible,
     source_hold,
 )
+from infocs.publication.authorization import (
+    PublicationAuthorization,
+    PublicationAuthorizationError,
+    validate_publication_authorization,
+)
 
 __all__ = [
     "PublicationDecision",
@@ -28,4 +33,7 @@ __all__ = [
     "SourcePublicationEligibilityType",
     "source_eligible",
     "source_hold",
+    "PublicationAuthorization",
+    "PublicationAuthorizationError",
+    "validate_publication_authorization",
 ]

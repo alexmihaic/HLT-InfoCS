@@ -29,13 +29,29 @@ Los updates encadenan naturalmente el estado: el `content_hash` de un Event
 es el `previous_content_hash` del siguiente update de esa secuencia. No se
 añade criptografía de cadena, firma ni certificación externa.
 
-## Privacidad y aprobación
+## Autorización de publicación
 
-El flujo exige Privacy Gate `allow` y Publication Review `approved` para
-construir y escribir Event. `quarantine`, `reject` y `hold` no generan Events.
-`changed_fields` contiene nombres de campos, no contenido. El primer Record
-BOE preexistente no se retrorellena: su Event queda pendiente de decisión y
-de un `observed_at` acreditado.
+La evaluación de políticas ocurre antes de construir o persistir un Event.
+Sólo un adaptador de política que haya pasado sus gates puede emitir una
+`PublicationAuthorization` inmutable. La autorización queda ligada a
+`record_id`, `source_id`, `content_hash` y un `policy_id` versionado; no se
+incluye en el Record ni en el Event. Una autorización para otra fuente,
+identidad o versión del Record no sirve.
+
+Las rutas v1 son distintas y no se homogeneizan artificialmente:
+
+- BOE: Privacy Gate `allow` y Publication Review manual `approved`.
+- BDNS: Privacy `allow`, Source Publication Eligibility `eligible` y política
+  de metadata `publishable_metadata`.
+- BOP: el source-wide `hold / reuse_policy_unresolved` no emite autorización.
+
+`quarantine`, `reject`, `hold` o la ausencia de autorización no generan
+Events. `changed_fields` contiene nombres de campos, no contenido. EventStore
+valida la autorización y su binding, pero no vuelve a ejecutar ninguna
+política source-specific.
+
+El primer Record BOE preexistente no se retrorellena: su Event queda pendiente
+de decisión y de un `observed_at` acreditado.
 
 ## EventStore
 
@@ -48,10 +64,11 @@ con conflicto contractual. Si solo difiere `observed_at`, la transición se
 considera la misma, se conserva el timestamp del archivo existente y el retry
 es idempotente. Cualquier otra diferencia bajo el mismo ID es conflicto.
 `observed_at` representa la primera persistencia de la transición. `write()`
-exige además el Record asociado y la configuración de Publication Review;
-valida el Record y vuelve a ejecutar Privacy Gate y review antes de añadir el
-archivo. `list_record()` ordena por `observed_at` y después `event_id`, sin
-depender del orden del filesystem.
+exige además el Record asociado y una PublicationAuthorization válida cuyo
+binding coincida exactamente con el Record y el hash del Event. Valida el
+Record, el schema, la identidad y el path antes de añadir el archivo; no carga
+configuración de revisión ni reevalúa Privacy. `list_record()` ordena por
+`observed_at` y después `event_id`, sin depender del orden del filesystem.
 
 La ingesta hace preflight completo de Records y Events antes de escribir; a
 continuación escribe Events y luego Records. No existe transacción real ni

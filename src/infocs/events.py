@@ -17,13 +17,10 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from infocs.diff.core import content_hash, diff
 from infocs.models import Record
-from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate
-from infocs.publication.review import (
-    PublicationDecision,
-    PublicationDecisionType,
-    PublicationReviewConfig,
-    PublicationReviewError,
-    review_publication,
+from infocs.publication.authorization import (
+    PublicationAuthorization,
+    PublicationAuthorizationError,
+    validate_publication_authorization,
 )
 
 
@@ -133,12 +130,12 @@ def create_event(
     record: Record,
     *,
     observed_at: datetime,
-    privacy: PrivacyDecision,
-    publication: PublicationDecision,
+    authorization: PublicationAuthorization | None,
 ) -> Event | None:
-    """Construye un create solo para record permitido y aprobado; en otro caso no emite Event."""
-    if not _publication_allowed(record, privacy, publication):
+    """Construye un create sólo si el Record exacto dispone de autorización."""
+    if authorization is None:
         return None
+    _assert_authorization(record, authorization)
     return _make_event("create", record, observed_at, previous=None, changed_fields=())
 
 
@@ -147,16 +144,16 @@ def update_event(
     current: Record,
     *,
     observed_at: datetime,
-    privacy: PrivacyDecision,
-    publication: PublicationDecision,
+    authorization: PublicationAuthorization | None,
 ) -> Event | None:
     """Construye update con rutas del diff común, sin valores anteriores/nuevos."""
     if previous.id != current.id or previous.source.id != current.source.id:
         raise EventValidationError("Un update debe conservar identidad y fuente del Record.")
     if previous.technical.content_hash == current.technical.content_hash:
         return None
-    if not _publication_allowed(current, privacy, publication):
+    if authorization is None:
         return None
+    _assert_authorization(current, authorization)
     paths = tuple(sorted({change.path for change in diff(previous.to_dict(), current.to_dict())}))
     if not paths:
         raise EventValidationError("Hash distinto sin campos semánticos modificados.")
@@ -227,11 +224,10 @@ class EventStore:
         event: Event,
         *,
         record: Record,
-        publication_review_config: PublicationReviewConfig,
-        privacy_gate: PrivacyGate | None = None,
+        authorization: PublicationAuthorization,
     ) -> bool:
         """Valida el Event y detecta colisión antes de comenzar un batch de escrituras."""
-        validated = self._validate_publication(event, record, publication_review_config, privacy_gate)
+        validated = self._validate_authorization(event, record, authorization)
         path = self.path_for(validated.source_id, validated.record_id, validated.event_id)
         if not path.exists():
             return True
@@ -245,10 +241,9 @@ class EventStore:
         event: Event,
         *,
         record: Record,
-        publication_review_config: PublicationReviewConfig,
-        privacy_gate: PrivacyGate | None = None,
+        authorization: PublicationAuthorization,
     ) -> EventWriteResult:
-        validated = self._validate_publication(event, record, publication_review_config, privacy_gate)
+        validated = self._validate_authorization(event, record, authorization)
         path = self.path_for(validated.source_id, validated.record_id, validated.event_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         if path.exists():
@@ -302,11 +297,10 @@ class EventStore:
         return tuple(sorted((event for event in events if event is not None), key=lambda event: (event.observed_at, event.event_id)))
 
     @staticmethod
-    def _validate_publication(
+    def _validate_authorization(
         event: Event,
         record: Record,
-        publication_review_config: PublicationReviewConfig,
-        privacy_gate: PrivacyGate | None,
+        authorization: PublicationAuthorization,
     ) -> Event:
         validated = _validated_event(event)
         if not isinstance(record, Record):
@@ -323,22 +317,16 @@ class EventStore:
             or content_hash(record.to_dict()) != validated.content_hash
         ):
             raise EventStoreError("El Event no corresponde al Record final actual.")
-        if not isinstance(publication_review_config, PublicationReviewConfig):
-            raise EventStoreError("La escritura de Event requiere Publication Review.")
-        gate = privacy_gate if privacy_gate is not None else PrivacyGate.default()
         try:
-            gate.validate()
-            privacy = gate.evaluate(record)
-            publication = review_publication(record, privacy, publication_review_config)
-        except Exception:
-            raise EventStoreError("Privacy Gate o Publication Review falló para Event.") from None
+            validate_publication_authorization(authorization, record)
+        except PublicationAuthorizationError:
+            raise EventStoreError("Event requiere autorización válida para el Record y hash actuales.") from None
         if (
-            not isinstance(privacy, PrivacyDecision)
-            or privacy.record_id != record.id
-            or privacy.decision is not PrivacyDecisionType.ALLOW
-            or publication.decision is not PublicationDecisionType.APPROVED
+            validated.record_id != authorization.record_id
+            or validated.source_id != authorization.source_id
+            or validated.content_hash != authorization.content_hash
         ):
-            raise EventStoreError("Event requiere Privacy Gate allow y Publication Review approved.")
+            raise EventStoreError("La autorización no está ligada al Event exacto.")
         return validated
 
     def _read(self, path: Path) -> Event | None:
@@ -387,14 +375,11 @@ def _make_event(
     return event
 
 
-def _publication_allowed(record: Record, privacy: PrivacyDecision, publication: PublicationDecision) -> bool:
-    if not isinstance(privacy, PrivacyDecision) or privacy.record_id != record.id:
-        raise EventValidationError("Decisión de privacidad ausente o no correspondiente al Record.")
-    if not isinstance(publication, PublicationDecision):
-        raise EventValidationError("Decisión de publicación ausente.")
-    if privacy.decision is not PrivacyDecisionType.ALLOW:
-        return False
-    return publication.decision is PublicationDecisionType.APPROVED
+def _assert_authorization(record: Record, authorization: PublicationAuthorization) -> None:
+    try:
+        validate_publication_authorization(authorization, record)
+    except PublicationAuthorizationError:
+        raise EventValidationError("Autorización ausente o no correspondiente al Record actual.") from None
 
 
 def _validated_event(event: Event) -> Event:

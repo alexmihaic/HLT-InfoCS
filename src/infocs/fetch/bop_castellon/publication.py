@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from infocs.models import Record
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType
+from infocs.publication.authorization import PublicationAuthorization
 from infocs.publication.source_policy import (
     SourcePublicationEligibilityDecision,
     source_hold,
@@ -59,3 +60,17 @@ def evaluate_bop_publication(
     if privacy_decision.decision is not PrivacyDecisionType.ALLOW:
         return BOPPublicationEvaluation(privacy_decision, None)
     return BOPPublicationEvaluation(privacy_decision, bop_source_publication_eligibility())
+
+
+def authorize_bop_event(
+    record: Record,
+    evaluation: BOPPublicationEvaluation,
+) -> PublicationAuthorization | None:
+    """BOP permanece HOLD; por diseño no puede emitir autorización Event."""
+    if not isinstance(record, Record) or not isinstance(evaluation, BOPPublicationEvaluation):
+        raise BOPPublicationPolicyError("Se requieren Record y evaluación BOP válidos.")
+    if evaluation.privacy_decision.record_id != record.id:
+        raise BOPPublicationPolicyError("La evaluación no corresponde al Record.")
+    if record.source.id != "bop_castellon":
+        raise BOPPublicationPolicyError("La política BOP sólo admite Records bop_castellon.")
+    return None

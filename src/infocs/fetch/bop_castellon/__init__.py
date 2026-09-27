@@ -24,6 +24,7 @@ from infocs.fetch.bop_castellon.parser import (
 from infocs.fetch.bop_castellon.publication import (
     BOPPublicationEvaluation,
     BOPPublicationPolicyError,
+    authorize_bop_event,
     bop_source_publication_eligibility,
     evaluate_bop_publication,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "BOPNormalizationError",
     "BOPPublicationEvaluation",
     "BOPPublicationPolicyError",
+    "authorize_bop_event",
     "BOPTransport",
     "bop_source_publication_eligibility",
     "category_for_bop_title",

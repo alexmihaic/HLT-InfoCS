@@ -18,10 +18,12 @@ from infocs.fetch.bop_castellon.normalize import normalize_bop_announcement  # n
 from infocs.fetch.bop_castellon.publication import (  # noqa: E402
     BOPPublicationEvaluation,
     BOPPublicationPolicyError,
+    authorize_bop_event,
     bop_source_publication_eligibility,
     evaluate_bop_publication,
 )
 from infocs.diff.core import diff  # noqa: E402
+from infocs.events import create_event  # noqa: E402
 from infocs.finalize import finalize_record  # noqa: E402
 from infocs.models import SourceReference  # noqa: E402
 from infocs.privacy import PrivacyConfig, PrivacyDecisionType, PrivacyGate  # noqa: E402
@@ -66,6 +68,9 @@ class BOPPublicationPolicyTests(unittest.TestCase):
         self.assertIs(result.privacy_decision, privacy)
         self.assertEqual(result.source_eligibility.decision, SourcePublicationEligibilityType.HOLD)
         self.assertEqual(result.source_eligibility.reason_code, "reuse_policy_unresolved")
+        authorization = authorize_bop_event(record, result)
+        self.assertIsNone(authorization)
+        self.assertIsNone(create_event(record, observed_at=OBSERVED, authorization=authorization))
 
     def test_source_hold_is_independent_of_identity_category_authority_and_geography(self) -> None:
         variants = (

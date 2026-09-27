@@ -18,11 +18,18 @@ from infocs.fetch.bdns.normalize import (
 from infocs.fetch.bdns.config import detail_url_for
 from infocs.models import Category, Record, TerritorialMatchReason
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType
+from infocs.publication.authorization import (
+    PublicationAuthorization,
+    _issue_publication_authorization,
+)
 from infocs.publication.source_policy import (
     SourcePublicationEligibilityDecision,
     SourcePublicationEligibilityType,
     source_eligible,
 )
+
+
+BDNS_EVENT_POLICY_ID = "bdns.metadata-publication.v1"
 
 
 class BDNSMetadataPublicationDecisionType(StrEnum):
@@ -112,6 +119,32 @@ def evaluate_bdns_publication(
         else "metadata_scope_not_publishable",
     )
     return BDNSPublicationEvaluation(privacy_decision, eligibility, decision)
+
+
+def authorize_bdns_event(
+    record: Record,
+    evaluation: BDNSPublicationEvaluation,
+) -> PublicationAuthorization | None:
+    """Adapta los tres gates BDNS a la autorización transitoria de Events."""
+    if not isinstance(record, Record) or not isinstance(evaluation, BDNSPublicationEvaluation):
+        raise BDNSPublicationPolicyError("Se requieren Record y evaluación BDNS válidos.")
+    if record.source.id != BDNS_SOURCE_ID:
+        raise BDNSPublicationPolicyError("La autorización sólo admite Records BDNS.")
+    if evaluation.privacy_decision.record_id != record.id:
+        raise BDNSPublicationPolicyError("La evaluación no corresponde al Record.")
+    canonical = evaluate_bdns_publication(record, evaluation.privacy_decision)
+    if canonical != evaluation:
+        raise BDNSPublicationPolicyError("La evaluación BDNS no coincide con las políticas actuales.")
+    if canonical.privacy_decision.decision is not PrivacyDecisionType.ALLOW:
+        return None
+    if (
+        canonical.source_eligibility is None
+        or canonical.source_eligibility.decision is not SourcePublicationEligibilityType.ELIGIBLE
+        or canonical.metadata_publication is None
+        or canonical.metadata_publication.decision is not BDNSMetadataPublicationDecisionType.PUBLISHABLE_METADATA
+    ):
+        return None
+    return _issue_publication_authorization(record, BDNS_EVENT_POLICY_ID)
 
 
 def _record_is_publishable_metadata(record: Record) -> bool:

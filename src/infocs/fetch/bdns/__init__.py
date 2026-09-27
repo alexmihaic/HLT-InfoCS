@@ -22,6 +22,7 @@ from infocs.fetch.bdns.publication import (
     BDNSMetadataPublicationDecisionType,
     BDNSPublicationEvaluation,
     BDNSPublicationPolicyError,
+    authorize_bdns_event,
     bdns_source_publication_eligibility,
     evaluate_bdns_publication,
 )
@@ -64,6 +65,7 @@ __all__ = [
     "BDNSTerritorialStatus",
     "BDNSPublicationEvaluation",
     "BDNSPublicationPolicyError",
+    "authorize_bdns_event",
     "BDNSSearchQuery",
     "BDNSTransport",
     "evaluate_bdns_territory",
