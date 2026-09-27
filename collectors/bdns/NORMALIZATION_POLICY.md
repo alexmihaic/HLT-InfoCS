@@ -2,11 +2,11 @@
 
 **Revisión:** 2026-09-26
 
-**Alcance:** reglas previas para convertir una convocatoria (no una concesión individual) en un futuro `RecordCandidate`. No implementa normalizador, privacidad ni publicación.
+**Alcance:** reglas para convertir una convocatoria (no una concesión individual) en `RecordCandidate`. La implementación source-specific es offline y no realiza privacidad, publicación ni persistencia.
 
 ## Requisito de scope
 
-Primero evaluar la política de `TERRITORIAL_POLICY.md`. Sólo los casos `INCLUDE` pueden continuar a normalización. Una región amplia o no resuelta no se convierte en Record local. Excluir una convocatoria fuera del scope no significa que la fuente haya fallado.
+Primero evaluar la política de `TERRITORIAL_POLICY.md`. Sólo los casos `INCLUDE` pueden producir un `RecordCandidate`. La implementación v1 compara de forma exacta `regiones[].descripcion` con `ES522 - Castellón / Castelló` (catálogo BDNS id 56). Una única región provincial de Valencia exactamente identificada y disjunta produce `OUT_OF_SCOPE`; región amplia, ausencia o etiqueta no mapeada produce `UNRESOLVED`. Estos resultados no significan que la fuente haya fallado.
 
 ## Identidad y origen
 
@@ -16,7 +16,7 @@ Primero evaluar la política de `TERRITORIAL_POLICY.md`. Sólo los casos `INCLUD
 - `grant.call_id` puede conservar el mismo Código BDNS: es la referencia de dominio del bloque grant, mientras `source.official_id` es la identidad genérica. `resolution_id` y `beneficiary` se omiten; una convocatoria no es una concesión.
 - `source_url`: endpoint oficial de detalle `https://www.infosubvenciones.es/bdnstrans/api/convocatorias?numConv=<codigoBDNS>`, con query encoding estándar. Es una URL reproducible documentada; no inventar una ficha frontend.
 
-El detalle contiene `organo.nivel1`–`nivel3`, pero no su código. La búsqueda puede aportar `codigoInvente`, que el OpenAPI define como «Código INVENTE del órgano de la convocatoria». Si se usa, primero unir resumen y detalle comprobando `numeroConvocatoria == codigoBDNS`; namespacing sugerido para `authority.id`: `bdns:invente:<codigoInvente>`. Es código del órgano en INVENTE, no INE ni código territorial. Si no hay código y el órgano es identificable por sus niveles source-specific, un futuro ID InfoCs debe ser determinista y explícitamente derivado (por ejemplo, hash de la tupla jerárquica canónica); no presentarlo como identificador oficial. Sin nombre de órgano suficiente, `authority = null` es válido.
+El detalle contiene `organo.nivel1`–`nivel3`, pero no su código. La búsqueda puede aportar `codigoInvente`, que el OpenAPI define como «Código INVENTE del órgano de la convocatoria». La implementación une resumen y detalle comprobando `numeroConvocatoria == codigoBDNS`; sólo después puede usar `authority.id = bdns:invente:<codigoInvente>`. Es código del órgano en INVENTE, no INE ni código territorial. Si no hay código y hay niveles de órgano, el normalizador construye un ID InfoCs determinista con SHA-256 de la jerarquía canónica y lo namespacia como `bdns:derived-authority:`; no es un identificador oficial. El nombre conserva los niveles no vacíos en orden, separados por ` / `. Sin nombre suficiente, `authority = null` es válido.
 
 El OpenAPI describe `tipoAdministracion` (`C`, `A`, `L`, `O`) como filtro de búsqueda: Estado, Comunidad Autónoma, Entidad Local y otros órganos. No figura como campo devuelto por el modelo de convocatoria. No derivar `administration_level` de ese parámetro ni del texto `nivel1`–`nivel3`. En v1 dejar `authority.administration_level` y `administration_level` a `null`, salvo que una fuente/catálogo oficial asociado aporte una clasificación inequívoca a uno de los cuatro niveles Core. `L` no distingue municipal de provincial; `O` tampoco es un nivel Core.
 

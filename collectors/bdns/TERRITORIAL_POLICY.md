@@ -2,7 +2,7 @@
 
 **Revisión:** 2026-09-26
 
-**Uso:** criterio de alcance para futuras convocatorias BDNS. No implementa filtro ni matching.
+**Uso:** criterio de alcance de convocatorias BDNS v1, implementado sin consultas de red en `src/infocs/fetch/bdns/normalize.py`.
 
 ## Evidencia oficial
 
@@ -30,6 +30,8 @@ Scope InfoCs: Castelló de la Plana y provincia de Castellón/Castelló. Sólo p
 2. Una futura región de nivel municipal sólo podrá incluirse si el propio catálogo oficial aporta un identificador municipal y existe una correspondencia inequívoca con el registro territorial oficial de InfoCs. Esa vía aún no está demostrada y no está habilitada por esta política.
 3. Un órgano convocante podrá ser señal territorial sólo tras asociar su código oficial a una entidad municipal/provincial concreta de Castellón mediante un catálogo oficial verificable. El mero nombre, el nivel jerárquico, `tipoAdministracion=L` o la sede electrónica no prueban ubicación ni ámbito de la convocatoria. Esta correspondencia aún no está auditada.
 
+La implementación v1 activa únicamente el primer caso: compara la etiqueta completa `regiones[].descripcion` con `ES522 - Castellón / Castelló` y emite sólo `geography.province = Castellón/Castelló`, con `OFFICIAL_CODE_MATCH`. La respuesta de detalle no incluye el ID del catálogo; `56` documenta el cruce auditado y no se presenta como dato recibido en cada convocatoria ni como código INE. El código `ES522` tampoco se convierte en INE.
+
 Si una convocatoria enumera varias regiones, basta con que una sea una coincidencia local/provincial exacta demostrada para establecer relevancia territorial; guardar sólo la geografía que la evidencia permita afirmar.
 
 ## No coincidencia y casos pendientes
@@ -39,6 +41,8 @@ Si una convocatoria enumera varias regiones, basta con que una sea una coinciden
 - Región explícita, verificable y disjunta del scope (por ejemplo, únicamente `ES523`): `OUT_OF_SCOPE`.
 - `regiones=[]`, campo ausente o etiqueta que no pueda enlazarse exactamente al catálogo: `UNRESOLVED`; no asumir Castellón.
 - Órgano local/provincial sin cruce oficial a una entidad concreta de Castellón: `UNRESOLVED`, aunque el texto contenga «Castellón» o una variante.
+
+En el evaluador v1, una lista compuesta exclusivamente por la etiqueta provincial disjunta observada `ES523 - Valencia / València` da `OUT_OF_SCOPE`. La etiqueta canónica local presente junto a cualquier otra región basta para `INCLUDE`; únicamente se registra la provincia que puede afirmarse. Cualquier otro contenido regional no mapeado queda `UNRESOLVED`, no `source_failure`.
 
 No son criterios territoriales: título, descripción, finalidad, beneficiarios, substring, fuzzy matching, LLM ni ubicación de la sede por sí sola. Los campos `nivel1`–`nivel3` describen niveles del órgano; no son en sí una declaración del ámbito geográfico de la convocatoria.
 

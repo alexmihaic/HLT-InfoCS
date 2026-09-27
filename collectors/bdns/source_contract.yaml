@@ -134,9 +134,15 @@ territoriality:
     - tipoAdministracion filter
     - regiones impact filter and official region tree
     - extract/document official URLs
-  municipality_mapping: not_audited
-  province_mapping: not_audited
-  future_filter: not_defined
+  municipality_mapping: not_demonstrated_no_municipal_region_enabled_v1
+  province_mapping:
+    source_field: regiones[].descripcion
+    exact_label: "ES522 - Castellón / Castelló"
+    bdns_catalog_id: 56
+    catalog_id_is_ine: false
+    mapped_geography: province_castellon_castello
+    matching: exact_full_label_only
+  future_filter: include_only_exact_local_official_region_or_future_verified_official_authority_crosswalk
 
 documents:
   default_policy: link_and_hash
