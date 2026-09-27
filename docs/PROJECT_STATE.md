@@ -31,9 +31,14 @@ Records BOP: 0; Events BOP: 0.**
 
 ## Siguiente fase de producto
 
-**Phase 09 — Portal Astro.** No se ha iniciado la implementación del portal.
-El `IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es
-la referencia para el estado operativo actual.
+**Phase 09 — Portal Astro: 09A y 09B completos.** La capa build-time carga
+Records/Events canónicos y genera portada cronológica, fichas estáticas y
+directorio de fuentes con metodología breve. La presentación distingue fecha
+de publicación de detección y conserva la procedencia; no usa JavaScript
+cliente. `astro check`/`astro build` pasan. GitHub Pages, dominio y deployment
+no están configurados ni se consideran listos. El
+`IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es la
+referencia para el estado operativo actual.
 
 ## Deuda operativa y publicación
 
@@ -49,6 +54,5 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `READY_TO_START_ASTRO`.** Esta señal autoriza iniciar la
-fase de producto estático; no implica que las deudas anteriores estén cerradas
-ni habilita la beta pública.
+**Estado de avance: `PHASE_09B_COMPLETE`.** Esto no implica que las deudas
+anteriores estén cerradas ni habilita el deployment o la beta pública.

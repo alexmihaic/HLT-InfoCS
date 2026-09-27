@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  currentPage?: 'home' | 'sources';
+}
+
+const {
+  title,
+  description = 'Actividad pública de Castellón a partir de fuentes oficiales.',
+  currentPage,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title} · InfoCs</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="/" aria-label="InfoCs, inicio">InfoCs</a>
+        <nav aria-label="Navegación principal">
+          <a href="/" aria-current={currentPage === 'home' ? 'page' : undefined}>Inicio</a>
+          <a href="/fuentes/" aria-current={currentPage === 'sources' ? 'page' : undefined}>Fuentes</a>
+        </nav>
+      </div>
+    </header>
+    <main id="contenido" class="shell">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p>InfoCs organiza metadatos de fuentes oficiales, conserva el enlace de origen y registra cambios cuando existe historial.</p>
+        <a href="/fuentes/">Fuentes y metodología</a>
+      </div>
+    </footer>
+  </body>
+</html>

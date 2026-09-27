@@ -1,0 +1,65 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { loadPortalData } from '../../lib/data';
+
+const data = await loadPortalData();
+---
+
+<BaseLayout
+  title="Fuentes y metodología"
+  description="Organismos oficiales de origen, disponibilidad editorial y método de organización de InfoCs."
+  currentPage="sources"
+>
+  <section class="page-intro" aria-labelledby="page-title">
+    <p class="eyebrow">Procedencia y alcance</p>
+    <h1 id="page-title">Fuentes</h1>
+    <p class="lede">InfoCs organiza metadatos de publicaciones oficiales y enlaza siempre que es posible con el sitio de origen. El estado que aparece aquí describe la disponibilidad editorial en InfoCs, no la salud técnica del organismo.</p>
+  </section>
+
+  <section class="source-directory" aria-label="Directorio de fuentes">
+    <ol class="source-list">
+      {data.sources.map((source) => (
+        <li>
+          <article class="source-entry">
+            <div class="source-entry-heading">
+              <div>
+                <p class="eyebrow">{source.statusLabel}</p>
+                <h2>{source.name}</h2>
+              </div>
+              <span class:list={["source-state", source.publicationState === 'publication_pending' ? 'pending' : 'active']}>
+                {source.statusLabel}
+              </span>
+            </div>
+            <dl class="source-facts">
+              <div><dt>Organismo responsable</dt><dd>{source.responsibleBody}</dd></div>
+              <div><dt>Acceso</dt><dd>{source.accessType}</dd></div>
+              <div>
+                <dt>Disponibilidad en InfoCs</dt>
+                <dd>{source.publicationState === 'publication_pending'
+                  ? 'No se publican Records de esta fuente mientras sus condiciones de reutilización estén pendientes de aclaración.'
+                  : source.recordCount > 0
+                    ? `${source.recordCount} ${source.recordCount === 1 ? 'publicación disponible' : 'publicaciones disponibles'}.`
+                    : 'Fuente activa; actualmente no hay Records públicos disponibles.'}</dd>
+              </div>
+            </dl>
+            <p>{source.summary}</p>
+            {source.attribution && <p class="attribution">{source.attribution}</p>}
+            <a class="text-link" href={source.officialUrl} target="_blank" rel="noopener noreferrer">Visitar fuente oficial <span aria-hidden="true">↗</span></a>
+          </article>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="methodology-section" aria-labelledby="method-title">
+    <p class="eyebrow">Método</p>
+    <h2 id="method-title">Cómo leer InfoCs</h2>
+    <ul>
+      <li>La fuente oficial es el origen; InfoCs organiza metadatos y conserva el enlace para consultar la publicación.</li>
+      <li>Las fechas oficiales y las fechas de detección por InfoCs se etiquetan por separado.</li>
+      <li>La normalización puede presentar categorías o ámbitos estructurados; no completa los campos que la fuente no permite determinar.</li>
+      <li>Los controles de privacidad se aplican antes de publicar. El historial sólo aparece cuando existe un Event canónico.</li>
+    </ul>
+    <p class="muted">El portal no promete exhaustividad absoluta, actualización en tiempo real ni asesoramiento jurídico. La publicación oficial original es la referencia para su contenido íntegro.</p>
+  </section>
+</BaseLayout>
