@@ -1,0 +1,5 @@
+---
+interface Props { title?: string }
+const { title = 'Procesado por InfoCs' } = Astro.props;
+---
+<section class="surface-panel derived-panel" aria-label={title}><p class="panel-kicker">{title}</p><slot /></section>

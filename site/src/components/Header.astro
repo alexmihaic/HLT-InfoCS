@@ -1,0 +1,20 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+import Wordmark from './Wordmark.astro';
+
+interface Props { currentPage?: 'explore' | 'sources' }
+const { currentPage } = Astro.props;
+---
+
+<header class="site-header">
+  <div class="shell header-inner">
+    <Wordmark />
+    <div class="header-actions">
+      <nav class="primary-nav" aria-label="Navegación principal">
+        <a href="/" aria-current={currentPage === 'explore' ? 'page' : undefined}>Explorar</a>
+        <a href="/fuentes/" aria-current={currentPage === 'sources' ? 'page' : undefined}>Fuentes</a>
+      </nav>
+      <ThemeToggle />
+    </div>
+  </div>
+</header>

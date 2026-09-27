@@ -1,10 +1,12 @@
 ---
 import '../styles/global.css';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
 
 interface Props {
   title: string;
   description?: string;
-  currentPage?: 'home' | 'sources';
+  currentPage?: 'explore' | 'sources';
 }
 
 const {
@@ -21,26 +23,21 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title} · InfoCs</title>
+    <script is:inline>
+      try {
+        const savedTheme = localStorage.getItem('infocs-theme');
+        document.documentElement.dataset.theme = savedTheme === 'light' ? 'light' : 'dark';
+      } catch {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
-    <header class="site-header">
-      <div class="shell header-inner">
-        <a class="brand" href="/" aria-label="InfoCs, inicio">InfoCs</a>
-        <nav aria-label="Navegación principal">
-          <a href="/" aria-current={currentPage === 'home' ? 'page' : undefined}>Inicio</a>
-          <a href="/fuentes/" aria-current={currentPage === 'sources' ? 'page' : undefined}>Fuentes</a>
-        </nav>
-      </div>
-    </header>
+    <Header currentPage={currentPage} />
     <main id="contenido" class="shell">
       <slot />
     </main>
-    <footer class="site-footer">
-      <div class="shell footer-inner">
-        <p>InfoCs organiza metadatos de fuentes oficiales, conserva el enlace de origen y registra cambios cuando existe historial.</p>
-        <a href="/fuentes/">Fuentes y metodología</a>
-      </div>
-    </footer>
+    <Footer />
   </body>
 </html>

@@ -1,0 +1,13 @@
+---
+import type { TimelineItem } from '../lib/presentation/recordView';
+import ChangeEvent from './ChangeEvent.astro';
+import EmptyState from './EmptyState.astro';
+interface Props { items: readonly TimelineItem[] }
+const { items } = Astro.props;
+---
+<section class="page-section" aria-labelledby="history-title">
+  <div class="section-heading"><div><p class="eyebrow">Seguimiento</p><h2 id="history-title">Historial</h2></div></div>
+  {items.length > 0
+    ? <ol class="event-list">{items.map((item) => <ChangeEvent description={item.description} value={item.value} display={item.display} />)}</ol>
+    : <EmptyState compact message="InfoCs no tiene un historial registrado para esta publicación." />}
+</section>

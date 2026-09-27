@@ -1,0 +1,14 @@
+---
+interface Props { recordId: string; officialId?: string; contentHash: string; detectedAt: string; lastCheckedAt: string }
+const { recordId, officialId, contentHash, detectedAt, lastCheckedAt } = Astro.props;
+---
+<details class="technical-details">
+  <summary>Detalles técnicos</summary>
+  <dl class="detail-grid">
+    <div><dt>Identificador InfoCs</dt><dd class="mono-value">{recordId}</dd></div>
+    {officialId && <div><dt>Identificador de la fuente</dt><dd class="mono-value">{officialId}</dd></div>}
+    <div><dt>Hash de contenido</dt><dd class="mono-value">{contentHash}</dd></div>
+    <div><dt>Detectado</dt><dd><time datetime={detectedAt}>{detectedAt}</time></dd></div>
+    <div><dt>Última comprobación</dt><dd><time datetime={lastCheckedAt}>{lastCheckedAt}</time></dd></div>
+  </dl>
+</details>

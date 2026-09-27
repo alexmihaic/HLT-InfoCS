@@ -1,7 +1,8 @@
 # Arquitectura de información frontend v1
 
-Estado: 09B implementada sobre Astro estático. El frontend lee Records y
-Events canónicos en build; no reinterpreta reglas de negocio ni modifica datos.
+Estado: slice 09A/09B integrada con el sistema visual aprobado de 09C. El
+frontend lee Records y Events canónicos en build; no reinterpreta reglas de
+negocio ni modifica datos.
 
 **Alcance de implementación:** las rutas Astro descritas aquí son la primera
 vertical funcional implementada. No sustituyen el sistema de producto/UI de
@@ -11,11 +12,16 @@ que se integrarán en fases posteriores de la Fase 09.
 ## Rutas y navegación
 
 - `/`: últimas publicaciones disponibles, ordenadas por `publishedAt` y, si
-  falta, por `detectedAt`. Navegación global: Inicio y Fuentes.
-- `/record/[slug]`: ficha estática; el slug hexadecimal reversible codifica el
+  falta, por `detectedAt`. Navegación global: Explorar y Fuentes.
+- `/registro/[slug]/`: ficha estática; el slug hexadecimal reversible codifica el
   ID UTF-8 del Record sin exponerlo como segmento literal de URL.
 - `/fuentes/`: organismo responsable, tipo de acceso, estado editorial,
   disponibilidad, enlace oficial y metodología resumida.
+
+La arquitectura UI aprobada contempla también `/buscar/`, `/cambios/`,
+`/fuentes/[source]/`, `/estado-fuentes/`, `/datos/` y `/metodologia/`; aún no
+están implementadas ni se muestran como enlaces activos. La ruta de ficha se
+alineó a `/registro/` antes de deployment y no se mantiene alias `/record/`.
 
 No se crea una página separada de Acerca o Metodología en v1: la explicación
 breve vive en el pie y en Fuentes. Una metodología pública más amplia se podrá
@@ -77,4 +83,6 @@ en TypeScript. El frontend no lee Records BOP, no interpreta Health técnico,
 no expone documentos ni texto completo y no incluye búsqueda, feeds o exports
 en esta fase.
 
-El portal es HTML estático y no requiere JavaScript cliente para navegar.
+El portal es HTML estático y la navegación funciona sin JavaScript cliente.
+El único JavaScript de esta slice cambia y recuerda la preferencia visual
+dark/light; no participa en la carga o semántica de los datos.

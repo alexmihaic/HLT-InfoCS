@@ -1,0 +1,5 @@
+---
+interface Props { label: string; tone?: 'active' | 'pending' }
+const { label, tone = 'active' } = Astro.props;
+---
+<span class:list={["status-badge", tone === 'pending' ? 'pending' : undefined]}>{label}</span>

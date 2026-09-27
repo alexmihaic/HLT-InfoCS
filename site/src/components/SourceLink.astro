@@ -1,0 +1,5 @@
+---
+interface Props { href: string; label?: string }
+const { href, label = 'Ver fuente oficial' } = Astro.props;
+---
+<a class="source-link" href={href} target="_blank" rel="noopener noreferrer">{label}<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>

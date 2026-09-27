@@ -1,5 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import RecordCard from '../components/RecordCard.astro';
+import EmptyState from '../components/EmptyState.astro';
+import StatusBadge from '../components/StatusBadge.astro';
 import { encodeRecordId, loadPortalData } from '../lib/data';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
 import { geographyLabels, primaryDate } from '../lib/presentation/recordView';
@@ -10,52 +13,35 @@ const data = await loadPortalData();
 <BaseLayout
   title="Últimas publicaciones relevantes para Castellón"
   description="Publicaciones oficiales organizadas por InfoCs, con procedencia y acceso a la fuente original."
-  currentPage="home"
+  currentPage="explore"
 >
-  <section class="home-intro" aria-labelledby="page-title">
-    <p class="eyebrow">Actividad pública · Castellón</p>
-    <h1 id="page-title">Últimas publicaciones relevantes para Castellón</h1>
-    <p class="lede">InfoCs organiza publicaciones de fuentes oficiales para facilitar su consulta. Cada ficha conserva el enlace de origen y distingue la fecha publicada de la fecha en que InfoCs la detectó.</p>
+  <section class="home-hero" aria-labelledby="page-title">
+    <div>
+      <p class="eyebrow">Datos públicos · fuentes oficiales</p>
+      <h1 id="page-title">Actividad pública de Castellón desde las fuentes oficiales.</h1>
+      <p class="lede">InfoCs reúne publicaciones verificables, conserva su procedencia y ayuda a consultarlas con menos fricción.</p>
+    </div>
+    <p class="hero-note">Una ciudadanía más fuerte empieza por saber qué se publica y dónde comprobarlo.</p>
   </section>
 
-  <section class="feed-section" aria-labelledby="records-title">
+  <section class="page-section" aria-labelledby="records-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">Orden cronológico</p>
         <h2 id="records-title">Publicaciones</h2>
       </div>
-      <p class="muted">{data.records.length} {data.records.length === 1 ? 'publicación disponible' : 'publicaciones disponibles'}</p>
+      <p class="count-note">{data.records.length} {data.records.length === 1 ? 'registro público' : 'registros públicos'}</p>
     </div>
 
     {data.records.length === 0 ? (
-      <p class="empty-state">Todavía no hay publicaciones disponibles. Consulta las fuentes oficiales para acceder a sus contenidos.</p>
+      <EmptyState message="Todavía no hay publicaciones disponibles. Consulta las fuentes oficiales para acceder a sus contenidos." />
     ) : (
       <ol class="record-list">
         {data.records.map((record) => {
-          const date = primaryDate(record);
-          const source = sourceLabel(record.sourceId, data.sources);
           const history = data.eventsByRecordId.get(record.id) ?? [];
-          const geography = geographyLabels(record);
           return (
             <li>
-              <article class="record-item">
-                <p class="record-meta">
-                  <span class="source-label">{source}</span>
-                  <span class="category-label">{categoryLabel(record.category)}</span>
-                </p>
-                <h3><a href={`/record/${encodeRecordId(record.id)}/`}>{record.title}</a></h3>
-                {record.authority && <p class="record-authority">{record.authority.name}</p>}
-                {geography.length > 0 && (
-                  <ul class="geography-list" aria-label="Ámbito territorial">
-                    {geography.map((label) => <li>{label}</li>)}
-                  </ul>
-                )}
-                <div class="record-footer">
-                  <time datetime={date.value}><span>{date.label}:</span> {date.display}</time>
-                  {history.length > 0 && <span class="history-indicator">Historial disponible</span>}
-                  <a class="text-link" href={record.sourceUrl} target="_blank" rel="noopener noreferrer">Fuente oficial ↗</a>
-                </div>
-              </article>
+              <RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, data.sources)} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={history.length > 0} />
             </li>
           );
         })}
@@ -63,22 +49,26 @@ const data = await loadPortalData();
     )}
   </section>
 
-  <section class="source-summary" aria-labelledby="source-summary-title">
-    <div>
-      <p class="eyebrow">Procedencia</p>
-      <h2 id="source-summary-title">Fuentes integradas</h2>
-      <p class="muted">El estado indica disponibilidad editorial en InfoCs, no salud técnica de la fuente.</p>
-      <ul class="home-source-list">
-        {data.sources.map((source) => (
-          <li>
-            <span>{sourceLabel(source.sourceId, data.sources)}</span>
-            <span>{source.publicationState === 'publication_pending'
-              ? source.statusLabel
-              : `${source.statusLabel} · ${source.recordCount} ${source.recordCount === 1 ? 'publicación' : 'publicaciones'}`}</span>
-          </li>
-        ))}
-      </ul>
+  <section class="page-section" aria-labelledby="source-summary-title">
+    <div class="section-heading"><div><p class="eyebrow">Procedencia</p><h2 id="source-summary-title">Fuentes integradas</h2></div><a class="text-link" href="/fuentes/">Cómo se recogen →</a></div>
+    <div class="source-summary-grid">
+      {data.sources.map((source) => (
+        <article class="source-tile">
+          <div class="source-tile-header"><h3>{sourceLabel(source.sourceId, data.sources)}</h3><StatusBadge label={source.statusLabel} tone={source.publicationState === 'publication_pending' ? 'pending' : 'active'} /></div>
+          <p>{source.summary}</p>
+          <p class="count-note">{source.publicationState === 'publication_pending'
+            ? 'Sin registros públicos en InfoCs'
+            : `${source.recordCount} ${source.recordCount === 1 ? 'registro disponible' : 'registros disponibles'}`}</p>
+        </article>
+      ))}
     </div>
-    <a class="text-link" href="/fuentes/">Conocer las fuentes y el método →</a>
+  </section>
+
+  <section class="page-section" aria-labelledby="method-summary-title">
+    <div class="surface-panel">
+      <p class="eyebrow">Procedencia</p>
+      <h2 id="method-summary-title">Datos oficiales, organizados con claridad</h2>
+      <p class="method-note">InfoCs conserva enlaces a las fuentes, normaliza metadatos con reglas explícitas y registra observaciones cuando hay historial. El estado de una fuente aquí es editorial, no un indicador de salud técnica.</p>
+    </div>
   </section>
 </BaseLayout>

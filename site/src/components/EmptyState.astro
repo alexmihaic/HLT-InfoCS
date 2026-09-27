@@ -1,0 +1,5 @@
+---
+interface Props { message: string; compact?: boolean }
+const { message, compact = false } = Astro.props;
+---
+<p class:list={["empty-state", compact ? 'compact' : undefined]}>{message}</p>

@@ -1,0 +1,7 @@
+---
+import CategoryBadge from './CategoryBadge.astro';
+import SourceBadge from './SourceBadge.astro';
+interface Props { source: string; category: string }
+const { source, category } = Astro.props;
+---
+<p class="record-meta"><SourceBadge label={source} /><CategoryBadge label={category} /></p>

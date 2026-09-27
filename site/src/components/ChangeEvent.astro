@@ -1,0 +1,5 @@
+---
+interface Props { description: string; value: string; display: string }
+const { description, value, display } = Astro.props;
+---
+<li><article class="event-row"><span class="event-marker" aria-hidden="true"></span><div><p>{description}</p><time datetime={value}>{display}</time></div></article></li>

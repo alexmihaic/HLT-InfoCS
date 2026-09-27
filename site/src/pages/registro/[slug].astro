@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ChangeTimeline from '../../components/ChangeTimeline.astro';
+import InfoCsDerived from '../../components/InfoCsDerived.astro';
+import OfficialData from '../../components/OfficialData.astro';
+import RecordMeta from '../../components/RecordMeta.astro';
+import SourceLink from '../../components/SourceLink.astro';
+import TechnicalDetails from '../../components/TechnicalDetails.astro';
+import { encodeRecordId, loadPortalData } from '../../lib/data';
+import { formatPortalDate } from '../../lib/presentation/dates';
+import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
+import { geographyLabels, timelineItems } from '../../lib/presentation/recordView';
+import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
+
+interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
+
+export async function getStaticPaths() {
+  const data = await loadPortalData();
+  return data.records.map((record) => {
+    const source = data.sources.find((item) => item.sourceId === record.sourceId);
+    if (!source) throw new Error('No se encontró metadata editorial de una fuente publicada.');
+    return { params: { slug: encodeRecordId(record.id) }, props: { record, events: data.eventsByRecordId.get(record.id) ?? [], source } };
+  });
+}
+
+const { record, events, source } = Astro.props as Props;
+const geographies = geographyLabels(record);
+const timeline = timelineItems(events);
+---
+
+<BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
+  <article class="detail-page detail-shell">
+    <nav class="breadcrumbs" aria-label="Ruta de navegación">
+      <a href="/">Explorar</a><span aria-hidden="true">/</span><span aria-current="page">Registro</span>
+    </nav>
+
+    <header class="detail-header">
+      <RecordMeta source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} />
+      <h1>{record.title}</h1>
+      {record.authority && <p class="detail-authority">{record.authority.name}</p>}
+    </header>
+
+    <div class="detail-columns">
+      <OfficialData>
+        <dl class="detail-grid">
+          {record.authority && <div><dt>Organismo</dt><dd>{record.authority.name}</dd></div>}
+          {record.publishedAt && <div><dt>Publicado</dt><dd><time datetime={record.publishedAt}>{formatPortalDate(record.publishedAt)}</time></dd></div>}
+          {record.eventAt && <div><dt>Fecha del acto</dt><dd><time datetime={record.eventAt}>{formatPortalDate(record.eventAt)}</time></dd></div>}
+          {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
+        </dl>
+      </OfficialData>
+
+      <InfoCsDerived>
+        <dl class="detail-grid">
+          <div><dt>Tipo</dt><dd>{categoryLabel(record.category)}</dd></div>
+          {record.administrationLevel && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
+          {geographies.length > 0 && <div><dt>Ámbito territorial</dt><dd>{geographies.join(' · ')}</dd></div>}
+        </dl>
+        <p class="muted">Los campos no disponibles en la fuente o no normalizados no se completan.</p>
+      </InfoCsDerived>
+    </div>
+
+    <section class="surface-panel source-panel page-section" aria-labelledby="source-panel-title">
+      <div><p class="panel-kicker">Procedencia</p><h2 id="source-panel-title">Fuente oficial</h2><p>El contenido íntegro y la interpretación oficial corresponden al organismo editor.</p></div>
+      <SourceLink href={record.sourceUrl} label="Abrir publicación oficial" />
+      {source.attribution && <p class="attribution">{source.attribution}</p>}
+    </section>
+
+    <section class="page-section" aria-labelledby="method-note-title">
+      <p class="eyebrow">Trazabilidad</p><h2 id="method-note-title">Procesamiento por InfoCs</h2>
+      <p class="method-note">InfoCs organiza metadatos estructurados, conserva el enlace oficial y aplica controles de privacidad antes de publicar. Esta ficha no sustituye a la fuente original ni ofrece asesoramiento jurídico.</p>
+    </section>
+
+    <ChangeTimeline items={timeline} />
+    <div class="page-section"><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
+  </article>
+</BaseLayout>

@@ -1,0 +1,5 @@
+---
+interface Props { label: string; value: string; display: string }
+const { label, value, display } = Astro.props;
+---
+<time class="date-value" datetime={value}><span class="date-label">{label}:</span><span>{display}</span></time>

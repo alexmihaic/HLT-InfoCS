@@ -1,0 +1,29 @@
+---
+import type { FrontendRecord } from '../lib/data/types';
+import type { PrimaryDateView } from '../lib/presentation/recordView';
+import DateValue from './DateValue.astro';
+import RecordMeta from './RecordMeta.astro';
+import SourceLink from './SourceLink.astro';
+
+interface Props {
+  record: FrontendRecord;
+  href: string;
+  source: string;
+  category: string;
+  date: PrimaryDateView;
+  geography: readonly string[];
+  hasHistory: boolean;
+}
+const { record, href, source, category, date, geography, hasHistory } = Astro.props;
+---
+
+<article class="record-card">
+  <div class="record-card-header"><RecordMeta source={source} category={category} />{hasHistory && <span class="history-indicator">Historial</span>}</div>
+  <h3><a href={href}>{record.title}</a></h3>
+  {record.authority && <p class="record-authority">{record.authority.name}</p>}
+  {geography.length > 0 && <ul class="geography-list" aria-label="Ámbito territorial">{geography.map((label) => <li>{label}</li>)}</ul>}
+  <div class="record-card-footer">
+    <DateValue label={date.label} value={date.value} display={date.display} />
+    <SourceLink href={record.sourceUrl} label="Fuente" />
+  </div>
+</article>
