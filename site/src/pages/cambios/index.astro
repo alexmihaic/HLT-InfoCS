@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ChangeRecordEntry from '../../components/ChangeRecordEntry.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { loadPortalData } from '../../lib/data';
+import { changeItems } from '../../lib/presentation/changes';
+
+const data = await loadPortalData();
+const items = changeItems(data);
+---
+
+<BaseLayout title="Cambios observados" description="Historial de cambios que InfoCs ha observado en publicaciones oficiales." currentPage="changes">
+  <section class="page-intro" aria-labelledby="page-title">
+    <p class="eyebrow">Historial público</p>
+    <h1 id="page-title">Cambios observados</h1>
+    <p class="lede">Este historial registra cuándo InfoCs incorporó una publicación o detectó cambios en una comprobación posterior. No sustituye las fechas oficiales de cada fuente.</p>
+  </section>
+
+  <section aria-labelledby="change-list-title">
+    <div class="section-heading"><div><p class="eyebrow">Más reciente primero</p><h2 id="change-list-title">Actividad de InfoCs</h2></div><p class="count-note">{items.length} {items.length === 1 ? 'evento registrado' : 'eventos registrados'}</p></div>
+    {items.length > 0
+      ? <ol class="change-list">{items.map((item) => <ChangeRecordEntry item={item} />)}</ol>
+      : <EmptyState message="Todavía no hay eventos públicos de cambios. La ausencia de eventos no implica que una fuente haya eliminado una publicación." />}
+  </section>
+</BaseLayout>

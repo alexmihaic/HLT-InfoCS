@@ -1,7 +1,7 @@
 # InfoCs Component Library v1
 
-Biblioteca aprobada para la interfaz pública. En 09C se implementan sólo las
-piezas necesarias para Records BOE/BDNS y el directorio editorial de fuentes.
+Biblioteca aprobada para la interfaz pública. 09C y 09D implementan las piezas
+necesarias para Records/Events reales y las fuentes editoriales conocidas.
 
 ## Componentes de esta slice
 
@@ -20,6 +20,8 @@ piezas necesarias para Records BOE/BDNS y el directorio editorial de fuentes.
 | `InfoCsDerived` | Normalización/procedencia | Geografía/categoría ya canónicas |
 | `TechnicalDetails` | Detalle progresivo | ID/hash/timestamps técnicos disponibles |
 | `ChangeTimeline` / `ChangeEvent` | Historial observado | Events existentes; sin valores before/after inventados |
+| `ChangeRecordEntry` | `/cambios/` y actividad de fuente | Event resuelto a su Record; tipo, observación y enlace |
+| `MethodologySection` | `/metodologia/` | Copy público derivado de políticas aprobadas |
 | `EmptyState` | Ausencia explícita | Mensaje contextual, sin datos de relleno |
 
 Las piezas de búsqueda, filtros, charts, paneles de salud y paginación se

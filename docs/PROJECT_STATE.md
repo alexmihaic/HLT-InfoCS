@@ -31,13 +31,12 @@ Records BOP: 0; Events BOP: 0.**
 
 ## Siguiente fase de producto
 
-**Phase 09C — Approved UI System integrated.** La capa build-time carga
-Records/Events canónicos y genera portada cronológica, fichas estáticas y
-directorio de fuentes. Se integraron los tokens, tipografía y componentes del
-sistema UI aprobado; sólo se usa JavaScript mínimo para recordar el tema
-oscuro/claro. `astro check`/`astro build` pasan. La búsqueda y las demás rutas
-de producto siguen pendientes; GitHub Pages, dominio y deployment no están
-configurados ni se consideran listos. Phase 09 no está completa. El
+**Phase 09D — Public Product Surfaces complete.** El portal estático carga
+Records/Events canónicos y ofrece portada, fichas de registro, índice y detalle
+de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Sólo se
+usa JavaScript mínimo para recordar el tema oscuro/claro. Siguen pendientes la
+búsqueda (Phase 10), el estado multi-source, los datasets/exports y el
+deployment de GitHub Pages; Phase 09 no está completa. El
 `IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es la
 referencia para el estado operativo actual.
 
@@ -55,6 +54,6 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `PHASE_09C_APPROVED_UI_SYSTEM_INTEGRATED`.** Esto no implica
+**Estado de avance: `PHASE_09D_PUBLIC_PRODUCT_SURFACES_COMPLETE`.** Esto no implica
 que las deudas anteriores estén cerradas ni habilita el deployment o la beta
 pública.

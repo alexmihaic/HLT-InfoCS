@@ -1,6 +1,7 @@
 # Arquitectura de información frontend v1
 
-Estado: slice 09A/09B integrada con el sistema visual aprobado de 09C. El
+Estado: superficies públicas implementadas en 09D sobre la slice Astro de
+09A/09B y el sistema visual aprobado de 09C. El
 frontend lee Records y Events canónicos en build; no reinterpreta reglas de
 negocio ni modifica datos.
 
@@ -12,20 +13,23 @@ que se integrarán en fases posteriores de la Fase 09.
 ## Rutas y navegación
 
 - `/`: últimas publicaciones disponibles, ordenadas por `publishedAt` y, si
-  falta, por `detectedAt`. Navegación global: Explorar y Fuentes.
+  falta, por `detectedAt`.
 - `/registro/[slug]/`: ficha estática; el slug hexadecimal reversible codifica el
   ID UTF-8 del Record sin exponerlo como segmento literal de URL.
-- `/fuentes/`: organismo responsable, tipo de acceso, estado editorial,
-  disponibilidad, enlace oficial y metodología resumida.
+- `/fuentes/` y `/fuentes/[source]/`: índice y fichas estáticas de fuentes
+  editoriales conocidas; muestran Records y Events disponibles, y BOP sólo
+  como publicación pendiente sin Records.
+- `/cambios/`: Events canónicos ordenados de más reciente a más antiguo y
+  enlazados a su Record.
+- `/metodologia/`: explicación pública breve de alcance, fechas, cambios,
+  privacidad, reutilización y limitaciones.
+- `404.html`: recuperación hacia Inicio y Fuentes.
 
-La arquitectura UI aprobada contempla también `/buscar/`, `/cambios/`,
-`/fuentes/[source]/`, `/estado-fuentes/`, `/datos/` y `/metodologia/`; aún no
-están implementadas ni se muestran como enlaces activos. La ruta de ficha se
-alineó a `/registro/` antes de deployment y no se mantiene alias `/record/`.
+La arquitectura UI aprobada contempla también `/buscar/`, `/estado-fuentes/`
+y `/datos/`; aún no están implementadas ni se muestran como enlaces activos.
+La búsqueda pertenece a Phase 10. No se mantiene alias `/record/`.
 
-No se crea una página separada de Acerca o Metodología en v1: la explicación
-breve vive en el pie y en Fuentes. Una metodología pública más amplia se podrá
-añadir antes de beta. Tampoco se crean rutas por categoría o fuente.
+No se crean rutas por categoría.
 
 ## Portada
 
@@ -73,6 +77,18 @@ enlaces de origen, aplica controles de privacidad, no completa campos sin
 respaldo y muestra historial cuando existe un Event. El portal no promete
 exhaustividad absoluta, tiempo real, superioridad frente a la fuente ni
 asesoramiento jurídico.
+
+## Cambios y método público
+
+La portada y `/cambios/` consumen Events públicos del build. `create` significa
+que InfoCs incorporó una publicación y `update` que InfoCs detectó cambios.
+`observedAt` se etiqueta como observación de InfoCs, no como fecha
+administrativa. No se muestran comparaciones before/after ausentes del modelo
+Event v1 ni estados missing/reappeared.
+
+La metodología pública explica territorio, dato oficial/procesado, fechas,
+privacidad, reutilización y límites sin exponer reason codes internos ni
+prometer exhaustividad o tiempo real.
 
 ## Opcionalidad y exclusiones
 

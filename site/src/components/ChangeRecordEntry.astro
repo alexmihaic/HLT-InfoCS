@@ -1,0 +1,23 @@
+---
+import SourceBadge from './SourceBadge.astro';
+import CategoryBadge from './CategoryBadge.astro';
+import type { ChangeItemView } from '../lib/presentation/changes';
+
+interface Props { item: ChangeItemView }
+const { item } = Astro.props;
+---
+<li>
+  <article class="change-entry">
+    <header class="change-entry-header">
+      <div class="record-meta">
+        <span class:list={['change-type', item.typeLabel === 'Actualización' && 'update']}>{item.typeLabel}</span>
+        <SourceBadge label={item.source} />
+        <CategoryBadge label={item.category} />
+      </div>
+      <p class="change-date"><span>Observado por InfoCs</span> <time datetime={item.observedAt}>{item.observedDate}</time></p>
+    </header>
+    <p class="change-description">{item.description}</p>
+    <h2><a href={item.recordHref}>{item.recordTitle}</a></h2>
+    <a class="text-link" href={item.recordHref}>Ver publicación →</a>
+  </article>
+</li>

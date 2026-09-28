@@ -5,6 +5,7 @@ import SourceLink from '../../components/SourceLink.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
 import { loadPortalData } from '../../lib/data';
 import { sourceLabel } from '../../lib/presentation/labels';
+import { sourceDetailPath } from '../../lib/presentation/sourceDetails';
 
 const data = await loadPortalData();
 ---
@@ -38,7 +39,10 @@ const data = await loadPortalData();
                     : 'Fuente activa; actualmente no hay registros públicos disponibles.'}</dd></div>
               </dl>
               {source.attribution && <p class="attribution">{source.attribution}</p>}
-              <div><SourceLink href={source.officialUrl} label="Visitar fuente oficial" /></div>
+              <div class="source-entry-actions">
+                {sourceDetailPath(source.sourceId) && <a class="text-link" href={sourceDetailPath(source.sourceId)!}>Detalles de la fuente →</a>}
+                <SourceLink href={source.officialUrl} label="Visitar fuente oficial" />
+              </div>
             </article>
           </li>
         ))}

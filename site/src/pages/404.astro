@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Página no encontrada" description="La página solicitada no está disponible en InfoCs.">
+  <section class="not-found content-shell" aria-labelledby="page-title">
+    <p class="eyebrow">Error 404</p>
+    <h1 id="page-title">Página no encontrada</h1>
+    <p class="lede">La dirección no corresponde a una página disponible en InfoCs.</p>
+    <nav class="not-found-actions" aria-label="Opciones de navegación">
+      <a class="primary-link" href="/">Ir al inicio</a>
+      <a class="text-link" href="/fuentes/">Ver fuentes →</a>
+    </nav>
+  </section>
+</BaseLayout>

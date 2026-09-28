@@ -17,6 +17,7 @@
   --color-accent: #2f8cff;
   --color-accent-hover: #55a2ff;
   --color-accent-active: #1d74dc;
+  --color-text-on-accent: #07111d;
   --color-accent-soft: rgb(47 140 255 / 12%);
   --color-success: #35c98a;
   --color-warning: #f2b84b;
@@ -54,6 +55,7 @@
   --color-accent: #176edd;
   --color-accent-hover: #105fc5;
   --color-accent-active: #0a52af;
+  --color-text-on-accent: #ffffff;
   --color-accent-soft: rgb(23 110 221 / 10%);
   --color-success: #16815b;
   --color-warning: #a56b00;

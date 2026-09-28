@@ -10,7 +10,10 @@
 | Estado operativo por fuente | Sólo existe Health BOE; BDNS Health pendiente | No presentar panel agregado ni inferir estado | `DEFER_OPERATIONS` |
 | Búsqueda real y filtros | No implementados; fase posterior de búsqueda | Sin control ficticio | `DEFER_PHASE_10` |
 | Datasets/export/RSS | No existen contratos de salida actuales | No prometer formatos | `DEFER_PHASE_10` |
-| Rutas de cambios, detalle de fuente, estado, datos y metodología | Aprobadas, aún fuera de la slice funcional | Documentar y no enlazar hasta existir | `DEFER_PHASE_10` |
+| `/cambios/`, `/fuentes/[source]/`, `/metodologia/` y 404 | Canónicos, editoriales y reglas disponibles | Implementados con Records/Events reales y fuentes conocidas | `RESOLVED` |
+| `/buscar/` | Búsqueda real no implementada | Phase 10; no mostrar control ficticio | `DEFER_PHASE_10` |
+| `/estado-fuentes/` | Observabilidad coherente multi-source incompleta | No inferir salud editorial ni técnica | `DEFER_OPERATIONS` |
+| `/datos/` | No existen contratos de datasets/exports | No anunciar formatos aún | `DEFER_PHASE_10` |
 | Ruta `/record/[slug]` de la slice 09A/09B | Sin deployment público ni enlaces externos | Alinear a `/registro/[slug]/`, sin ruta duplicada | `IMPLEMENT_NOW` |
 | Contenido técnico de onboarding/bootstrap en Home | Ya no describe la experiencia de producto | Sustituir por portada pública | `OBSOLETE` |
 

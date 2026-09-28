@@ -20,7 +20,10 @@ Rutas v1:
 
 - `/`: últimas publicaciones, en orden cronológico.
 - `/registro/[slug]/`: ficha estática y Events asociados.
-- `/fuentes/`: fuentes, disponibilidad editorial y metodología breve.
+- `/fuentes/` y `/fuentes/[source]/`: índice y fichas de fuentes.
+- `/cambios/`: Events públicos reales asociados a sus Records.
+- `/metodologia/`: alcance y límites del método InfoCs.
+- `404.html`: recuperación hacia Inicio o Fuentes.
 
 La ficha usa un slug hexadecimal reversible. La antigua ruta `/record/` se
 alineó con la IA española aprobada antes de deployment; no se genera un alias.
@@ -29,7 +32,8 @@ Las etiquetas y fechas de presentación viven en `src/lib/presentation/`; no
 modifican los valores canónicos ni vuelven a decidir su semántica.
 
 `src/lib/data/sources.ts` mantiene metadata editorial que no forma parte del
-schema canónico (nombres públicos, estado de publicación y atribución BDNS).
+schema canónico (nombres públicos, estado de publicación y atribuciones de
+fuente cuando corresponden).
 Los recuentos se calculan desde los Records cargados; BOP aparece sólo como
 fuente con publicación pendiente y no como dataset.
 

@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ChangeRecordEntry from '../../components/ChangeRecordEntry.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import RecordCard from '../../components/RecordCard.astro';
+import SourceLink from '../../components/SourceLink.astro';
+import StatusBadge from '../../components/StatusBadge.astro';
+import { loadPortalData, encodeRecordId } from '../../lib/data';
+import { categoryLabel, sourceLabel } from '../../lib/presentation/labels';
+import { geographyLabels, primaryDate } from '../../lib/presentation/recordView';
+import { SOURCE_EDITORIAL_DETAILS, sourceDetailBySlug, type SourceDetailView } from '../../lib/presentation/sourceDetails';
+
+interface Props { detail: SourceDetailView }
+
+export async function getStaticPaths() {
+  const data = await loadPortalData();
+  return SOURCE_EDITORIAL_DETAILS.map(({ slug }) => {
+    const detail = sourceDetailBySlug(data, slug);
+    if (!detail) throw new Error(`No se pudo generar el detalle estático de la fuente ${slug}.`);
+    return { params: { source: slug }, props: { detail } };
+  });
+}
+
+const { detail } = Astro.props as Props;
+const { source } = detail;
+---
+
+<BaseLayout title={source.name} description={`Origen, alcance y disponibilidad de ${source.name} en InfoCs.`} currentPage="sources">
+  <article class="source-detail-page content-shell">
+    <nav class="breadcrumbs" aria-label="Ruta de navegación">
+      <a href="/fuentes/">Fuentes</a><span aria-hidden="true">/</span><span aria-current="page">{sourceLabel(source.sourceId, [source])}</span>
+    </nav>
+
+    <header class="source-detail-header">
+      <p class="eyebrow">Fuente oficial</p>
+      <div class="source-detail-title-row">
+        <h1>{sourceLabel(source.sourceId, [source])}</h1>
+        <StatusBadge label={source.statusLabel} tone={source.publicationState === 'publication_pending' ? 'pending' : 'active'} />
+      </div>
+      <p class="lede">{source.summary}</p>
+    </header>
+
+    <section class="source-detail-panel surface-panel" aria-labelledby="source-facts-title">
+      <div class="section-heading"><div><p class="eyebrow">Transparencia</p><h2 id="source-facts-title">Origen y alcance</h2></div></div>
+      <dl class="source-facts source-detail-facts">
+        <div><dt>Organismo responsable</dt><dd>{source.responsibleBody}</dd></div>
+        <div><dt>Ámbito que representa la fuente</dt><dd>{detail.scope}</dd></div>
+        <div><dt>Acceso</dt><dd>{detail.accessNote}</dd></div>
+        <div><dt>Estado editorial en InfoCs</dt><dd>{source.statusLabel}</dd></div>
+        <div><dt>Registros públicos disponibles</dt><dd>{source.recordCount}</dd></div>
+      </dl>
+      {source.attribution && <p class="attribution">{source.attribution}</p>}
+      <p class="source-reuse-note">{detail.reuseNote}</p>
+      <SourceLink href={source.officialUrl} label="Abrir fuente oficial" />
+    </section>
+
+    {source.sourceId === 'bop_castellon' && <aside class="source-pending-note" aria-label="Estado de publicación BOP">
+      <h2>Transparencia de publicación</h2>
+      <p>La integración técnica está preparada, pero InfoCs todavía no publica registros del BOP: las condiciones de reutilización de su metadata requieren confirmación.</p>
+    </aside>}
+
+    <section class="page-section" aria-labelledby="source-records-title">
+      <div class="section-heading"><div><p class="eyebrow">Contenido disponible</p><h2 id="source-records-title">Publicaciones de esta fuente</h2></div></div>
+      {detail.records.length === 0
+        ? <EmptyState compact message={source.publicationState === 'publication_pending'
+          ? 'No hay registros públicos de esta fuente en InfoCs.'
+          : 'No hay publicaciones de esta fuente disponibles ahora mismo.'} />
+        : <ol class="record-list source-record-list">{detail.records.map((record) => (
+          <li><RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={(detail.activity.some((item) => item.recordHref === `/registro/${encodeRecordId(record.id)}/`))} /></li>
+        ))}</ol>}
+    </section>
+
+    {detail.activity.length > 0 && <section class="page-section" aria-labelledby="source-activity-title">
+      <div class="section-heading"><div><p class="eyebrow">Seguimiento</p><h2 id="source-activity-title">Actividad reciente</h2></div></div>
+      <ol class="change-list">{detail.activity.map((item) => <ChangeRecordEntry item={item} />)}</ol>
+    </section>}
+  </article>
+</BaseLayout>

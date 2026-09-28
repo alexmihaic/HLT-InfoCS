@@ -1,0 +1,56 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import MethodologySection from '../components/MethodologySection.astro';
+
+---
+<BaseLayout title="Metodología" description="Cómo recopila, organiza y presenta InfoCs información de fuentes oficiales." currentPage="methodology">
+  <article class="methodology-page content-shell">
+    <header class="page-intro" aria-labelledby="page-title">
+      <p class="eyebrow">Método y límites</p>
+      <h1 id="page-title">Metodología</h1>
+      <p class="lede">Qué recoge InfoCs, cómo presenta la procedencia y qué límites mantiene.</p>
+    </header>
+
+    <MethodologySection id="what-is-infocs" title="Qué es InfoCs">
+      <p>InfoCs organiza publicaciones de fuentes oficiales para facilitar su consulta y su relación con Castelló de la Plana y la provincia de Castellón. Conserva el enlace al origen y separa los datos publicados por la fuente de la organización añadida por InfoCs.</p>
+    </MethodologySection>
+
+    <MethodologySection id="official-sources" title="Fuentes oficiales">
+      <p>El portal integra el Boletín Oficial del Estado (BOE) y la Base de Datos Nacional de Subvenciones (BDNS). El BOP de Castellón se describe en <a href="/fuentes/bop-castellon/">su ficha de fuente</a>, pero sus registros no se publican mientras su reutilización no esté aclarada.</p>
+      <p>Consulta el <a href="/fuentes/">directorio de fuentes</a> para conocer organismos responsables, acceso y disponibilidad editorial.</p>
+    </MethodologySection>
+
+    <MethodologySection id="inclusion" title="Cómo se incluyen registros">
+      <p>InfoCs utiliza campos estructurados y reglas documentadas para cada fuente. La cobertura territorial es Castelló de la Plana y la provincia de Castellón; una publicación estatal o autonómica amplia no se atribuye automáticamente al territorio. No se usan coincidencias difusas ni modelos de lenguaje para decidir la inclusión territorial.</p>
+      <p>Los campos que la fuente o las reglas no permiten determinar se omiten o permanecen sin clasificar.</p>
+    </MethodologySection>
+
+    <MethodologySection id="official-vs-processed" title="Dato oficial y procesado por InfoCs">
+      <p>El título y los demás datos de origen se presentan como información de la fuente. InfoCs añade organización —por ejemplo, etiquetas de categoría o ámbito territorial— mediante reglas explícitas. La ficha conserva ambas capas diferenciadas y enlaza a la publicación oficial para consultar el contenido íntegro.</p>
+    </MethodologySection>
+
+    <MethodologySection id="dates" title="Fechas">
+      <p>Cuando existe una fecha oficial de publicación, se muestra como «Publicado». Si no existe, la fecha visible se identifica como «Detectado por InfoCs». La hora de un evento de InfoCs representa una observación del sistema, no la fecha en que la administración publicó el contenido.</p>
+    </MethodologySection>
+
+    <MethodologySection id="changes" title="Cambios">
+      <p>El historial refleja los eventos canónicos disponibles: incorporación de una publicación y cambios detectados en comprobaciones posteriores. No se muestran comparaciones de valores anteriores y actuales cuando el modelo no las conserva. La ausencia de un evento no demuestra que una publicación haya desaparecido.</p>
+    </MethodologySection>
+
+    <MethodologySection id="privacy" title="Privacidad">
+      <p>Que un dato sea accesible públicamente en su fuente no significa que InfoCs deba replicarlo o indexarlo automáticamente. La publicación pasa controles de privacidad y de alcance antes de incorporarse al portal.</p>
+    </MethodologySection>
+
+    <MethodologySection id="reuse" title="Reutilización">
+      <p>Las condiciones se determinan por fuente. En BDNS se publica metadata de convocatorias con atribución a la Intervención General de la Administración del Estado; no se publican aquí concesiones individuales ni copias de documentos. El BOP permanece sin registros públicos hasta aclarar las condiciones de reutilización aplicables.</p>
+    </MethodologySection>
+
+    <MethodologySection id="limitations" title="Limitaciones">
+      <p>InfoCs no promete exhaustividad absoluta, actualización en tiempo real ni una interpretación jurídica superior a la de la fuente. La fuente oficial es la referencia para el contenido completo y sus efectos.</p>
+    </MethodologySection>
+
+    <MethodologySection id="open-code" title="Código abierto">
+      <p>El código y la documentación están en un repositorio público. La licencia del proyecto aún está pendiente de definición.</p>
+    </MethodologySection>
+  </article>
+</BaseLayout>

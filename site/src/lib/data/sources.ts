@@ -11,6 +11,7 @@ export const SOURCE_METADATA: readonly SourceMeta[] = [
     statusLabel: 'Activa',
     summary: 'Publica disposiciones y actos oficiales del ámbito estatal.',
     publicationState: 'public_records',
+    attribution: 'Fuente de los datos: Agencia Estatal Boletín Oficial del Estado',
   },
   {
     sourceId: 'bdns',

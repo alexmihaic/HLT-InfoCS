@@ -13,9 +13,11 @@ La arquitectura de producto contempla estas rutas:
 - `/datos/` — acceso a datasets.
 - `/metodologia/` — método y alcance.
 
-La implementación actual expone `/`, `/registro/[slug]/` y `/fuentes/`.
-El encabezado sólo enlaza a las rutas implementadas: Explorar (inicio) y
-Fuentes. El resto queda documentado, no se simula como navegación activa.
+La implementación pública actual expone `/`, `/registro/[slug]/`, `/fuentes/`,
+`/fuentes/[source]/`, `/cambios/`, `/metodologia/` y `404.html`. El encabezado
+enlaza a Inicio, Cambios, Fuentes y Metodología. `/buscar/` queda para Phase 10;
+`/estado-fuentes/` y `/datos/` siguen pendientes de contratos de operaciones
+y exports, respectivamente.
 
 ## Superficies
 
