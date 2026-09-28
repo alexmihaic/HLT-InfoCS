@@ -1,6 +1,6 @@
 # Estado operativo de InfoCs
 
-Actualizado: 2026-09-27. Este documento resume el estado presente; no es un
+Actualizado: 2026-09-28. Este documento resume el estado presente; no es un
 registro de fases ni sustituye la hoja de ruta canónica.
 
 ## Arquitectura
@@ -31,12 +31,17 @@ Records BOP: 0; Events BOP: 0.**
 
 ## Siguiente fase de producto
 
-**Phase 09D — Public Product Surfaces complete.** El portal estático carga
+**Phase 09D — Public Product Surfaces complete. Phase 09E — GitHub Pages deployment complete.**
+El artefacto estático se despliega con GitHub Actions en
+`https://alexmihaic.github.io/HLT-InfoCS/`. El custom domain
+`infocs.hazlotuyo.pro` está pendiente de su registro DNS CNAME; DNS no se ha
+modificado y HTTPS del custom domain no está verificado. Esto describe un
+deployment técnico, no una beta pública. El portal estático carga
 Records/Events canónicos y ofrece portada, fichas de registro, índice y detalle
 de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Sólo se
 usa JavaScript mínimo para recordar el tema oscuro/claro. Siguen pendientes la
-búsqueda (Phase 10), el estado multi-source, los datasets/exports y el
-deployment de GitHub Pages; Phase 09 no está completa. El
+búsqueda (Phase 10), el estado multi-source y los datasets/exports; Phase 09 no
+está completa. El
 `IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es la
 referencia para el estado operativo actual.
 
@@ -54,6 +59,5 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `PHASE_09D_PUBLIC_PRODUCT_SURFACES_COMPLETE`.** Esto no implica
-que las deudas anteriores estén cerradas ni habilita el deployment o la beta
-pública.
+**Estado de avance: `PHASE_09E_PAGES_DEPLOYED_DNS_PENDING`.** Esto no implica
+que las deudas anteriores estén cerradas ni habilita una beta pública.
