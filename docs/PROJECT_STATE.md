@@ -32,11 +32,9 @@ Records BOP: 0; Events BOP: 0.**
 ## Siguiente fase de producto
 
 **Phase 09D — Public Product Surfaces complete. Phase 09E — GitHub Pages deployment complete.**
-El artefacto estático se despliega con GitHub Actions en
-`https://alexmihaic.github.io/HLT-InfoCS/`. El custom domain
-`infocs.hazlotuyo.pro` está pendiente de su registro DNS CNAME; DNS no se ha
-modificado y HTTPS del custom domain no está verificado. Esto describe un
-deployment técnico, no una beta pública. El portal estático carga
+El portal estático se despliega con GitHub Actions y el dominio personalizado
+activo es `https://infocs.hazlotuyo.pro`. Esto describe un deployment técnico,
+no una beta pública. El portal estático carga
 Records/Events canónicos y ofrece portada, fichas de registro, índice y detalle
 de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Sólo se
 usa JavaScript mínimo para recordar el tema oscuro/claro. Siguen pendientes la
@@ -59,5 +57,5 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `PHASE_09E_PAGES_DEPLOYED_DNS_PENDING`.** Esto no implica
+**Estado de avance: `PHASE_09E_CUSTOM_DOMAIN_ACTIVE`.** Esto no implica
 que las deudas anteriores estén cerradas ni habilita una beta pública.
