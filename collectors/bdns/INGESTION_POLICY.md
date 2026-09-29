@@ -39,7 +39,7 @@ La primera persistencia controlada ya ocurrió: existe un Record BDNS público y
 su Event `create` se materializó posteriormente bajo la autorización
 multi-source. La atribución IGAE sigue visible junto al dataset y el alcance
 publicable no cambia. No se ejecutan concesiones, descargas ni mirroring. OPS-B
-añade el runner y la escritura de Manifest por ejecución, pero todavía no hay
-workflow/schedule ni una ejecución productiva revisada. Derivar o persistir
-Health queda fuera de OPS-B y se reserva para OPS-C. Un fallo de escritura no
-elimina ni invalida Records anteriores.
+añade el runner y la escritura del Manifest. OPS-C deriva y escribe el
+`SourceHealth` a partir del historial de Manifests. Todavía no hay
+workflow/schedule ni una ejecución productiva revisada. Un fallo de escritura
+no elimina ni invalida Records anteriores.

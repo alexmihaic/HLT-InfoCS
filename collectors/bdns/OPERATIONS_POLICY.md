@@ -229,14 +229,16 @@ específico del run se conserva en el resultado operacional seguro; sí limita
 la auditoría posterior de cobertura y la automatización. No añadir campos ni
 schema en esta fase.
 
-La siguiente regla de derivación de `SourceHealth` es política prevista para
-OPS-C; OPS-B no deriva ni persiste Health. Cuando se implemente: éxito
-(incluido `no_results` como
+El runner deriva `SourceHealth` después de escribir el Manifest, reutilizando
+la regla Core: éxito (incluido `no_results` como
 `success`) → `healthy`; `partial` → `degraded`; uno/dos `failed` consecutivos
 → `degraded`; tres o más → `failing`; sin historial → `unknown`. Es salud del
 proceso de colección/cobertura, no disponibilidad de BDNS ni indicador de que
-hayan llegado registros nuevos. `partial` por presupuesto indica cobertura
-pendiente, no que SNPSAP esté técnicamente caído.
+hayan llegado registros nuevos. Un run `success`/`no_results` rompe la racha de
+fallos; `partial` se marca `degraded`, pero no se cuenta como fallo
+consecutivo. `partial` por presupuesto indica cobertura pendiente, no que
+SNPSAP esté técnicamente caído. El resultado se escribe en
+`data/health/bdns.json` y reutiliza el schema Core existente.
 
 ## Workflow futuro y carrera con `main`
 
@@ -263,6 +265,12 @@ concurrente o conflicto detiene la publicación para intervención. Nunca merge
 opaco ni force push; limitar a un intento de rebase y fallar cerrado si la
 carrera se repite.
 
+El workflow futuro capturará exit code y JSON estructurado del runner, validará
+y publicará los artefactos canónicos válidos —también ante un run parcial— antes
+de propagar al final el resultado no-completo. No decidirá el estado leyendo o
+parseando texto humano de consola. El allowlist exacto de staging vive en
+[RUNNER_CONTRACT.md](RUNNER_CONTRACT.md).
+
 ## Interfaz del runner
 
 El módulo ejecutable es `python -m infocs.fetch.bdns.runner`. Requiere modo y
@@ -275,9 +283,9 @@ provisional del filtro temporal quedan en `requested_scope` del Manifest.
 Los topes se pueden reducir por argumentos, nunca elevar por encima de cinco
 páginas, 250 detalles y diez minutos. La página de control final se añade a
 esas cinco páginas máximas. El EventStore se configura siempre y el runner
-escribe el Manifest del run. La derivación o persistencia de `SourceHealth`
-queda fuera de OPS-B y se reserva para OPS-C. Esta interfaz no habilita
-workflow ni schedule por sí sola.
+escribe Manifest y Health derivados. La salida CLI es JSON estructurado y los
+códigos de salida distinguen resultado completo, parcial y fallo; esta interfaz
+no habilita workflow ni schedule por sí sola.
 
 ## Validaciones y límites que debe respetar el runner
 

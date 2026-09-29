@@ -40,7 +40,9 @@ from infocs.manifests import (
     RunMetrics,
     RunStatus,
     SoftwareMetadata,
+    derive_source_health,
     new_run_id,
+    write_source_health,
 )
 from infocs.privacy import PrivacyGate
 from infocs.store import RecordStore
@@ -192,6 +194,7 @@ def run_bdns_productive_collection(
     record_store: RecordStore | None = None,
     event_store: EventStore | None = None,
     manifest_store: ManifestStore | None = None,
+    health_path: str | Path | None = None,
     privacy_gate: PrivacyGate | None = None,
     software_metadata: SoftwareMetadata | None = None,
     overlap_days: int = 14,
@@ -228,6 +231,7 @@ def run_bdns_productive_collection(
         raise ValueError(f"time_budget_seconds debe estar entre 1 y {BDNS_TIME_BUDGET_SECONDS}.")
 
     manifests = manifest_store or ManifestStore(PROJECT_ROOT / "data" / "manifests")
+    health_target = Path(health_path) if health_path is not None else PROJECT_ROOT / "data" / "health" / "bdns.json"
     gate = privacy_gate or PrivacyGate.default()
     records = record_store or RecordStore(PROJECT_ROOT / "data" / "records", privacy_gate=gate)
     events = event_store or EventStore(PROJECT_ROOT / "data" / "events")
@@ -442,6 +446,8 @@ def run_bdns_productive_collection(
         error_summary=summary,
     )
     manifests.write(manifest)
+    health = derive_source_health(manifests.list_source("bdns"), source_id="bdns")
+    write_source_health(health_target, health)
     return BDNSRunnerResult(
         run_id=run_id,
         status=str(result_status),
@@ -457,6 +463,14 @@ class _RunFault(RuntimeError):
     def __init__(self, status: str, code: str) -> None:
         self.status = status
         self.code = code
+
+
+class _RunnerArgumentParser(argparse.ArgumentParser):
+    """Mantiene el código de salida OPS-C para invocaciones inválidas."""
+
+    def error(self, message: str) -> None:
+        self.print_usage(sys.stderr)
+        self.exit(1, f"{self.prog}: error: {message}\n")
 
 
 def _query(*, page: int, from_date: date, through_date: date) -> BDNSSearchQuery:
@@ -538,6 +552,19 @@ def _validate_aware(value: datetime, field: str) -> None:
         raise ValueError(f"{field} debe incluir zona horaria.")
 
 
+def runner_exit_code(status: str) -> int:
+    """Mapea el resultado operativo a un código estable para invocadores CI."""
+    try:
+        normalized = BDNSRunnerStatus(status)
+    except ValueError:
+        return 1
+    if normalized in {BDNSRunnerStatus.COMPLETE_SUCCESS, BDNSRunnerStatus.NO_RESULTS}:
+        return 0
+    if normalized is BDNSRunnerStatus.PARTIAL_SUCCESS:
+        return 2
+    return 1
+
+
 def _parse_date(value: str) -> date:
     if not isinstance(value, str) or not _DATE_RE.fullmatch(value):
         raise argparse.ArgumentTypeError("La fecha debe usar YYYY-MM-DD.")
@@ -548,7 +575,7 @@ def _parse_date(value: str) -> date:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Ejecuta un scope BDNS Castellón con límites v1.")
+    parser = _RunnerArgumentParser(description="Ejecuta un scope BDNS Castellón con límites v1.")
     parser.add_argument("--mode", required=True, choices=(BDNSRunMode.DISCOVERY, BDNSRunMode.INCREMENTAL_UPDATE, BDNSRunMode.COMPLETE_SCOPE))
     parser.add_argument("--from-date", type=_parse_date)
     parser.add_argument("--initial-from-date", type=_parse_date)
@@ -577,7 +604,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"run_id": run_id, "source_id": "bdns", "status": "failed", "error_code": "runner_failure"}), file=sys.stderr)
         return 1
     print(json.dumps(result.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-    return 1 if result.status in {BDNSRunnerStatus.SOURCE_FAILURE, BDNSRunnerStatus.TERRITORIAL_CONTRACT_DRIFT, BDNSRunnerStatus.PERSISTENCE_BLOCKED} else 0
+    return runner_exit_code(result.status)
 
 
 if __name__ == "__main__":  # pragma: no cover

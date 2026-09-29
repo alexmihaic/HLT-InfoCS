@@ -24,7 +24,8 @@ exhaustion is `partial_success` with Manifest `partial` and
 `error_summary=run_budget_exhausted`; drift or invalid source data is partial
 or failed according to the failing contract. Partial/failed runs never advance
 the incremental checkpoint. Only a successful compatible incremental
-Manifest can do so.
+Manifest can do so; `discovery` and `complete_scope` do not become a daily
+incremental watermark automatically.
 
 ## Persistence and publication
 
@@ -38,8 +39,55 @@ Manifest status mapping is `complete_success`/`no_results` → `success`,
 `partial_success` → `partial`, and source/contract/persistence failure →
 `failed`. The aggregate `publication_approved` counter means that a Record
 passed the BDNS source-specific metadata publication policy; it is not a human
-approval. This runner writes a Manifest only. Deriving or persisting
-`SourceHealth` is deferred to OPS-C.
+approval. The runner writes the Manifest first, then derives and atomically
+writes `data/health/bdns.json` (or the injected test path) from BDNS Manifest
+history. Health reflects collection outcomes, not whether new Records arrived
+or whether reuse permits publication.
+
+## CLI contract for future automation
+
+For each completed run, stdout contains exactly one compact JSON result with
+run id, source id, status, safe aggregate metrics, request count, HTTP status
+codes, and a stable error code when applicable. It does not contain titles,
+authority labels, identifiers for individual calls, URLs, or payloads.
+Unexpected invocation/observability exceptions emit only a generic safe error
+object to stderr.
+
+Exit codes are stable: `0` for `complete_success` and `no_results`, `2` for
+`partial_success`, and `1` for source, contract, persistence, invocation, or
+observability failure. A future workflow must preserve/validate run artifacts
+before marking a nonzero collection result as a failed job; this contract does
+not implement that workflow.
+
+## Future workflow handling
+
+The workflow must capture both the process exit code and the runner's stdout
+JSON as machine-readable values. It must branch on the JSON `status` and exit
+code, never parse human-readable console text. A `partial_success` run has
+valid, publishable observations and safe Manifest/Health observability, but is
+not a complete execution: validate and publish only its valid canonical
+artifacts, keep the checkpoint unchanged, then propagate the partial outcome
+as a non-successful workflow result. The runner writes Manifest before Health;
+if Manifest writing fails, it must not synthesize Health, and if Health writing
+fails the command exits `1` as an observability failure.
+
+The only BDNS data paths eligible for staging are:
+
+- `data/records/bdns/**/*.json`
+- `data/events/bdns/**/*.json`
+- `data/manifests/bdns/**/*.json`
+- `data/health/bdns.json`
+
+No arbitrary additions, raw payloads, documents, or review-queue files are
+eligible. Validate schemas, canonical paths, Record/Event integrity, attribution,
+and the complete changed-path allowlist before staging.
+
+Before publishing, capture the base SHA and fetch `origin/main`. A race may be
+rebased only when every remote commit is a compatible `data(boe)` update and
+the remote diff has no BDNS paths. Any BDNS change, unexpected code/config/schema/
+workflow change, or conflict aborts publication. Never force-push. After a
+compatible rebase, revalidate the combined generated artifacts before a normal
+push.
 
 ## Temporal scope and absence
 

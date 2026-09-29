@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from contextlib import redirect_stderr
+from io import StringIO
 import json
 from pathlib import Path
 import sys
@@ -20,7 +22,9 @@ from infocs.fetch.bdns.parser import parse_bdns_detail, parse_bdns_search  # noq
 from infocs.fetch.bdns.runner import (  # noqa: E402
     BDNSRunMode,
     BDNSRunnerStatus,
+    main,
     resolve_incremental_window,
+    runner_exit_code,
     run_bdns_productive_collection,
 )
 from infocs.manifests import ManifestStore, RunStatus  # noqa: E402
@@ -84,6 +88,7 @@ class BDNSRunnerTests(unittest.TestCase):
             record_store=self.records,
             event_store=self.events,
             manifest_store=self.manifests,
+            health_path=self.health,
             privacy_gate=self.gate,
             **kwargs,
         )
@@ -129,7 +134,14 @@ class BDNSRunnerTests(unittest.TestCase):
         self.assertEqual(len(transport.search_queries), 2)
         self.assertEqual(transport.search_queries[0].region_ids, (56,))
         self.assertEqual(transport.search_queries[0].date_from, date(2026, 9, 1))
-        self.assertFalse(self.health.exists())
+        health = json.loads(self.health.read_text(encoding="utf-8"))
+        self.assertEqual(health["source_id"], "bdns")
+        self.assertEqual(health["status"], "healthy")
+        self.assertEqual(health["last_run_id"], result.run_id)
+        report = json.dumps(result.to_dict(), ensure_ascii=False)
+        self.assertNotIn(self.detail.title, report)
+        self.assertNotIn(self.detail.codigo_bdns, report)
+        self.assertNotIn("document", report.casefold())
 
     def test_budget_exhaustion_is_partial_and_not_an_incremental_checkpoint(self) -> None:
         summaries = tuple(
@@ -154,6 +166,7 @@ class BDNSRunnerTests(unittest.TestCase):
         self.assertEqual(result.status, BDNSRunnerStatus.PARTIAL_SUCCESS)
         self.assertEqual(result.manifest.status, RunStatus.PARTIAL)
         self.assertEqual(result.error_code, "run_budget_exhausted")
+        self.assertEqual(json.loads(self.health.read_text())["status"], "degraded")
         self.assertEqual(result.metrics.seen, 50)
         self.assertEqual(result.metrics.created, 1)
         self.assertEqual(len(transport.detail_codes), 1)
@@ -164,6 +177,20 @@ class BDNSRunnerTests(unittest.TestCase):
             overlap_days=7,
         )
         self.assertEqual(window, (date(2026, 9, 1), date(2026, 9, 30)))
+
+    def test_cli_exit_codes_distinguish_complete_partial_and_failed(self) -> None:
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.COMPLETE_SUCCESS), 0)
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.NO_RESULTS), 0)
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.PARTIAL_SUCCESS), 2)
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.SOURCE_FAILURE), 1)
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.TERRITORIAL_CONTRACT_DRIFT), 1)
+        self.assertEqual(runner_exit_code(BDNSRunnerStatus.PERSISTENCE_BLOCKED), 1)
+        self.assertEqual(runner_exit_code("unknown_status"), 1)
+
+    def test_invalid_cli_invocation_uses_terminal_exit_code_one(self) -> None:
+        with redirect_stderr(StringIO()), self.assertRaises(SystemExit) as raised:
+            main([])
+        self.assertEqual(raised.exception.code, 1)
 
     def test_control_read_that_finishes_after_wall_clock_budget_is_partial(self) -> None:
         elapsed = {"seconds": 0}
