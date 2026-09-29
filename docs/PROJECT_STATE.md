@@ -1,6 +1,6 @@
 # Estado operativo de InfoCs
 
-Actualizado: 2026-09-28. Este documento resume el estado presente; no es un
+Actualizado: 2026-09-29. Este documento resume el estado presente; no es un
 registro de fases ni sustituye la hoja de ruta canónica.
 
 ## Arquitectura
@@ -49,8 +49,11 @@ referencia para el estado operativo actual.
 Estos puntos no bloquean empezar Astro, pero deben resolverse antes de la
 operación/publicación que corresponda:
 
-- BDNS: automatización propia, Manifests/Health propios, semántica de run y
-  exigir EventStore para operaciones `create`/`update` antes de automatizar.
+- BDNS: semántica operativa v1 definida; no hay garantía de detección sin
+  pérdida de todas las correcciones retrospectivas, limitación aceptada. Puede
+  avanzarse con un runner que declare explícitamente su cobertura. Siguen
+  pendientes automatización propia, Manifests/Health propios y exigir
+  EventStore para operaciones `create`/`update` en el runner productivo.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.
