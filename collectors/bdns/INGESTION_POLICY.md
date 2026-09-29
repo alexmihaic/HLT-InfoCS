@@ -25,15 +25,21 @@ Cada ruta pasa sus gates source-specific y entrega una
 una operación `create`/`update` autorizada preflighta y escribe Event antes de
 Record; `no_change` no necesita Event.
 
-El orquestador aún permite una ruta de compatibilidad sin EventStore, que
-puede informar `BDNS_CREATE_EVENT_DEFERRED` o
-`BDNS_UPDATE_EVENT_DEFERRED`. No es el modo productivo futuro: antes de
-automatizar BDNS, EventStore debe ser obligatorio para cualquier `create` o
-`update`, de modo que no se publique un Record sin su transición autorizada.
+La función de ingesta de un solo anuncio conserva una ruta de compatibilidad
+sin EventStore para usos históricos/tests, que puede informar
+`BDNS_CREATE_EVENT_DEFERRED` o `BDNS_UPDATE_EVENT_DEFERRED`. No es la ruta
+productiva: EventStore debe estar presente para cualquier `create` o `update`,
+de modo que no se publique un Record sin su transición autorizada.
+
+El runner source-specific de OPS-B siempre construye y pasa un EventStore; no
+usa la ruta de compatibilidad. Para cada `create`/`update`, el Event se
+preflighta y escribe antes del Record conforme al orden del Store actual.
 
 La primera persistencia controlada ya ocurrió: existe un Record BDNS público y
 su Event `create` se materializó posteriormente bajo la autorización
 multi-source. La atribución IGAE sigue visible junto al dataset y el alcance
-publicable no cambia. No se ejecutan concesiones, descargas ni mirroring. BDNS
-aún no tiene automatización, Manifest productivo ni Health propio. Un fallo de
-escritura no elimina ni invalida Records anteriores.
+publicable no cambia. No se ejecutan concesiones, descargas ni mirroring. OPS-B
+añade el runner y la escritura de Manifest por ejecución, pero todavía no hay
+workflow/schedule ni una ejecución productiva revisada. Derivar o persistir
+Health queda fuera de OPS-B y se reserva para OPS-C. Un fallo de escritura no
+elimina ni invalida Records anteriores.

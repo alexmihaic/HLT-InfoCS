@@ -57,6 +57,7 @@ class BDNSRecordOperation(StrEnum):
 
 class BDNSEventStatus(StrEnum):
     CREATED = "created"
+    UPDATED = "updated"
     NOT_REQUIRED = "not_required"
     DEFERRED = "deferred"
 
@@ -79,6 +80,7 @@ class BDNSIngestionMetrics:
     records_updated: int = 0
     records_unchanged: int = 0
     events_created: int = 0
+    events_updated: int = 0
     errors: int = 0
 
     def __post_init__(self) -> None:
@@ -374,9 +376,12 @@ def ingest_bdns(
                 safe_reason="record_write_failed",
             )
 
-        if event_created:
+        if event_created and operation is BDNSRecordOperation.CREATE:
             counts["events_created"] += 1
             event_status = BDNSEventStatus.CREATED
+        elif event_created and operation is BDNSRecordOperation.UPDATE:
+            counts["events_updated"] += 1
+            event_status = BDNSEventStatus.UPDATED
         elif event is not None and event_store is None:
             event_status = BDNSEventStatus.DEFERRED
 

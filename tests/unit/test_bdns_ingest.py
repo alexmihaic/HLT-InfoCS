@@ -162,7 +162,8 @@ class BDNSIngestionTests(unittest.TestCase):
             FakeTransport(page, (changed,)), event_store=event_store
         )
         self.assertEqual(updated.operation, BDNSRecordOperation.UPDATE)
-        self.assertEqual(updated.metrics.events_created, 1)
+        self.assertEqual(updated.metrics.events_created, 0)
+        self.assertEqual(updated.metrics.events_updated, 1)
         events = event_store.list_source("bdns")
         self.assertEqual(len(events), 2)
         update_event = next(event for event in events if event.type == "update")
@@ -179,6 +180,7 @@ class BDNSIngestionTests(unittest.TestCase):
         self.assertEqual(updated.operation, BDNSRecordOperation.UPDATE)
         self.assertEqual(updated.metrics.records_updated, 1)
         self.assertEqual(updated.metrics.events_created, 0)
+        self.assertEqual(updated.metrics.events_updated, 0)
         self.assertEqual(updated.event_status, BDNSEventStatus.DEFERRED)
         self.assertEqual(updated.safe_reason, "event_store_not_configured")
 

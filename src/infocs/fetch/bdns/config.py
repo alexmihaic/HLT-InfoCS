@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from urllib.parse import urlencode
 
 from infocs.fetch.bdns.models import BDNSSearchQuery
@@ -45,6 +46,13 @@ def validate_search_query(query: BDNSSearchQuery) -> None:
         not isinstance(query.numero_convocatoria, str) or not query.numero_convocatoria.strip()
     ):
         raise ValueError("numero_convocatoria debe ser texto no vacío si se proporciona.")
+    if (query.date_from is None) != (query.date_to is None):
+        raise ValueError("date_from y date_to deben proporcionarse conjuntamente.")
+    if query.date_from is not None:
+        if not isinstance(query.date_from, date) or not isinstance(query.date_to, date):
+            raise ValueError("Los límites temporales deben ser fechas calendario.")
+        if query.date_from > query.date_to:
+            raise ValueError("date_from no puede ser posterior a date_to.")
     if not isinstance(query.region_ids, tuple) or len(set(query.region_ids)) != len(query.region_ids):
         raise ValueError("region_ids debe ser una tupla de IDs de región distintos.")
     if any(isinstance(region_id, bool) or not isinstance(region_id, int) or region_id <= 0 for region_id in query.region_ids):
@@ -62,6 +70,9 @@ def search_url_for(query: BDNSSearchQuery) -> str:
     if query.numero_convocatoria is not None:
         params.append(("numeroConvocatoria", query.numero_convocatoria))
     params.extend(("regiones", str(region_id)) for region_id in query.region_ids)
+    if query.date_from is not None and query.date_to is not None:
+        params.append(("fechaDesde", query.date_from.strftime("%d/%m/%Y")))
+        params.append(("fechaHasta", query.date_to.strftime("%d/%m/%Y")))
     return f"{BDNS_SEARCH_URL}?{urlencode(params)}"
 
 

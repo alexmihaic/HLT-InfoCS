@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import date
 from http.client import HTTPResponse
 import json
 from pathlib import Path
@@ -100,6 +101,29 @@ class BDNSUrlTests(unittest.TestCase):
                 "regiones": ["56"],
             },
         )
+
+    def test_temporal_filters_use_documented_ddmmyyyy_parameters(self) -> None:
+        query = BDNSSearchQuery(
+            region_ids=(56,),
+            date_from=date(2026, 9, 1),
+            date_to=date(2026, 9, 29),
+        )
+        self.assertEqual(
+            parse_qs(urlsplit(search_url_for(query)).query),
+            {
+                "page": ["0"],
+                "pageSize": ["25"],
+                "order": ["fechaRecepcion"],
+                "direccion": ["desc"],
+                "regiones": ["56"],
+                "fechaDesde": ["01/09/2026"],
+                "fechaHasta": ["29/09/2026"],
+            },
+        )
+
+    def test_invalid_temporal_range_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            search_url_for(BDNSSearchQuery(date_from=date(2026, 9, 2), date_to=date(2026, 9, 1)))
 
     def test_invalid_region_filter_is_rejected_before_any_network_call(self) -> None:
         for region_ids in ((0,), (-1,), (True,), (56, 56), [56]):

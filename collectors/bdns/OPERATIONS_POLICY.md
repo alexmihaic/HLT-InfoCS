@@ -1,7 +1,7 @@
 # BDNS / SNPSAP — política de operación v1
 
 **Revisión:** 2026-09-29
-**Estado:** contrato operativo v1 aceptado; el runner productivo aún no está implementado.
+**Estado:** contrato operativo v1 aceptado; runner source-specific disponible, sin workflow ni ejecución productiva activados.
 
 ## Decisión ejecutiva
 
@@ -112,17 +112,20 @@ Propuesta de backfill controlado:
 - avanzar a la siguiente ventana sólo tras un Manifest exitoso y la validación
   de todos sus Records/Events.
 
-Si el filtro temporal no se confirma oficialmente, no particionar ni presentar
-ese backfill como temporalmente completo: recorrer el scope territorial entero
-con paginación integral o detener la automatización hasta resolver el contrato.
+Mientras la semántica temporal siga sin confirmación oficial, las ventanas se
+ejecutan bajo `fecha-recepcion-provisional-v1` y su `requested_scope` describe
+exactamente los parámetros usados. Un scope completo sólo acredita la
+enumeración estable del conjunto que devolvió esa consulta; no acredita por sí
+solo que la fecha limite represente oficialmente fecha de recepción ni que se
+hayan cubierto todas las correcciones retrospectivas.
 
 ## Incremental diario y cambios retrospectivos
 
-Una vez confirmada la semántica temporal, consultar una ventana que empiece en
-el último límite **completado** menos un solape operativo y termine en un corte
-fijo del run. Repetir el solape hace idempotentes las convocatorias tardías
-dentro de él; el tamaño del solape es una política InfoCs que debe ajustarse a
-la demora observada, no una garantía de BDNS.
+Bajo la política source-specific versionada vigente, consultar una ventana que
+empiece en el último límite **completado** menos un solape operativo y termine
+en un corte fijo del run. Repetir el solape hace idempotentes las convocatorias
+tardías dentro de él; el tamaño del solape es una política InfoCs que debe
+ajustarse a la demora observada, no una garantía de BDNS.
 
 No hay cursor ni filtro documentado por fecha de última modificación del
 registro. Por tanto, una convocatoria antigua corregida fuera del solape puede
@@ -175,17 +178,20 @@ Propuesta de arranque conservadora, revisable con métricas operativas:
 - una sola petición HTTP cada vez, sin retry automático ni documentos;
 - solicitar inicialmente `pageSize=50`, que es el ejemplo oficial, sin afirmar
   que sea máximo; revisar coherencia del tamaño devuelto;
-- máximo inicial de 250 detalles y 6 páginas por run (cinco páginas de 50
-  cubren 250 sumarios y una lectura de control); hard wall-clock budget de
-  10 minutos;
+- máximo inicial de 250 detalles y 5 páginas de datos por run (con `pageSize=50`);
+  la lectura de control final es una request adicional, no una sexta página de
+  datos; presupuesto de 600 segundos;
 - adaptar las ventanas para que normalmente quepan dentro del presupuesto;
   cualquier límite alcanzado antes de completar una ventana termina en
   `partial_success` y deja el checkpoint intacto;
 - ajustar esos valores sólo después de observar latencia, cuotas/respuestas y
   volumen real en operación; no confundirlos con límites SNPSAP.
 
-Los 250 detalles/10 minutos son una salvaguarda inicial de InfoCs, no un número
-publicado por la API. La muestra de septiembre (62 filas en 29 días) cabe bajo
+Los 250 detalles/600 segundos son una salvaguarda inicial de InfoCs, no un número
+publicado por la API. El presupuesto se comprueba entre requests y tras la
+lectura final; una request síncrona ya iniciada no se interrumpe y puede
+terminar después del plazo, pero el run se marca parcial. La muestra de
+septiembre (62 filas en 29 días) cabe bajo
 ese presupuesto en términos de sumarios, aunque el tiempo de sus 62 detalles
 no se ha medido.
 
@@ -223,7 +229,9 @@ específico del run se conserva en el resultado operacional seguro; sí limita
 la auditoría posterior de cobertura y la automatización. No añadir campos ni
 schema en esta fase.
 
-`SourceHealth` se deriva del Manifest: éxito (incluido `no_results` como
+La siguiente regla de derivación de `SourceHealth` es política prevista para
+OPS-C; OPS-B no deriva ni persiste Health. Cuando se implemente: éxito
+(incluido `no_results` como
 `success`) → `healthy`; `partial` → `degraded`; uno/dos `failed` consecutivos
 → `degraded`; tres o más → `failing`; sin historial → `unknown`. Es salud del
 proceso de colección/cobertura, no disponibilidad de BDNS ni indicador de que
@@ -255,13 +263,30 @@ concurrente o conflicto detiene la publicación para intervención. Nunca merge
 opaco ni force push; limitar a un intento de rebase y fallar cerrado si la
 carrera se repite.
 
+## Interfaz del runner
+
+El módulo ejecutable es `python -m infocs.fetch.bdns.runner`. Requiere modo y
+fecha final explícitos. `discovery` y `complete_scope` requieren también
+`--from-date`; `incremental_update` usa `--initial-from-date` sólo si aún no
+existe un Manifest incremental exitoso, y en ejecuciones posteriores obtiene
+el último límite completado y aplica el solape indicado. El scope y la versión
+provisional del filtro temporal quedan en `requested_scope` del Manifest.
+
+Los topes se pueden reducir por argumentos, nunca elevar por encima de cinco
+páginas, 250 detalles y diez minutos. La página de control final se añade a
+esas cinco páginas máximas. El EventStore se configura siempre y el runner
+escribe el Manifest del run. La derivación o persistencia de `SourceHealth`
+queda fuera de OPS-B y se reserva para OPS-C. Esta interfaz no habilita
+workflow ni schedule por sí sola.
+
 ## Validaciones y límites que debe respetar el runner
 
-1. Confirmar documentalmente que `fechaDesde`/`fechaHasta` filtran
-   `fechaRecepcion`; la muestra live no basta para elevarlo a contrato.
+1. Mantener explícito y versionado que `fechaDesde`/`fechaHasta` se usan como
+   proxy provisional de `fechaRecepcion`; la muestra live no basta para
+   elevarlo a garantía documental.
 2. Validar el orden por una clave única o aceptar que no hay garantía de
    desempate/snapshot durante la paginación.
-3. Acordar fecha inicial del backfill y política de barridos de detalles
+3. Fijar la fecha inicial del backfill y política de barridos de detalles
    históricos para detectar modificaciones retrospectivas.
 4. Medir latencia/carga y revisar límites operativos iniciales antes de un
    schedule.

@@ -26,6 +26,8 @@ class BDNSSearchQuery:
     direction: str = "desc"
     numero_convocatoria: str | None = None
     region_ids: tuple[int, ...] = ()
+    date_from: date | None = None
+    date_to: date | None = None
 
 
 @dataclass(frozen=True, slots=True)

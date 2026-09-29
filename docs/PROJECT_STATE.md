@@ -23,7 +23,7 @@ no decide políticas BOE/BDNS/BOP.
 | Fuente | Estado operativo |
 | --- | --- |
 | BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual. |
-| BDNS/SNPSAP | Collector operativo; reutilización confirmada con condiciones; política de metadata; 1 Record real y 1 Event `create`; aún sin acción productiva propia, Manifest ni Health. |
+| BDNS/SNPSAP | Collector y runner productivo implementados para `discovery`, `incremental_update` y `complete_scope`; RunManifest por ejecución; EventStore obligatorio para `create`/`update`; 1 Record real y 1 Event `create`. Sin automatización, sin SourceHealth productivo y sin validación live del runner. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
 Conteos canónicos: **Records BOE: 1; Records BDNS: 1; Events BDNS: 1;
@@ -49,11 +49,11 @@ referencia para el estado operativo actual.
 Estos puntos no bloquean empezar Astro, pero deben resolverse antes de la
 operación/publicación que corresponda:
 
-- BDNS: semántica operativa v1 definida; no hay garantía de detección sin
-  pérdida de todas las correcciones retrospectivas, limitación aceptada. Puede
-  avanzarse con un runner que declare explícitamente su cobertura. Siguen
-  pendientes automatización propia, Manifests/Health propios y exigir
-  EventStore para operaciones `create`/`update` en el runner productivo.
+- BDNS: la política v1 acepta que no existe garantía absoluta de detección
+  inmediata de todas las modificaciones retrospectivas. El runner declara
+  explícitamente su scope y cobertura; la limitación no impide avanzar, pero
+  debe permanecer visible. Siguen pendientes automatización propia,
+  SourceHealth productivo y validación live controlada del runner.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.

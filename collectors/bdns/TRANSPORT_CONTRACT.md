@@ -15,7 +15,7 @@ El cliente usa únicamente los endpoints públicos documentados de SNPSAP:
 
 | Operación | Método y ruta | Parámetros v1 | Resultado |
 | --- | --- | --- | --- |
-| Búsqueda | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda` | `page` (base cero), `pageSize`, `order`, `direccion`; filtros opcionales `numeroConvocatoria` y `regiones` (IDs enteros del catálogo) | Página JSON con `content`, totales y metadatos de paginación. |
+| Búsqueda | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias/busqueda` | `page` (base cero), `pageSize`, `order`, `direccion`; filtros opcionales `numeroConvocatoria`, `regiones` (IDs enteros del catálogo), `fechaDesde` y `fechaHasta` (`dd/MM/yyyy`) | Página JSON con `content`, totales y metadatos de paginación. |
 | Detalle | `GET https://www.infosubvenciones.es/bdnstrans/api/convocatorias` | `numConv=<numeroConvocatoria>` | Objeto JSON de la convocatoria. El parámetro opcional `vpd` no se usa. |
 
 Cabeceras explícitas: `Accept: application/json` y User-Agent de InfoCs. No se envían autenticación ni cookies. Cada llamada crea una petición GET independiente; no se persiste estado de sesión. El cliente no sigue redirecciones automáticamente: una respuesta distinta de HTTP 200 se clasifica y no se sigue a otro destino.
@@ -38,6 +38,12 @@ La búsqueda modela `content[]`, `pageable.pageNumber`, `pageable.pageSize`, `pa
 El detalle conserva, cuando están presentes, `codigoBDNS`, `id` técnico, título y variante lingüística, `organo.nivel1`–`nivel3`, `sedeElectronica`, `fechaRecepcion`, `presupuestoTotal`, tipo, instrumentos, tipos de beneficiario, sectores, regiones, finalidad, bases reguladoras, banderas y fechas del periodo de solicitud, metadata de documentos y metadata de `anuncios`/extractos. No conserva el payload completo ni campos desconocidos.
 
 La respuesta de búsqueda usa paginación indexada, no cursor. El máximo de página no está documentado; el cliente valida enteros positivos pero no inventa un máximo de servidor. En el smoke se pidió `page=0`, `pageSize=1`, `order=fechaRecepcion`, `direccion=desc`; SNPSAP devolvió una página de un elemento y metadatos coherentes de página. El total observado fue 654694 y es sólo una observación dinámica del 2026-09-26, no una constante contractual.
+
+El runner OPS-B usa los filtros temporales documentados como límites explícitos
+de scope, con política local versionada `fecha-recepcion-provisional-v1`.
+La muestra live compatible con `fechaRecepcion` no convierte esa semántica en
+una garantía oficial. El runner serializa fechas a `dd/MM/yyyy`, fija `regiones=56`
+y valida página/totales/identidad y una lectura de control al final del scope.
 
 ## Identidad y semántica de campos
 
