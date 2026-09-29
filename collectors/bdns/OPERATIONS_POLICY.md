@@ -1,7 +1,7 @@
 # BDNS / SNPSAP — política de operación v1
 
 **Revisión:** 2026-09-29
-**Estado:** contrato operativo v1 aceptado; runner source-specific disponible, sin workflow ni ejecución productiva activados.
+**Estado:** contrato operativo v1 aceptado; runner source-specific disponible; Action manual implementada en OPS-D, aún sin ejecución productiva ni schedule.
 
 ## Decisión ejecutiva
 
@@ -240,11 +240,15 @@ consecutivo. `partial` por presupuesto indica cobertura pendiente, no que
 SNPSAP esté técnicamente caído. El resultado se escribe en
 `data/health/bdns.json` y reutiliza el schema Core existente.
 
-## Workflow futuro y carrera con `main`
+## Workflow y carrera con `main`
 
-Diseño futuro, no implementado:
+La Action manual `workflow_dispatch` está implementada por OPS-D; no hay
+schedule. Cualquier automatización periódica queda diferida. El contrato de
+inputs, allowlist de publicación y pasos de carrera se mantiene en
+[AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md). Las reglas operativas son:
 
-1. `workflow_dispatch` para un scope/ventana explícitos y schedule serial;
+1. una ventana explícita mediante `workflow_dispatch`; cualquier schedule
+   futuro requerirá aprobación y serialización;
 2. checkout, Python fijado según el repo e instalación reproducible;
 3. ejecutar runner con RecordStore, EventStore, ManifestStore y Health;
 4. validar Records, Events, Manifest, Health, atribución y paths antes del
@@ -265,7 +269,7 @@ concurrente o conflicto detiene la publicación para intervención. Nunca merge
 opaco ni force push; limitar a un intento de rebase y fallar cerrado si la
 carrera se repite.
 
-El workflow futuro capturará exit code y JSON estructurado del runner, validará
+La Action manual captura exit code y JSON estructurado del runner, valida
 y publicará los artefactos canónicos válidos —también ante un run parcial— antes
 de propagar al final el resultado no-completo. No decidirá el estado leyendo o
 parseando texto humano de consola. El allowlist exacto de staging vive en

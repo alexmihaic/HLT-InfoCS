@@ -23,7 +23,7 @@ no decide políticas BOE/BDNS/BOP.
 | Fuente | Estado operativo |
 | --- | --- |
 | BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual. |
-| BDNS/SNPSAP | OPS-B productive runner publicado para `discovery`, `incremental_update` y `complete_scope`; OPS-C SourceHealth y contrato CLI seguro completados; RunManifest por ejecución; EventStore obligatorio para `create`/`update`; 1 Record real y 1 Event `create`. Todavía no automatizado: sin GitHub Action, sin ejecución live del runner y sin schedule. |
+| BDNS/SNPSAP | OPS-B productive runner y OPS-C SourceHealth/CLI publicados; OPS-D manual GitHub Action implementada, aún no live-validada; modos `discovery`, `incremental_update` y `complete_scope`; RunManifest por ejecución; EventStore obligatorio para `create`/`update`; 1 Record real y 1 Event `create`. Sin schedule; no declarada operativa hasta validación manual controlada. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
 Conteos canónicos: **Records BOE: 1; Records BDNS: 1; Events BDNS: 1;
@@ -52,8 +52,8 @@ operación/publicación que corresponda:
 - BDNS: la política v1 acepta que no existe garantía absoluta de detección
   inmediata de todas las modificaciones retrospectivas. El runner declara
   explícitamente su scope y cobertura; la limitación no impide avanzar, pero
-  debe permanecer visible. Siguen pendientes la GitHub Action y schedule, y
-  una primera validación live controlada del runner.
+  debe permanecer visible. Siguen pendientes la validación live controlada de
+  la nueva GitHub Action y cualquier schedule futuro.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.

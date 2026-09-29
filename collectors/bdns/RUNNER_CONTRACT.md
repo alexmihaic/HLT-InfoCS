@@ -44,7 +44,7 @@ writes `data/health/bdns.json` (or the injected test path) from BDNS Manifest
 history. Health reflects collection outcomes, not whether new Records arrived
 or whether reuse permits publication.
 
-## CLI contract for future automation
+## CLI contract for automation
 
 For each completed run, stdout contains exactly one compact JSON result with
 run id, source id, status, safe aggregate metrics, request count, HTTP status
@@ -55,13 +55,14 @@ object to stderr.
 
 Exit codes are stable: `0` for `complete_success` and `no_results`, `2` for
 `partial_success`, and `1` for source, contract, persistence, invocation, or
-observability failure. A future workflow must preserve/validate run artifacts
-before marking a nonzero collection result as a failed job; this contract does
-not implement that workflow.
+observability failure. The manual workflow preserves and validates run
+artifacts before propagating a nonzero collection result. Its full publication
+contract is in [AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md); no schedule is
+implemented.
 
-## Future workflow handling
+## Workflow artifact handling
 
-The workflow must capture both the process exit code and the runner's stdout
+The manual workflow captures both the process exit code and the runner's stdout
 JSON as machine-readable values. It must branch on the JSON `status` and exit
 code, never parse human-readable console text. A `partial_success` run has
 valid, publishable observations and safe Manifest/Health observability, but is
@@ -87,7 +88,7 @@ rebased only when every remote commit is a compatible `data(boe)` update and
 the remote diff has no BDNS paths. Any BDNS change, unexpected code/config/schema/
 workflow change, or conflict aborts publication. Never force-push. After a
 compatible rebase, revalidate the combined generated artifacts before a normal
-push.
+push. The workflow is manual-only; no schedule or cron is configured.
 
 ## Temporal scope and absence
 
