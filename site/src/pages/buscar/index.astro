@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Buscar publicaciones" description="Busca en las publicaciones oficiales que InfoCs ha incorporado al portal." currentPage="search">
+  <section class="page-intro" aria-labelledby="page-title" data-search-root>
+    <p class="eyebrow">Publicaciones oficiales</p>
+    <h1 id="page-title">Buscar</h1>
+    <p class="lede">Busca en los registros públicos disponibles en InfoCs. Los resultados enlazan a su ficha y a la fuente oficial.</p>
+
+    <form class="search-form page-section" action="/buscar/" method="get" role="search">
+      <label class="visually-hidden" for="search-query">Término de búsqueda</label>
+      <input class="search-input" id="search-query" name="q" type="search" autocomplete="off" placeholder="Título, organismo o término…" />
+      <button class="search-submit" type="submit">Buscar</button>
+    </form>
+
+    <p class="search-status" id="search-status" role="status" aria-live="polite" aria-atomic="true">Introduce un término para buscar en las publicaciones oficiales.</p>
+    <div class="empty-state compact" id="search-empty"><p>La búsqueda se realiza en las fichas públicas de registros.</p></div>
+    <ol class="search-results" id="search-results" aria-label="Resultados de búsqueda"></ol>
+  </section>
+</BaseLayout>
+
+<script src="../../scripts/search.ts"></script>

@@ -9,7 +9,7 @@ import TechnicalDetails from '../../components/TechnicalDetails.astro';
 import { encodeRecordId, loadPortalData } from '../../lib/data';
 import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
-import { geographyLabels, timelineItems } from '../../lib/presentation/recordView';
+import { geographyLabels, primaryDate, timelineItems } from '../../lib/presentation/recordView';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
 interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
@@ -25,11 +25,23 @@ export async function getStaticPaths() {
 
 const { record, events, source } = Astro.props as Props;
 const geographies = geographyLabels(record);
+const date = primaryDate(record);
 const timeline = timelineItems(events);
+const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 ---
 
 <BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
-  <article class="detail-page detail-shell">
+  <article class="detail-page detail-shell" data-pagefind-body>
+    <div class="visually-hidden" data-pagefind-ignore aria-hidden="true">
+      <span data-pagefind-meta="kind">record</span>
+      <span data-pagefind-meta="source">{sourceLabel(record.sourceId, [source])}</span>
+      <span data-pagefind-meta="category">{categoryLabel(record.category)}</span>
+      {record.authority && <span data-pagefind-meta="authority">{record.authority.name}</span>}
+      <span data-pagefind-meta="primary_date_iso">{date.value}</span>
+      <span data-pagefind-meta="primary_date_label">{date.label}</span>
+      <span data-pagefind-meta="primary_date_value">{date.display}</span>
+      <span data-pagefind-meta="public_url">{recordPath}</span>
+    </div>
     <nav class="breadcrumbs" aria-label="Ruta de navegación">
       <a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Registro</span>
     </nav>
@@ -72,6 +84,6 @@ const timeline = timelineItems(events);
     </section>
 
     <ChangeTimeline items={timeline} />
-    <div class="page-section"><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
+    <div class="page-section" data-pagefind-ignore><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
   </article>
 </BaseLayout>

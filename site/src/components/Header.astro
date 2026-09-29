@@ -2,7 +2,7 @@
 import ThemeToggle from './ThemeToggle.astro';
 import Wordmark from './Wordmark.astro';
 
-interface Props { currentPage?: 'home' | 'changes' | 'sources' | 'methodology' }
+interface Props { currentPage?: 'home' | 'search' | 'changes' | 'sources' | 'methodology' }
 const { currentPage } = Astro.props;
 ---
 
@@ -11,6 +11,7 @@ const { currentPage } = Astro.props;
     <Wordmark />
     <nav class="primary-nav" aria-label="Navegación principal">
       <a href="/" aria-current={currentPage === 'home' ? 'page' : undefined}>Inicio</a>
+      <a href="/buscar/" aria-current={currentPage === 'search' ? 'page' : undefined}>Buscar</a>
       <a href="/cambios/" aria-current={currentPage === 'changes' ? 'page' : undefined}>Cambios</a>
       <a href="/fuentes/" aria-current={currentPage === 'sources' ? 'page' : undefined}>Fuentes</a>
       <a href="/metodologia/" aria-current={currentPage === 'methodology' ? 'page' : undefined}>Metodología</a>

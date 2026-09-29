@@ -36,10 +36,11 @@ El portal estático se despliega con GitHub Actions y el dominio personalizado
 activo es `https://infocs.hazlotuyo.pro`. Esto describe un deployment técnico,
 no una beta pública. El portal estático carga
 Records/Events canónicos y ofrece portada, fichas de registro, índice y detalle
-de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Sólo se
-usa JavaScript mínimo para recordar el tema oscuro/claro. Siguen pendientes la
-búsqueda (Phase 10), el estado multi-source y los datasets/exports; Phase 09 no
-está completa. El
+de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Usa
+JavaScript mínimo para el tema oscuro/claro y la búsqueda estática. Phase 10A
+implementa búsqueda textual con Pagefind; siguen pendientes los filtros,
+facetas y refinamientos de orden de Phase 10B, el estado multi-source y los
+datasets/exports. Phase 10 y Phase 09 no están completas. El
 `IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es la
 referencia para el estado operativo actual.
 
@@ -57,5 +58,5 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `PHASE_09E_CUSTOM_DOMAIN_ACTIVE`.** Esto no implica
+**Estado de avance: `PHASE_09E_CUSTOM_DOMAIN_ACTIVE`; `PHASE_10A_STATIC_SEARCH_COMPLETE`.** Esto no implica
 que las deudas anteriores estén cerradas ni habilita una beta pública.

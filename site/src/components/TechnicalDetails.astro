@@ -2,7 +2,7 @@
 interface Props { recordId: string; officialId?: string; contentHash: string; detectedAt: string; lastCheckedAt: string }
 const { recordId, officialId, contentHash, detectedAt, lastCheckedAt } = Astro.props;
 ---
-<details class="technical-details">
+<details class="technical-details" data-pagefind-ignore>
   <summary>Detalles técnicos</summary>
   <dl class="detail-grid">
     <div><dt>Identificador InfoCs</dt><dd class="mono-value">{recordId}</dd></div>
