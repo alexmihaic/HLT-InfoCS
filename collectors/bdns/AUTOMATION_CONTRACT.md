@@ -1,12 +1,25 @@
-# BDNS manual GitHub Action — OPS-D
+# BDNS GitHub Action — OPS-G
 
-La automatización v1 es exclusivamente manual mediante
-`.github/workflows/bdns-manual.yml` (`workflow_dispatch`); no hay schedule ni
-cron. Requiere `main`, solicita modo y fechas ISO explícitas, fija la región
-provincial BDNS `56` y valida el intervalo localmente antes de iniciar el
-runner. En `incremental_update`, `fecha_desde` es la fecha inicial sólo cuando
-falta un checkpoint incremental compatible; después se aplica el checkpoint
-y solape definidos por la política operativa.
+`.github/workflows/bdns-manual.yml` conserva el disparo manual y añade una
+ejecución diaria programada. El horario es una política operativa de InfoCs:
+08:17 `Europe/Madrid` (`17 8 * * *`), sin disparo `push` ni `pull_request`.
+GitHub Actions schedule es best-effort: su configuración no prueba que cada
+run se haya ejecutado puntualmente; RunManifest y SourceHealth son la evidencia
+operativa.
+
+`workflow_dispatch` mantiene sus inputs y comportamiento: modo y fechas ISO
+explícitas, validación local, región provincial BDNS `56`; para un incremental
+manual, `fecha_desde` sólo sirve como inicio si falta un checkpoint compatible.
+El evento `schedule` fija `incremental_update` y calcula `through_date` como
+ayer según el calendario `Europe/Madrid`. No suministra fecha inicial ni hace
+bootstrap: antes de iniciar el runner exige un Manifest BDNS `success` de tipo
+`bdns_incremental_update` con `fecha-recepcion-provisional-v1`. Si no existe,
+falla cerrado antes de cualquier request y requiere intervención manual.
+El runner vuelve a resolver el scope desde el Manifest; el workflow no crea un
+watermark ni duplica el límite inicial. Se aplica el solape operativo vigente
+de 14 días respecto al `to` del último incremental exitoso compatible.
+Reduce omisiones recientes, pero no garantiza detectar todas las correcciones
+retrospectivas; la revalidación histórica queda pendiente de OPS-H.
 
 El runner conserva sus límites versionados (50 resultados por página, 250
 detalles, 5 páginas y 600 segundos); no se exponen como inputs. La Action
@@ -18,8 +31,8 @@ otras fuentes ni checkpoint independiente. Comprueba modelos, schemas, paths
 canónicos, hash de Record, vínculo Event–Record, atribución y coherencia
 Manifest–Health.
 
-Sin artefactos modificados no se crea commit vacío. Si los hay, se validan y se
-publican antes de propagar el resultado original: `0` es éxito completo,
+Sin artefactos modificados no se crea commit vacío ni se despacha Pages. Si los
+hay, se validan y se publican antes de propagar el resultado original: `0` es éxito completo,
 `2` deja publicados artefactos parciales y termina el workflow como no exitoso,
 `1` propaga fallo terminal después de publicar únicamente observabilidad
 válida, si la hay. Un fallo de validación/publicación termina por sí mismo con
@@ -37,9 +50,13 @@ runner; si no hubo commit no hay dispatch. El push de datos usa `GITHUB_TOKEN`,
 cuyos eventos `push` no disparan otros workflows ni un build de Pages, por lo
 que este `workflow_dispatch` explícito es necesario. Un fallo del dispatch
 falla la Action BDNS. Los pushes normales/humanos conservan el trigger `push`
-de Pages. La automatización BDNS sigue siendo manual, sin schedule ni cron.
+de Pages. Si un run programado crea un commit, su mensaje seguro es
+`data(bdns): scheduled incremental through YYYY-MM-DD`; el modo manual conserva
+su formato actual. La concurrencia `bdns-collection-main` serializa los runs
+manuales y programados. Las protecciones de carrera con BOE permanecen iguales.
 
-La primera ejecución manual `complete_scope` del 2026-09-28 terminó con éxito.
-Detectó que el push de datos no inicia Pages cuando usa `GITHUB_TOKEN`. OPS-E.1
-añade el dispatch explícito; su funcionamiento quedará live-validado cuando un
-próximo collector publique un commit de datos. BDNS sigue sin schedule.
+La ejecución productiva `complete_scope`, la cadena de publicación automática
+a Pages y un `incremental_update` compatible e idempotente se validaron en
+OPS-E/OPS-E.2/OPS-F. El schedule quedó implementado en OPS-G y está pendiente
+de la primera ejecución programada; BDNS no debe considerarse
+schedule-validado hasta entonces.

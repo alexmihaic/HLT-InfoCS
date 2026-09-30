@@ -1,7 +1,7 @@
 # BDNS / SNPSAP — política de operación v1
 
 **Revisión:** 2026-09-29
-**Estado:** contrato operativo v1 aceptado; runner source-specific disponible; Action manual implementada en OPS-D, aún sin ejecución productiva ni schedule.
+**Estado:** contrato operativo v1 aceptado; runner y Action manual validados en producción; schedule diario OPS-G implementado, pendiente de su primera validación programada.
 
 ## Decisión ejecutiva
 
@@ -242,13 +242,29 @@ SNPSAP esté técnicamente caído. El resultado se escribe en
 
 ## Workflow y carrera con `main`
 
-La Action manual `workflow_dispatch` está implementada por OPS-D; no hay
-schedule. Cualquier automatización periódica queda diferida. El contrato de
-inputs, allowlist de publicación y pasos de carrera se mantiene en
+La Action conserva `workflow_dispatch` y añade un schedule diario a las 08:17
+`Europe/Madrid` (`17 8 * * *`), como decisión operativa InfoCs y no como
+propiedad de SNPSAP. El evento programado fuerza `incremental_update` y fija
+`through_date` en ayer según la fecha local de Madrid. No recibe fecha inicial:
+requiere antes de cualquier request un Manifest de éxito BDNS incremental con
+tipo `bdns_incremental_update` y la política temporal vigente. Si falta, falla
+cerrado; no hay bootstrap automático. Aplica el solape productivo de 14 días
+desde el `to` del último checkpoint exitoso. El scope real queda registrado
+por el runner en el Manifest. La Action manual conserva sus inputs, validación
+y modos existentes, incluida la fecha inicial manual como fallback cuando
+falta checkpoint.
+
+El horario de GitHub Actions es best-effort. La existencia del schedule no
+demuestra que una ejecución diaria haya ocurrido; Manifest y Health aportan la
+evidencia. El solape reduce omisiones de altas/cambios recientes, pero no
+garantiza detectar todas las modificaciones retrospectivas; no se configura
+ahora revalidación histórica separada (OPS-H).
+
+El contrato de inputs, allowlist de publicación y pasos de carrera se mantiene en
 [AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md). Las reglas operativas son:
 
-1. una ventana explícita mediante `workflow_dispatch`; cualquier schedule
-   futuro requerirá aprobación y serialización;
+1. manual: ventana explícita; schedule: incremental basado sólo en checkpoint
+   compatible y corte hasta ayer en `Europe/Madrid`;
 2. checkout, Python fijado según el repo e instalación reproducible;
 3. ejecutar runner con RecordStore, EventStore, ManifestStore y Health;
 4. validar Records, Events, Manifest, Health, atribución y paths antes del
@@ -288,8 +304,9 @@ Los topes se pueden reducir por argumentos, nunca elevar por encima de cinco
 páginas, 250 detalles y diez minutos. La página de control final se añade a
 esas cinco páginas máximas. El EventStore se configura siempre y el runner
 escribe Manifest y Health derivados. La salida CLI es JSON estructurado y los
-códigos de salida distinguen resultado completo, parcial y fallo; esta interfaz
-no habilita workflow ni schedule por sí sola.
+códigos de salida distinguen resultado completo, parcial y fallo. La Action
+BDNS habilita el schedule, pero su primera ejecución programada sigue pendiente
+de validación; esta interfaz por sí sola no prueba que el horario se ejecute.
 
 ## Validaciones y límites que debe respetar el runner
 
@@ -300,8 +317,8 @@ no habilita workflow ni schedule por sí sola.
    desempate/snapshot durante la paginación.
 3. Fijar la fecha inicial del backfill y política de barridos de detalles
    históricos para detectar modificaciones retrospectivas.
-4. Medir latencia/carga y revisar límites operativos iniciales antes de un
-   schedule.
+4. Observar latencia/carga bajo los límites operativos existentes tras activar
+   el schedule; los límites no cambian en OPS-G.
 
 La semántica de `fechaDesde`/`fechaHasta` y la ausencia de snapshot/desempate
 siguen siendo incertidumbres explícitas. El runner deberá tratar la semántica

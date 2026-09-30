@@ -40,6 +40,7 @@ su Event `create` se materializó posteriormente bajo la autorización
 multi-source. La atribución IGAE sigue visible junto al dataset y el alcance
 publicable no cambia. No se ejecutan concesiones, descargas ni mirroring. OPS-B
 añade el runner y la escritura del Manifest. OPS-C deriva y escribe el
-`SourceHealth` a partir del historial de Manifests. OPS-D añade una Action
-manual, aún no live-validada; no hay schedule ni ejecución productiva revisada.
-Un fallo de escritura no elimina ni invalida Records anteriores.
+`SourceHealth` a partir del historial de Manifests. OPS-D añade la Action
+manual, validada en producción; OPS-G conserva ese modo y añade schedule diario
+incremental a las 08:17 `Europe/Madrid`, pendiente de su primera ejecución
+programada. Un fallo de escritura no elimina ni invalida Records anteriores.

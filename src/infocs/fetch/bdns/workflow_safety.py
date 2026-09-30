@@ -3,18 +3,26 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
+from datetime import date, datetime, timedelta
 import json
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
+from zoneinfo import ZoneInfo
 from typing import Any, Iterable, Mapping
 
 from infocs.diff.core import content_hash
 from infocs.events import Event, EventStore
 from infocs.fetch.bdns.ingest import BDNS_ATTRIBUTION_PATH, _attribution_preflight
-from infocs.fetch.bdns.runner import BDNS_REGION_ID, BDNSRunnerStatus
+from infocs.fetch.bdns.runner import (
+    BDNS_DEFAULT_OVERLAP_DAYS,
+    BDNS_INCREMENTAL_SCOPE_TYPE,
+    BDNS_REGION_ID,
+    BDNS_TEMPORAL_POLICY_VERSION,
+    BDNSRunnerStatus,
+    resolve_incremental_window,
+)
 from infocs.manifests import (
     ManifestStore,
     RunManifest,
@@ -52,6 +60,7 @@ _BDNS_ROOTS = (
     "data/manifests/bdns/",
 )
 _HEALTH_PATH = "data/health/bdns.json"
+_MADRID = ZoneInfo("Europe/Madrid")
 _SCHEMAS = {
     "data/records/bdns/": "record.schema.json",
     "data/events/bdns/": "event.schema.json",
@@ -62,6 +71,63 @@ _SCHEMAS = {
 
 class WorkflowSafetyError(ValueError):
     """BDNS result or artifact is outside the reviewed publication contract."""
+
+
+def scheduled_through_date(now: datetime | None = None) -> date:
+    """Return yesterday using the Europe/Madrid calendar, never the runner's UTC date."""
+    current = now if now is not None else datetime.now(_MADRID)
+    if current.tzinfo is None or current.utcoffset() is None:
+        raise WorkflowSafetyError("scheduled_clock_must_be_timezone_aware")
+    return current.astimezone(_MADRID).date() - timedelta(days=1)
+
+
+def resolve_scheduled_parameters(
+    manifests: Iterable[RunManifest],
+    *,
+    now: datetime | None = None,
+) -> dict[str, str]:
+    """Fail closed without a current successful incremental checkpoint; do not bootstrap."""
+    through_date = scheduled_through_date(now)
+    if BDNS_REGION_ID != 56:
+        raise WorkflowSafetyError("territorial_scope_changed")
+    checkpoint_candidates = tuple(
+        item for item in manifests
+        if item.source_id == "bdns"
+        and item.status.value == "success"
+        and item.requested_scope.type == BDNS_INCREMENTAL_SCOPE_TYPE
+        and f"region={BDNS_REGION_ID}" in item.requested_scope.value.split(";")
+        and f"temporal_policy={BDNS_TEMPORAL_POLICY_VERSION}" in item.requested_scope.value.split(";")
+    )
+    try:
+        resolve_incremental_window(
+            checkpoint_candidates,
+            through_date=through_date,
+            initial_from_date=None,
+            overlap_days=BDNS_DEFAULT_OVERLAP_DAYS,
+        )
+    except (TypeError, ValueError) as error:
+        raise WorkflowSafetyError("compatible_incremental_checkpoint_required") from error
+    return {"run_class": "incremental_update", "through_date": through_date.isoformat()}
+
+
+def write_scheduled_parameters(
+    github_output: str | Path,
+    manifests: Iterable[RunManifest],
+    *,
+    now: datetime | None = None,
+) -> dict[str, str]:
+    """Validate schedule parameters and write only safe GitHub step outputs."""
+    parameters = resolve_scheduled_parameters(manifests, now=now)
+    output_path = Path(github_output)
+    try:
+        with output_path.open("a", encoding="utf-8", newline="\n") as output:
+            output.write(f"run_class={parameters['run_class']}\n")
+            output.write("from_date=\n")
+            output.write(f"through_date={parameters['through_date']}\n")
+            output.write("trigger=schedule\n")
+    except OSError as error:
+        raise WorkflowSafetyError("github_output_write_failed") from error
+    return parameters
 
 
 def validate_inputs(run_class: str, from_date: str, through_date: str) -> None:
@@ -448,6 +514,8 @@ def _parser() -> argparse.ArgumentParser:
     commit = subparsers.add_parser("validate-commit")
     commit.add_argument("--commit", required=True)
     commit.add_argument("--result-file", required=True)
+    scheduled = subparsers.add_parser("prepare-scheduled")
+    scheduled.add_argument("--github-output", required=True)
     return parser
 
 
@@ -456,6 +524,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "validate-inputs":
             validate_inputs(args.run_class, args.from_date, args.through_date)
+        elif args.command == "prepare-scheduled":
+            write_scheduled_parameters(
+                args.github_output,
+                ManifestStore(PROJECT_ROOT / "data" / "manifests").list_source("bdns"),
+            )
         elif args.command == "validate-result":
             result = validate_runner_result(
                 _read_text_file(args.stdout_file),

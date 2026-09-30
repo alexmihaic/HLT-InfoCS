@@ -17,6 +17,8 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from infocs.fetch.bdns.workflow_safety import (  # noqa: E402
     WorkflowSafetyError,
+    resolve_scheduled_parameters,
+    scheduled_through_date,
     validate_changed_entries,
     validate_generated_artifacts,
     validate_inputs,
@@ -29,6 +31,14 @@ from infocs.fetch.bdns.parser import parse_bdns_detail, parse_bdns_search  # noq
 from infocs.fetch.bdns.runner import run_bdns_productive_collection  # noqa: E402
 from infocs.events import EventStore  # noqa: E402
 from infocs.manifests import ManifestStore  # noqa: E402
+from infocs.manifests import (  # noqa: E402
+    CollectionMode,
+    RunManifest,
+    RunMetrics,
+    RunStatus,
+    RequestedScope,
+    SoftwareMetadata,
+)
 from infocs.privacy import PrivacyGate  # noqa: E402
 from infocs.store import RecordStore  # noqa: E402
 
@@ -51,6 +61,42 @@ class _FixtureTransport:
 
 
 class BDNSWorkflowSafetyTests(unittest.TestCase):
+    @staticmethod
+    def _incremental_checkpoint() -> RunManifest:
+        return RunManifest(
+            manifest_version="1.0",
+            run_id="run-v1-12345678-1234-4234-9234-123456789abc",
+            source_id="bdns",
+            collection_mode=CollectionMode.INCREMENTAL_FEED,
+            started_at="2026-09-30T06:00:00Z",
+            finished_at="2026-09-30T06:01:00Z",
+            status=RunStatus.SUCCESS,
+            requested_scope=RequestedScope(
+                "bdns_incremental_update",
+                "region=56;from=2026-09-14;to=2026-09-29;temporal_policy=fecha-recepcion-provisional-v1",
+            ),
+            metrics=RunMetrics(),
+            software_metadata=SoftwareMetadata("0.2.0", "1"),
+        )
+
+    def test_scheduled_through_date_uses_madrid_calendar_across_utc_midnight(self) -> None:
+        now = datetime(2026, 9, 30, 22, 30, tzinfo=UTC)
+        self.assertEqual(scheduled_through_date(now), date(2026, 9, 30))
+        with self.assertRaisesRegex(WorkflowSafetyError, "scheduled_clock_must_be_timezone_aware"):
+            scheduled_through_date(datetime(2026, 9, 30, 22, 30))
+
+    def test_scheduled_run_fails_closed_without_compatible_checkpoint(self) -> None:
+        with self.assertRaisesRegex(WorkflowSafetyError, "compatible_incremental_checkpoint_required"):
+            resolve_scheduled_parameters((), now=datetime(2026, 9, 30, 10, tzinfo=UTC))
+
+    def test_scheduled_parameters_use_incremental_mode_and_yesterday_with_checkpoint(self) -> None:
+        parameters = resolve_scheduled_parameters(
+            (self._incremental_checkpoint(),),
+            now=datetime(2026, 9, 30, 10, tzinfo=UTC),
+        )
+        self.assertEqual(parameters, {"run_class": "incremental_update", "through_date": "2026-09-29"})
+        self.assertNotIn("from_date", parameters)
+
     def test_manual_scope_inputs_validate_dates_and_modes_before_requests(self) -> None:
         validate_inputs("complete_scope", "2026-01-01", "2026-01-31")
         for values in (

@@ -55,14 +55,14 @@ object to stderr.
 
 Exit codes are stable: `0` for `complete_success` and `no_results`, `2` for
 `partial_success`, and `1` for source, contract, persistence, invocation, or
-observability failure. The manual workflow preserves and validates run
-artifacts before propagating a nonzero collection result. Its full publication
-contract is in [AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md); no schedule is
-implemented.
+observability failure. Manual and scheduled workflow modes preserve and
+validate run artifacts before propagating a nonzero collection result. The
+schedule is implemented but awaits its first scheduled-run validation; its
+full publication contract is in [AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md).
 
 ## Workflow artifact handling
 
-The manual workflow captures both the process exit code and the runner's stdout
+The workflow captures both the process exit code and the runner's stdout
 JSON as machine-readable values. It must branch on the JSON `status` and exit
 code, never parse human-readable console text. A `partial_success` run has
 valid, publishable observations and safe Manifest/Health observability, but is
@@ -88,7 +88,9 @@ rebased only when every remote commit is a compatible `data(boe)` update and
 the remote diff has no BDNS paths. Any BDNS change, unexpected code/config/schema/
 workflow change, or conflict aborts publication. Never force-push. After a
 compatible rebase, revalidate the combined generated artifacts before a normal
-push. The workflow is manual-only; no schedule or cron is configured.
+push. The workflow supports manual dispatch and a daily schedule; schedule
+parameters and checkpoint preflight are defined in
+[AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md).
 
 ## Temporal scope and absence
 

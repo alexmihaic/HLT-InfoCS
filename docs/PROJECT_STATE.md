@@ -23,7 +23,7 @@ no decide políticas BOE/BDNS/BOP.
 | Fuente | Estado operativo |
 | --- | --- |
 | BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual; commits de datos despachan Pages explícitamente. |
-| BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. OPS-E.1 añade dispatch explícito de Pages tras commits de datos. OPS-E.2 validó `complete_scope` (2026-09-29): `complete_success`, 3 Records y 3 Events creados; Health `healthy` y cadena automática a Pages PASS. OPS-F validó en producción `incremental_update` (2026-09-28..2026-09-29): `complete_success`, 7 vistos, 7 sin cambios, 0 altas, 0 actualizaciones y 0 Events; creó el primer Manifest incremental `success`, ahora checkpoint compatible, con Health `healthy` y cadena automática a Pages PASS. BDNS sigue siendo manual-only; el schedule continúa pendiente. |
+| BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. OPS-E.1 añade dispatch explícito de Pages tras commits de datos. OPS-E.2 validó `complete_scope` (2026-09-29): `complete_success`, 3 Records y 3 Events creados; Health `healthy` y cadena automática a Pages PASS. OPS-F validó en producción `incremental_update` (2026-09-28..2026-09-29): `complete_success`, 7 vistos, 7 sin cambios, 0 altas, 0 actualizaciones y 0 Events; creó el primer Manifest incremental `success`, ahora checkpoint compatible, con Health `healthy` y cadena automática a Pages PASS. OPS-G implementa la ejecución diaria incremental a las 08:17 `Europe/Madrid`, con `through_date` de ayer y checkpoint Manifest obligatorio; está pendiente de la primera validación programada. BDNS mantiene el disparo manual y aún no declara el schedule validado. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
 Conteos canónicos: **Records BOE: 1; Records BDNS: 8; Events BDNS: 8;
@@ -53,8 +53,9 @@ operación/publicación que corresponda:
   inmediata de todas las modificaciones retrospectivas. El runner declara
   explícitamente su scope y cobertura; la limitación no impide avanzar, pero
   debe permanecer visible. La Action manual y la propagación automática
-  data(bdns) → Pages quedaron validadas en producción en OPS-E.2; cualquier
-  schedule futuro sigue pendiente.
+  data(bdns) → Pages quedaron validadas en producción en OPS-E.2. El schedule
+  diario se implementó en OPS-G y está pendiente de la primera ejecución
+  programada; BDNS sigue ofreciendo el modo manual.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.

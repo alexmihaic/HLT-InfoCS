@@ -54,6 +54,7 @@ BDNS_PAGE_SIZE = 50
 BDNS_MAX_PAGES = 5
 BDNS_MAX_DETAILS = 250
 BDNS_TIME_BUDGET_SECONDS = 600
+BDNS_DEFAULT_OVERLAP_DAYS = 14
 BDNS_TEMPORAL_POLICY_VERSION = "fecha-recepcion-provisional-v1"
 BDNS_INCREMENTAL_SCOPE_TYPE = "bdns_incremental_update"
 _DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}\Z")
@@ -197,7 +198,7 @@ def run_bdns_productive_collection(
     health_path: str | Path | None = None,
     privacy_gate: PrivacyGate | None = None,
     software_metadata: SoftwareMetadata | None = None,
-    overlap_days: int = 14,
+    overlap_days: int = BDNS_DEFAULT_OVERLAP_DAYS,
     max_pages: int = BDNS_MAX_PAGES,
     max_details: int = BDNS_MAX_DETAILS,
     time_budget_seconds: int = BDNS_TIME_BUDGET_SECONDS,
@@ -580,7 +581,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--from-date", type=_parse_date)
     parser.add_argument("--initial-from-date", type=_parse_date)
     parser.add_argument("--through-date", type=_parse_date, required=True)
-    parser.add_argument("--overlap-days", type=int, default=14)
+    parser.add_argument("--overlap-days", type=int, default=BDNS_DEFAULT_OVERLAP_DAYS)
     parser.add_argument("--max-pages", type=int, default=BDNS_MAX_PAGES)
     parser.add_argument("--max-details", type=int, default=BDNS_MAX_DETAILS)
     args = parser.parse_args(argv)
