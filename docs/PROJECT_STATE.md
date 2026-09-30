@@ -23,10 +23,10 @@ no decide políticas BOE/BDNS/BOP.
 | Fuente | Estado operativo |
 | --- | --- |
 | BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual; commits de datos despachan Pages explícitamente. |
-| BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. Primer `complete_scope` (2026-09-28) terminó `success`: creó 4 Records y 4 Events; total canónico 5 Records BDNS; Health `healthy`. El primer run detectó que el push con `GITHUB_TOKEN` no activa Pages. OPS-E.1 incorpora dispatch explícito de Pages tras un commit de datos; pendiente validarlo en el próximo collector. Sin schedule. |
+| BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. OPS-E.1 añade dispatch explícito de Pages tras commits de datos. OPS-E.2 validó `complete_scope` (2026-09-29): `complete_success`, 3 Records y 3 Events creados; Health `healthy` y cadena automática a Pages PASS. OPS-F validó en producción `incremental_update` (2026-09-28..2026-09-29): `complete_success`, 7 vistos, 7 sin cambios, 0 altas, 0 actualizaciones y 0 Events; creó el primer Manifest incremental `success`, ahora checkpoint compatible, con Health `healthy` y cadena automática a Pages PASS. BDNS sigue siendo manual-only; el schedule continúa pendiente. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
-Conteos canónicos: **Records BOE: 1; Records BDNS: 5; Events BDNS: 5;
+Conteos canónicos: **Records BOE: 1; Records BDNS: 8; Events BDNS: 8;
 Records BOP: 0; Events BOP: 0.**
 
 ## Siguiente fase de producto
@@ -52,8 +52,9 @@ operación/publicación que corresponda:
 - BDNS: la política v1 acepta que no existe garantía absoluta de detección
   inmediata de todas las modificaciones retrospectivas. El runner declara
   explícitamente su scope y cobertura; la limitación no impide avanzar, pero
-  debe permanecer visible. Siguen pendientes la validación live controlada de
-  la nueva GitHub Action y cualquier schedule futuro.
+  debe permanecer visible. La Action manual y la propagación automática
+  data(bdns) → Pages quedaron validadas en producción en OPS-E.2; cualquier
+  schedule futuro sigue pendiente.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.
