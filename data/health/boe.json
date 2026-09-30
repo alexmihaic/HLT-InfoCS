@@ -1,1 +1,1 @@
-{"consecutive_failures":0,"last_attempt_at":"2026-09-29T16:32:57.512327Z","last_run_id":"run-v1-e08e6fdc-97fa-42f3-a1bf-91f02ae8d7a1","last_success_at":"2026-09-29T16:32:59.659824Z","source_id":"boe","status":"healthy","updated_at":"2026-09-29T16:32:59.659824Z"}
+{"consecutive_failures":1,"last_attempt_at":"2026-09-30T16:26:08.382525Z","last_error_code":"source_failure","last_run_id":"run-v1-41bbf3db-5262-44be-b8bb-1586efc84298","last_success_at":"2026-09-29T16:32:59.659824Z","source_id":"boe","status":"degraded","updated_at":"2026-09-30T16:26:09.388483Z"}
