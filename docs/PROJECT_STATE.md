@@ -1,6 +1,6 @@
 # Estado operativo de InfoCs
 
-Actualizado: 2026-09-29. Este documento resume el estado presente; no es un
+Actualizado: 2026-09-30. Este documento resume el estado presente; no es un
 registro de fases ni sustituye la hoja de ruta canónica.
 
 ## Arquitectura
@@ -22,11 +22,11 @@ no decide políticas BOE/BDNS/BOP.
 
 | Fuente | Estado operativo |
 | --- | --- |
-| BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual. |
-| BDNS/SNPSAP | OPS-B productive runner y OPS-C SourceHealth/CLI publicados; OPS-D manual GitHub Action implementada, aún no live-validada; modos `discovery`, `incremental_update` y `complete_scope`; RunManifest por ejecución; EventStore obligatorio para `create`/`update`; 1 Record real y 1 Event `create`. Sin schedule; no declarada operativa hasta validación manual controlada. |
+| BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual; commits de datos despachan Pages explícitamente. |
+| BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. Primer `complete_scope` (2026-09-28) terminó `success`: creó 4 Records y 4 Events; total canónico 5 Records BDNS; Health `healthy`. El primer run detectó que el push con `GITHUB_TOKEN` no activa Pages. OPS-E.1 incorpora dispatch explícito de Pages tras un commit de datos; pendiente validarlo en el próximo collector. Sin schedule. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
-Conteos canónicos: **Records BOE: 1; Records BDNS: 1; Events BDNS: 1;
+Conteos canónicos: **Records BOE: 1; Records BDNS: 5; Events BDNS: 5;
 Records BOP: 0; Events BOP: 0.**
 
 ## Siguiente fase de producto

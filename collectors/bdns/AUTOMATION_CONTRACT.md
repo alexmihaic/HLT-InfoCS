@@ -30,8 +30,16 @@ una carrera lineal formada íntegramente por commits automáticos
 `data(boe): collect YYYY-MM-DD`, con paths de datos BOE canónicos y sin
 borrados. En ese caso crea el commit BDNS, realiza un único rebase normal y
 revalida los artefactos; cambios inesperados, conflictos o una segunda carrera
-abortan. Push normal a `main`, nunca force-push. Cada commit `data(bdns): ...`
-en `main` activa el workflow existente de Pages para reconstruir el portal;
-la Action BDNS no invoca Pages ni escribe código/configuración.
+abortan. Push normal a `main`, nunca force-push. Cuando el push de un commit
+`data(bdns): ...` termina correctamente, la Action despacha explícitamente
+`deploy-pages.yml` en `main`, antes de propagar el exit code original del
+runner; si no hubo commit no hay dispatch. El push de datos usa `GITHUB_TOKEN`,
+cuyos eventos `push` no disparan otros workflows ni un build de Pages, por lo
+que este `workflow_dispatch` explícito es necesario. Un fallo del dispatch
+falla la Action BDNS. Los pushes normales/humanos conservan el trigger `push`
+de Pages. La automatización BDNS sigue siendo manual, sin schedule ni cron.
 
-La implementación no queda live-validada hasta una ejecución manual aprobada.
+La primera ejecución manual `complete_scope` del 2026-09-28 terminó con éxito.
+Detectó que el push de datos no inicia Pages cuando usa `GITHUB_TOKEN`. OPS-E.1
+añade el dispatch explícito; su funcionamiento quedará live-validado cuando un
+próximo collector publique un commit de datos. BDNS sigue sin schedule.

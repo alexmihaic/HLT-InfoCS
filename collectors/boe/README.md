@@ -194,4 +194,6 @@ versionada. Véase [`REVIEW_QUEUE_POLICY.md`](REVIEW_QUEUE_POLICY.md).
 
 El workflow sólo puede publicar JSON bajo `data/records/`, `data/events/`,
 `data/manifests/`, `data/health/` y `data/review/`. No ejecuta la suite de
-tests en cada colección y no se activa por el commit automático del bot.
+tests en cada colección ni se reactiva a sí mismo por el commit automático del
+bot. Cuando sí publica un commit de datos, despacha explícitamente Pages:
+`GITHUB_TOKEN` no hace que el push dispare otro workflow.
