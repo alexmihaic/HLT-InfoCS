@@ -1,0 +1,70 @@
+name: BDNS v1-v2 baseline migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: bdns-collection-main
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require main
+        shell: bash
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main"
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e .
+      - name: Prepare entire batch outside the repository
+        id: prepare
+        shell: bash
+        run: |
+          base_sha="$(git rev-parse HEAD)"
+          echo "sha=$base_sha" >> "$GITHUB_OUTPUT"
+          python -m infocs.fetch.bdns.migration inventory
+          python -m infocs.fetch.bdns.migration prepare \
+            --git-sha "$base_sha" --staged-data-root "$RUNNER_TEMP/bdns-v2-data" \
+            > "$RUNNER_TEMP/bdns-migration-result.json"
+          python -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/bdns-migration-result.json")); assert r["status"] in ("prepared","already_migrated"); print("prepared="+str(r["status"]=="prepared").lower())' >> "$GITHUB_OUTPUT"
+      - name: Materialize validated batch and publish single cutover commit
+        id: publish
+        if: steps.prepare.outputs.prepared == 'true'
+        env:
+          BASE_SHA: ${{ steps.prepare.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python -m infocs.fetch.bdns.migration materialize --staged-data-root "$RUNNER_TEMP/bdns-v2-data"
+          git add -- data/records/bdns/ data/migrations/bdns/v1-v2/
+          git diff --cached --check
+          python -m infocs.fetch.bdns.migration validate-git --base-ref "$BASE_SHA"
+          git fetch origin main --no-tags
+          python -m infocs.fetch.bdns.workflow_safety validate-remote --base-sha "$BASE_SHA"
+          remote_sha="$(git rev-parse origin/main)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data(bdns): migrate canonical records to v2 baseline"
+          if [[ "$remote_sha" != "$BASE_SHA" ]]; then
+            git rebase origin/main
+          fi
+          python -m infocs.fetch.bdns.migration validate-git --base-ref HEAD^ --commit HEAD
+          git diff --check
+          git push origin HEAD:main
+          echo "commit_created=true" >> "$GITHUB_OUTPUT"
+      - name: Dispatch Pages after successful migration push
+        if: steps.publish.outputs.commit_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-pages.yml/dispatches" -f ref=main

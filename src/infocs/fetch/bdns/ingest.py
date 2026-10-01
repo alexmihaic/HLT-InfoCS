@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -23,6 +23,8 @@ from infocs.fetch.bdns.publication import (
     evaluate_bdns_publication,
 )
 from infocs.fetch.bdns.transport import BDNSTransport
+from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
+from infocs.fetch.bdns.enrichment import normalize_bdns_enriched
 from infocs.finalize import finalize_record
 from infocs.models import DataValidationError, Record
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate, PrivacyGateError
@@ -154,6 +156,13 @@ def ingest_bdns(
     statuses: list[int] = []
     requests = 1
     try:
+        hash_version = productive_hash_version(record_store, event_store)
+        if hash_version == 2 and not isinstance(event_store, EventStore):
+            raise BDNSBaselineError("event_store_required")
+    except BDNSBaselineError as error:
+        counts["errors"] += 1
+        return _result(BDNSIngestionStatus.PERSISTENCE_BLOCKED, counts, 0, statuses, safe_reason=str(error))
+    try:
         search = client.search(
             BDNSSearchQuery(
                 page=0,
@@ -195,7 +204,8 @@ def ingest_bdns(
             _validate_aware_timestamp(observed_at, "observation timestamp")
             if observed_at < started_at:
                 raise ValueError("observation timestamp precedes the run start.")
-            normalized = normalize_bdns_detail(
+            normalizer = normalize_bdns_enriched if hash_version == 2 else normalize_bdns_detail
+            normalized = normalizer(
                 summary,
                 detail_result.payload,
                 detected_at=started_at,
@@ -233,6 +243,10 @@ def ingest_bdns(
 
         try:
             record = finalize_record(normalized.candidate)
+            if hash_version == 2:
+                prior = record_store.get(record.id, source_id="bdns")
+                if prior is not None:
+                    record = replace(record, dates=replace(record.dates, detected_at=prior.dates.detected_at))
         except DataValidationError:
             counts["errors"] += 1
             continue

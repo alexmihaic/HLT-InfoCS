@@ -173,7 +173,11 @@ de publicación inventado.
 
 ## 11. Migration requirements for 10B-D
 
-No writer/migration primitive implementado ahora. Requisitos concretos de la
+Tooling y contrato concretados posteriormente en
+[BASELINE_MIGRATION_CONTRACT.md](BASELINE_MIGRATION_CONTRACT.md) (D1, offline).
+Los requisitos siguientes se mantienen; D2 ejecutará el cutover por separado.
+
+10B-B no implementó writer/migration primitive. Requisitos concretos de la
 ruta separada, antes de cualquier write futuro:
 
 1. Preflight autorizado: cargar baseline v1 validado, conservar record_id y

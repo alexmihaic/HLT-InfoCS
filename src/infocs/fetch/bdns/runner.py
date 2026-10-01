@@ -280,6 +280,11 @@ def run_bdns_productive_collection(
     error_code = "runner_preflight_failed"
     try:
         gate.validate()
+        from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
+        try:
+            productive_hash_version(records, events)
+        except BDNSBaselineError as error:
+            raise _RunFault(BDNSRunnerStatus.SOURCE_FAILURE, str(error)) from None
         if not _attribution_preflight(BDNS_ATTRIBUTION_PATH):
             raise RuntimeError("attribution_preflight_failed")
         if not isinstance(events, EventStore):

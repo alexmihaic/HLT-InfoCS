@@ -167,7 +167,10 @@ completas a logs como safe_reason.
 ## 8. Firewall productivo y dependencia de 10B-D
 
 **Enrichment capability ready, productive activation pending baseline migration.**
-Ingest, runner y schedule no llaman ninguna ruta enriquecida: Records nuevos y
+Actualización D1: el selector canónico descrito en
+[BASELINE_MIGRATION_CONTRACT.md](BASELINE_MIGRATION_CONTRACT.md) permite v2 sólo
+tras marker válido y población migrada. Sin marker real, sigue vigente v1.
+Sin marker, ingest, runner y schedule no llaman ninguna ruta enriquecida: Records nuevos y
 observaciones siguen v1, sin source_data ni content_hash_version explícita.
 Una prueba ejecuta el runner con FakeTransport/Stores temporales y hace fallar
 si toca cualquiera de las funciones v2; verifica Record v1 generado.

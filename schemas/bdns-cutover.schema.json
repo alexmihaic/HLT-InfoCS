@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "bdns-cutover",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "migration_id",
+    "source_id",
+    "policy_id",
+    "target_normalizer_version",
+    "evidence_contract_version",
+    "software_git_sha",
+    "target_hash_version",
+    "completed_at",
+    "record_count",
+    "population_hash"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "migration_id": {
+      "type": "string",
+      "pattern": "^bdns-v1-v2-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "source_id": {
+      "const": "bdns"
+    },
+    "policy_id": {
+      "const": "bdns.enriched-metadata-publication.v2"
+    },
+    "target_normalizer_version": {
+      "const": "2.0.0"
+    },
+    "evidence_contract_version": {
+      "const": "1.0"
+    },
+    "software_git_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "target_hash_version": {
+      "const": 2
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "record_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "population_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
