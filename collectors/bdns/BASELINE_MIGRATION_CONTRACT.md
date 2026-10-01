@@ -146,6 +146,12 @@ No refetch tras rebase. El helper workflow_safety existente verifica todos los
 commits/pathsets automáticos data(boe) compatibles; cualquier BDNS/code/schema/
 workflow/docs/frontend/migration remote → abort. No force, merge ni retry push.
 
+El workflow captura el exit code de `prepare` y valida/proyecta su JSON mediante
+una allowlist cerrada antes de propagar ese exit code. Expone un único
+`BDNS_MIGRATION_SAFE_RESULT` en logs y counts/status/safe reason en Step Summary,
+nunca contenido fuente. `blocked` conserva exit 1 y no materializa. Resultado
+ausente, inválido o inconsistente → `migration_safe_result_invalid`, exit 1.
+
 Commit: `data(bdns): migrate canonical records to v2 baseline`. Exactamente M de
 todos los Records inventariados, A de evidencias y marker. No Events/Manifest/
 Health/README/code/frontend. validate-git valida snapshots del parent/base y gates

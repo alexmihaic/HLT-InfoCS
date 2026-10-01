@@ -34,10 +34,80 @@ jobs:
           base_sha="$(git rev-parse HEAD)"
           echo "sha=$base_sha" >> "$GITHUB_OUTPUT"
           python -m infocs.fetch.bdns.migration inventory
+          set +e
           python -m infocs.fetch.bdns.migration prepare \
             --git-sha "$base_sha" --staged-data-root "$RUNNER_TEMP/bdns-v2-data" \
             > "$RUNNER_TEMP/bdns-migration-result.json"
-          python -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/bdns-migration-result.json")); assert r["status"] in ("prepared","already_migrated"); print("prepared="+str(r["status"]=="prepared").lower())' >> "$GITHUB_OUTPUT"
+          prepare_rc=$?
+          set -e
+          export PREPARE_RC="$prepare_rc"
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          counts = (
+              "inventory_count", "fresh_detail_count", "summary_resolved_count",
+              "v1_match_count", "v2_prepared_count", "privacy_allowed_count",
+              "publication_approved_count", "authorization_count", "evidence_count",
+              "request_count",
+          )
+          keys = ("status", "migration_id", *counts, "safe_reason")
+          reasons = {
+              "migration_invalid_inventory", "migration_v1_source_drift",
+              "migration_summary_not_resolved", "migration_detail_failure",
+              "migration_enrichment_blocked", "migration_privacy_blocked",
+              "migration_publication_blocked", "migration_evidence_conflict",
+              "migration_mixed_hash_versions", "migration_cutover_marker_invalid",
+              "migration_incomplete_batch", "migration_budget_exhausted",
+              "migration_invalid_staging", "migration_attribution_blocked",
+              "migration_preflight_failed", "migration_invalid_timestamp",
+          }
+          try:
+              raw = json.loads((Path(os.environ["RUNNER_TEMP"]) / "bdns-migration-result.json").read_text(encoding="utf-8"))
+              if not isinstance(raw, dict) or not set(keys).issubset(raw):
+                  raise ValueError
+              # Unknown fields are never forwarded, even if a future CLI adds them.
+              result = {key: raw[key] for key in keys}
+              status = result["status"]
+              rc = int(os.environ["PREPARE_RC"])
+              if status not in ("prepared", "already_migrated", "blocked"):
+                  raise ValueError
+              if (status == "blocked" and rc != 1) or (status != "blocked" and rc != 0):
+                  raise ValueError
+              if not isinstance(result["migration_id"], str) or not re.fullmatch(r"bdns-v1-v2-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", result["migration_id"]):
+                  raise ValueError
+              if any(type(result[key]) is not int or result[key] < 0 for key in counts):
+                  raise ValueError
+              reason = result["safe_reason"]
+              if status == "blocked":
+                  if not isinstance(reason, str) or reason not in reasons:
+                      raise ValueError
+              elif reason is not None:
+                  raise ValueError
+          except Exception:
+              result = {"status": "blocked", "safe_reason": "migration_safe_result_invalid"}
+              with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+                  handle.write("prepared=false\nstatus=blocked\nsafe_reason=migration_safe_result_invalid\n")
+              print("BDNS_MIGRATION_SAFE_RESULT=" + json.dumps(result, separators=(",", ":")))
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+                  handle.write("## BDNS migration preparation\n\nStatus: blocked\n\nSafe reason: migration_safe_result_invalid\n")
+              raise SystemExit(1)
+          print("BDNS_MIGRATION_SAFE_RESULT=" + json.dumps(result, separators=(",", ":")))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+              handle.write("prepared=" + str(status == "prepared").lower() + "\n")
+              handle.write(f"status={status}\nsafe_reason={reason or ''}\nrequest_count={result['request_count']}\n")
+          labels = ("Inventory", "Fresh details", "Summaries resolved", "V1 matches",
+                    "V2 prepared", "Privacy allowed", "Publication approved",
+                    "Authorizations", "Evidence", "Requests")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
+              handle.write(f"## BDNS migration preparation\n\nStatus: {status}\n\n")
+              for label, key in zip(labels, counts, strict=True):
+                  handle.write(f"- {label}: {result[key]}\n")
+              handle.write(f"\nSafe reason: {reason or 'none'}\n")
+          PY
+          exit "$prepare_rc"
       - name: Materialize validated batch and publish single cutover commit
         id: publish
         if: steps.prepare.outputs.prepared == 'true'
