@@ -7,7 +7,7 @@ construir un modelo desde JSON.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import UTC, date, datetime
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
@@ -309,6 +309,241 @@ class GrantDetails:
         return result
 
 
+def _bdns_fields(model, *, text=(), dates=(), flags=(), objects=None, sequences=None) -> None:
+    """Valida modelos cerrados también cuando se construyen sin JSON Schema."""
+    for name in text:
+        value = getattr(model, name)
+        if value is not None and (not isinstance(value, str) or not value.strip()):
+            raise DataValidationError(f"{name} debe ser texto no vacío o None.")
+    for name in dates:
+        value = getattr(model, name)
+        if value is not None and type(value) is not date:
+            raise DataValidationError(f"{name} debe ser date o None, no timestamp/texto.")
+    for name in flags:
+        value = getattr(model, name)
+        if value is not None and type(value) is not bool:
+            raise DataValidationError(f"{name} debe ser booleano o None.")
+    for name, expected in (objects or {}).items():
+        value = getattr(model, name)
+        if value is not None and not isinstance(value, expected):
+            raise DataValidationError(f"Tipo inválido en {name}.")
+    for name, expected in (sequences or {}).items():
+        value = getattr(model, name)
+        if not isinstance(value, tuple) or any(not isinstance(item, expected) for item in value):
+            raise DataValidationError(f"{name} debe ser una tupla tipada e inmutable.")
+        if expected is str and any(not item.strip() for item in value):
+            raise DataValidationError(f"{name} no admite texto vacío.")
+
+
+def _bdns_dict(model) -> dict[str, Any]:
+    """Serializa únicamente los fields declarados; no hay payload arbitrario."""
+    result = {}
+    for field in fields(model):
+        value = getattr(model, field.name)
+        if value is None or value == ():
+            continue
+        if isinstance(value, date):
+            value = value.isoformat()
+        elif isinstance(value, tuple):
+            value = [item.to_dict() if hasattr(item, "to_dict") else item for item in value]
+        elif hasattr(value, "to_dict"):
+            value = value.to_dict()
+        result[field.name] = value
+    return result
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSBudgetTotal:
+    """Presupuesto de convocatoria; no importe concedido ni moneda inferida."""
+
+    value: Decimal
+    currency: str | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.value, Decimal) or not self.value.is_finite() or self.value < 0:
+            raise DataValidationError("budget_total.value requiere Decimal finito no negativo, no float.")
+        if self.currency is not None and (
+            not isinstance(self.currency, str) or not re.fullmatch(r"[A-Z]{3}", self.currency)
+        ):
+            raise DataValidationError("budget_total.currency debe ser ISO 4217 o None.")
+
+    def to_dict(self) -> dict[str, str]:
+        value = format(self.value, "f")
+        if "." in value:
+            value = value.rstrip("0").rstrip(".")
+        result = {"value": "0" if self.value.is_zero() else value}
+        if self.currency is not None:
+            result["currency"] = self.currency
+        return result
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSOfficialClassification:
+    label: str
+    code: str | None = None
+
+    def __post_init__(self) -> None:
+        _non_empty(self.label, "classification.label")
+        _bdns_fields(self, text=("code",))
+
+    def to_dict(self) -> dict[str, str]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSAuthorityHierarchy:
+    nivel1: str | None = None
+    nivel2: str | None = None
+    nivel3: str | None = None
+
+    def __post_init__(self) -> None:
+        _bdns_fields(self, text=("nivel1", "nivel2", "nivel3"))
+        if not any((self.nivel1, self.nivel2, self.nivel3)):
+            raise DataValidationError("authority_hierarchy no puede estar vacío.")
+
+    def to_dict(self) -> dict[str, str]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSApplicationPeriod:
+    start_date: date | None = None
+    end_date: date | None = None
+    start_text: str | None = None
+    end_text: str | None = None
+    abierto: bool | None = None
+
+    def __post_init__(self) -> None:
+        _bdns_fields(self, text=("start_text", "end_text"), dates=("start_date", "end_date"), flags=("abierto",))
+        if not self.to_dict():
+            raise DataValidationError("application no puede estar vacío.")
+
+    def to_dict(self) -> dict[str, Any]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSRegulatoryBases:
+    description: str | None = None
+    official_source_url: str | None = None
+
+    def __post_init__(self) -> None:
+        _bdns_fields(self, text=("description", "official_source_url"))
+        if self.official_source_url is not None:
+            _bdns_https_url(self.official_source_url)
+        if not self.to_dict():
+            raise DataValidationError("regulatory_bases no puede estar vacío.")
+
+    def to_dict(self) -> dict[str, str]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSDocumentReference:
+    source_document_id: int
+    description: str | None = None
+    filename: str | None = None
+    published_date: date | None = None
+    modified_value: str | None = None
+
+    def __post_init__(self) -> None:
+        if type(self.source_document_id) is not int or self.source_document_id < 0:
+            raise DataValidationError("source_document_id debe ser entero no negativo.")
+        _bdns_fields(self, text=("description", "filename", "modified_value"), dates=("published_date",))
+
+    def to_dict(self) -> dict[str, Any]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSExtractReference:
+    cve: str | None = None
+    diary: str | None = None
+    source_url: str | None = None
+    publication_date: date | None = None
+    title: str | None = None
+    title_coofficial: str | None = None
+
+    def __post_init__(self) -> None:
+        _bdns_fields(self, text=("cve", "diary", "source_url", "title", "title_coofficial"), dates=("publication_date",))
+        if self.source_url is not None:
+            _bdns_https_url(self.source_url)
+        if not self.to_dict():
+            raise DataValidationError("extract no puede estar vacío.")
+
+    def to_dict(self) -> dict[str, Any]:
+        return _bdns_dict(self)
+
+
+def _bdns_https_url(value: str) -> None:
+    from urllib.parse import urlsplit
+
+    try:
+        url = urlsplit(value)
+        valid = url.scheme == "https" and bool(url.hostname) and not url.username and not url.password
+        url.port  # Rechaza puertos mal formados.
+    except ValueError:
+        valid = False
+    if not valid or any(char.isspace() for char in value):
+        raise DataValidationError("El enlace fuente requiere HTTPS sin credenciales.")
+
+
+@dataclass(frozen=True, slots=True)
+class BDNSCanonicalData:
+    """Estado fuente permitido por schema; NO autorización de publicación."""
+
+    extension_version: str = "1.0"
+    official_title_coofficial: str | None = None
+    authority_hierarchy: BDNSAuthorityHierarchy | None = None
+    budget_total: BDNSBudgetTotal | None = None
+    call_type: str | None = None
+    instruments: tuple[str, ...] = ()
+    eligible_beneficiary_types: tuple[BDNSOfficialClassification, ...] = ()
+    sectors: tuple[BDNSOfficialClassification, ...] = ()
+    impact_regions: tuple[str, ...] = ()
+    received_date: date | None = None
+    application: BDNSApplicationPeriod | None = None
+    purpose: str | None = None
+    regulatory_bases: BDNSRegulatoryBases | None = None
+    electronic_office_url: str | None = None
+    extract_published_in_official_diary: bool | None = None
+    documents: tuple[BDNSDocumentReference, ...] = ()
+    extracts: tuple[BDNSExtractReference, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.extension_version != "1.0":
+            raise DataValidationError("BDNS extension_version debe ser 1.0.")
+        _bdns_fields(self, text=("official_title_coofficial", "call_type", "purpose", "electronic_office_url"),
+            dates=("received_date",), flags=("extract_published_in_official_diary",),
+            objects={"authority_hierarchy": BDNSAuthorityHierarchy, "budget_total": BDNSBudgetTotal,
+                "application": BDNSApplicationPeriod, "regulatory_bases": BDNSRegulatoryBases},
+            sequences={"instruments": str, "eligible_beneficiary_types": BDNSOfficialClassification,
+                "sectors": BDNSOfficialClassification, "impact_regions": str,
+                "documents": BDNSDocumentReference, "extracts": BDNSExtractReference})
+        if self.electronic_office_url is not None:
+            _bdns_https_url(self.electronic_office_url)
+        if len(self.to_dict()) == 1:
+            raise DataValidationError("La extensión requiere al menos un dato fuente.")
+        ids = [item.source_document_id for item in self.documents]
+        if len(set(ids)) != len(ids):
+            raise DataValidationError("No se admiten document IDs duplicados.")
+
+    def to_dict(self) -> dict[str, Any]:
+        return _bdns_dict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceData:
+    bdns: BDNSCanonicalData
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.bdns, BDNSCanonicalData):
+            raise DataValidationError("source_data.bdns requiere BDNSCanonicalData.")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"bdns": self.bdns.to_dict()}
+
+
 @dataclass(frozen=True, slots=True)
 class Document:
     source_url: str
@@ -429,15 +664,18 @@ class TechnicalMetadata:
     identity_strategy: str
     raw_sha256: str | None = None
     extraction_method: str | None = None
+    content_hash_version: int = 1
 
     def __post_init__(self) -> None:
         _sha256(self.content_hash, "technical.content_hash")
         _sha256(self.raw_sha256, "technical.raw_sha256")
         if self.identity_strategy not in _IDENTITY_STRATEGIES:
             raise DataValidationError("technical.identity_strategy no es válido.")
+        if type(self.content_hash_version) is not int or self.content_hash_version not in (1, 2):
+            raise DataValidationError("content_hash_version debe ser 1 o 2.")
 
-    def to_dict(self) -> dict[str, str]:
-        return {
+    def to_dict(self) -> dict[str, Any]:
+        result = {
             key: value
             for key, value in (
                 ("content_hash", self.content_hash),
@@ -447,6 +685,9 @@ class TechnicalMetadata:
             )
             if value is not None
         }
+        if self.content_hash_version != 1:
+            result["content_hash_version"] = self.content_hash_version
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,6 +713,7 @@ class RecordCandidate:
     tags: tuple[str, ...] = ()
     relations: tuple[Relation, ...] = ()
     technical: CandidateTechnicalMetadata | None = None
+    source_data: SourceData | None = None
 
     def __post_init__(self) -> None:
         _validate_common_record_fields(self)
@@ -518,10 +760,13 @@ class Record:
     documents: tuple[Document, ...] = ()
     tags: tuple[str, ...] = ()
     relations: tuple[Relation, ...] = ()
+    source_data: SourceData | None = None
 
     def __post_init__(self) -> None:
         _validate_common_record_fields(self)
         _non_empty(self.id, "id")
+        if (self.source_data is not None) != (self.technical.content_hash_version == 2):
+            raise DataValidationError("source_data requiere hash v2; Record sin extensión requiere v1.")
 
     def to_dict(self) -> dict[str, Any]:
         result = _common_record_to_dict(self)
@@ -669,6 +914,9 @@ def _validate_common_record_fields(record: RecordCandidate | Record) -> None:
         raise DataValidationError(f"schema_version debe ser {SCHEMA_VERSION}.")
     _non_empty(record.title, "title")
     _non_empty(record.source_url, "source_url")
+    if record.source_data is not None:
+        if not isinstance(record.source_data, SourceData) or record.source.id != "bdns" or record.category is not Category.GRANTS_CALL:
+            raise DataValidationError("La extensión BDNS sólo es válida para source=bdns y grants.call.")
     if record.authority is None and record.administration_level is not None:
         raise DataValidationError("administration_level requiere una authority conocida.")
     if (
@@ -709,6 +957,8 @@ def _common_record_to_dict(record: RecordCandidate | Record) -> dict[str, Any]:
         result["tags"] = list(record.tags)
     if record.relations:
         result["relations"] = [relation.to_dict() for relation in record.relations]
+    if record.source_data is not None:
+        result["source_data"] = record.source_data.to_dict()
     return result
 
 
@@ -769,7 +1019,45 @@ def _common_record_from_payload(data: Mapping[str, Any]) -> dict[str, Any]:
             Relation(RelationType(item["type"]), item["target_id"])
             for item in data.get("relations", ())
         ),
+        "source_data": _source_data_from_dict(data.get("source_data")),
     }
+
+
+def _source_data_from_dict(data: Mapping[str, Any] | None) -> SourceData | None:
+    if data is None:
+        return None
+    raw = dict(data["bdns"])
+    for name, constructor in (
+        ("authority_hierarchy", BDNSAuthorityHierarchy), ("application", BDNSApplicationPeriod),
+        ("regulatory_bases", BDNSRegulatoryBases),
+    ):
+        if raw.get(name) is not None:
+            item = dict(raw[name])
+            if name == "application":
+                for key in ("start_date", "end_date"):
+                    if item.get(key) is not None:
+                        item[key] = _optional_date(item[key], key)
+            raw[name] = constructor(**item)
+    if raw.get("budget_total") is not None:
+        raw["budget_total"] = BDNSBudgetTotal(Decimal(raw["budget_total"]["value"]), raw["budget_total"].get("currency"))
+    if raw.get("received_date") is not None:
+        raw["received_date"] = _optional_date(raw["received_date"], "received_date")
+    for name, constructor, date_key in (
+        ("eligible_beneficiary_types", BDNSOfficialClassification, None),
+        ("sectors", BDNSOfficialClassification, None),
+        ("documents", BDNSDocumentReference, "published_date"),
+        ("extracts", BDNSExtractReference, "publication_date"),
+    ):
+        items = []
+        for value in raw.get(name) or ():
+            item = dict(value)
+            if date_key and item.get(date_key) is not None:
+                item[date_key] = _optional_date(item[date_key], date_key)
+            items.append(constructor(**item))
+        raw[name] = tuple(items)
+    for name in ("instruments", "impact_regions"):
+        raw[name] = tuple(raw.get(name) or ())
+    return SourceData(BDNSCanonicalData(**raw))
 
 
 def _money_from_dict(data: Mapping[str, Any] | None) -> Money | None:

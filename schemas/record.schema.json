@@ -10,7 +10,12 @@
       "properties": {
         "id": {"$ref": "#/$defs/non_empty_string"},
         "technical": {"$ref": "#/$defs/final_technical"}
-      }
+      },
+      "allOf": [{
+        "if": {"required": ["source_data"]},
+        "then": {"properties": {"technical": {"required": ["content_hash_version"], "properties": {"content_hash_version": {"const": 2}}}}},
+        "else": {"properties": {"technical": {"properties": {"content_hash_version": {"const": 1}}}}}
+      }]
     }
   ],
   "unevaluatedProperties": false,
@@ -31,6 +36,7 @@
         "source_url": {"type": "string", "format": "uri"},
         "procurement": {"$ref": "#/$defs/procurement"},
         "grant": {"$ref": "#/$defs/grant"},
+        "source_data": {"$ref": "#/$defs/source_data"},
         "geography": {"$ref": "#/$defs/geography"},
         "documents": {"type": "array", "items": {"$ref": "#/$defs/document"}},
         "tags": {"type": "array", "items": {"$ref": "#/$defs/non_empty_string"}, "uniqueItems": true},
@@ -39,12 +45,127 @@
         "status": {"enum": ["active", "missing_from_source", "withdrawn", "quarantine"]}
       },
       "allOf": [
+        {"if": {"required": ["source_data"]}, "then": {"properties": {"source": {"properties": {"id": {"const": "bdns"}}}, "category": {"const": "grants.call"}}}},
         {"if": {"properties": {"administration_level": {"const": "municipal"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "municipal"}}}}}},
         {"if": {"properties": {"administration_level": {"const": "provincial"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "provincial"}}}}}},
         {"if": {"properties": {"administration_level": {"const": "autonomous"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "autonomous"}}}}}},
         {"if": {"properties": {"administration_level": {"const": "state"}}}, "then": {"properties": {"authority": {"type": "object", "properties": {"administration_level": {"const": "state"}}}}}},
         {"if": {"properties": {"administration_level": {"type": "null"}}}, "then": {"properties": {"authority": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["administration_level"], "properties": {"administration_level": {"type": "null"}}}]}}}}
       ]
+    },
+    "source_data": {
+      "type": "object", "additionalProperties": false, "required": ["bdns"],
+      "properties": {"bdns": {"$ref": "#/$defs/bdns_data"}}
+    },
+    "bdns_optional_text": {"type": ["string", "null"], "minLength": 1, "pattern": "\\S"},
+    "bdns_optional_date": {"type": ["string", "null"], "format": "date"},
+    "bdns_optional_url": {"type": ["string", "null"], "format": "uri", "pattern": "^https://[^/@\\s]+(?:[/?#]|$)"},
+    "bdns_budget": {
+      "type": "object", "additionalProperties": false, "required": ["value"],
+      "properties": {
+        "value": {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]+)?$"},
+        "currency": {"type": ["string", "null"], "pattern": "^[A-Z]{3}$"}
+      }
+    },
+    "bdns_classification": {
+      "type": "object", "additionalProperties": false, "required": ["label"],
+      "properties": {"label": {"type": "string", "minLength": 1, "pattern": "\\S"}, "code": {"$ref": "#/$defs/bdns_optional_text"}}
+    },
+    "bdns_authority_hierarchy": {
+      "type": "object", "additionalProperties": false,
+      "properties": {"nivel1": {"$ref": "#/$defs/bdns_optional_text"}, "nivel2": {"$ref": "#/$defs/bdns_optional_text"}, "nivel3": {"$ref": "#/$defs/bdns_optional_text"}},
+      "anyOf": [
+        {"required": ["nivel1"], "properties": {"nivel1": {"type": "string"}}},
+        {"required": ["nivel2"], "properties": {"nivel2": {"type": "string"}}},
+        {"required": ["nivel3"], "properties": {"nivel3": {"type": "string"}}}
+      ]
+    },
+    "bdns_application": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "anyOf": [
+        {"required": ["start_date"], "properties": {"start_date": {"type": "string"}}},
+        {"required": ["end_date"], "properties": {"end_date": {"type": "string"}}},
+        {"required": ["start_text"], "properties": {"start_text": {"type": "string"}}},
+        {"required": ["end_text"], "properties": {"end_text": {"type": "string"}}},
+        {"required": ["abierto"], "properties": {"abierto": {"type": "boolean"}}}
+      ],
+      "properties": {
+        "start_date": {"$ref": "#/$defs/bdns_optional_date"}, "end_date": {"$ref": "#/$defs/bdns_optional_date"},
+        "start_text": {"$ref": "#/$defs/bdns_optional_text"}, "end_text": {"$ref": "#/$defs/bdns_optional_text"},
+        "abierto": {"type": ["boolean", "null"]}
+      }
+    },
+    "bdns_bases": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "anyOf": [
+        {"required": ["description"], "properties": {"description": {"type": "string"}}},
+        {"required": ["official_source_url"], "properties": {"official_source_url": {"type": "string"}}}
+      ],
+      "properties": {"description": {"$ref": "#/$defs/bdns_optional_text"}, "official_source_url": {"$ref": "#/$defs/bdns_optional_url"}}
+    },
+    "bdns_document": {
+      "type": "object", "additionalProperties": false, "required": ["source_document_id"],
+      "properties": {
+        "source_document_id": {"type": "integer", "minimum": 0},
+        "description": {"$ref": "#/$defs/bdns_optional_text"}, "filename": {"$ref": "#/$defs/bdns_optional_text"},
+        "published_date": {"$ref": "#/$defs/bdns_optional_date"}, "modified_value": {"$ref": "#/$defs/bdns_optional_text"}
+      }
+    },
+    "bdns_extract": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "anyOf": [
+        {"required": ["cve"], "properties": {"cve": {"type": "string"}}},
+        {"required": ["diary"], "properties": {"diary": {"type": "string"}}},
+        {"required": ["source_url"], "properties": {"source_url": {"type": "string"}}},
+        {"required": ["publication_date"], "properties": {"publication_date": {"type": "string"}}},
+        {"required": ["title"], "properties": {"title": {"type": "string"}}},
+        {"required": ["title_coofficial"], "properties": {"title_coofficial": {"type": "string"}}}
+      ],
+      "properties": {
+        "cve": {"$ref": "#/$defs/bdns_optional_text"}, "diary": {"$ref": "#/$defs/bdns_optional_text"},
+        "source_url": {"$ref": "#/$defs/bdns_optional_url"}, "publication_date": {"$ref": "#/$defs/bdns_optional_date"},
+        "title": {"$ref": "#/$defs/bdns_optional_text"}, "title_coofficial": {"$ref": "#/$defs/bdns_optional_text"}
+      }
+    },
+    "bdns_data": {
+      "type": "object", "additionalProperties": false, "required": ["extension_version"], "minProperties": 2,
+      "anyOf": [
+        {"required": ["official_title_coofficial"], "properties": {"official_title_coofficial": {"type": "string"}}},
+        {"required": ["authority_hierarchy"], "properties": {"authority_hierarchy": {"type": "object"}}},
+        {"required": ["budget_total"], "properties": {"budget_total": {"type": "object"}}},
+        {"required": ["call_type"], "properties": {"call_type": {"type": "string"}}},
+        {"required": ["instruments"], "properties": {"instruments": {"minItems": 1}}},
+        {"required": ["eligible_beneficiary_types"], "properties": {"eligible_beneficiary_types": {"minItems": 1}}},
+        {"required": ["sectors"], "properties": {"sectors": {"minItems": 1}}},
+        {"required": ["impact_regions"], "properties": {"impact_regions": {"minItems": 1}}},
+        {"required": ["received_date"], "properties": {"received_date": {"type": "string"}}},
+        {"required": ["application"], "properties": {"application": {"type": "object"}}},
+        {"required": ["purpose"], "properties": {"purpose": {"type": "string"}}},
+        {"required": ["regulatory_bases"], "properties": {"regulatory_bases": {"type": "object"}}},
+        {"required": ["electronic_office_url"], "properties": {"electronic_office_url": {"type": "string"}}},
+        {"required": ["extract_published_in_official_diary"], "properties": {"extract_published_in_official_diary": {"type": "boolean"}}},
+        {"required": ["documents"], "properties": {"documents": {"minItems": 1}}},
+        {"required": ["extracts"], "properties": {"extracts": {"minItems": 1}}}
+      ],
+      "properties": {
+        "extension_version": {"const": "1.0"},
+        "official_title_coofficial": {"$ref": "#/$defs/bdns_optional_text"},
+        "authority_hierarchy": {"anyOf": [{"$ref": "#/$defs/bdns_authority_hierarchy"}, {"type": "null"}]},
+        "budget_total": {"anyOf": [{"$ref": "#/$defs/bdns_budget"}, {"type": "null"}]},
+        "call_type": {"$ref": "#/$defs/bdns_optional_text"},
+        "instruments": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "eligible_beneficiary_types": {"type": "array", "items": {"$ref": "#/$defs/bdns_classification"}},
+        "sectors": {"type": "array", "items": {"$ref": "#/$defs/bdns_classification"}},
+        "impact_regions": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "\\S"}},
+        "received_date": {"$ref": "#/$defs/bdns_optional_date"},
+        "application": {"anyOf": [{"$ref": "#/$defs/bdns_application"}, {"type": "null"}]},
+        "purpose": {"$ref": "#/$defs/bdns_optional_text"},
+        "regulatory_bases": {"anyOf": [{"$ref": "#/$defs/bdns_bases"}, {"type": "null"}]},
+        "electronic_office_url": {"$ref": "#/$defs/bdns_optional_url"},
+        "extract_published_in_official_diary": {"type": ["boolean", "null"]},
+        "documents": {"type": "array", "items": {"$ref": "#/$defs/bdns_document"}},
+        "extracts": {"type": "array", "items": {"$ref": "#/$defs/bdns_extract"}}
+      }
     },
     "non_empty_string": {"type": "string", "minLength": 1},
     "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
@@ -183,7 +304,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["content_hash", "identity_strategy"],
-      "properties": {"content_hash": {"$ref": "#/$defs/sha256"}, "raw_sha256": {"$ref": "#/$defs/sha256"}, "extraction_method": {"type": "string"}, "identity_strategy": {"enum": ["official_id", "case_number", "canonical_url", "composite_fingerprint"]}}
+      "properties": {"content_hash": {"$ref": "#/$defs/sha256"}, "content_hash_version": {"enum": [1, 2]}, "raw_sha256": {"$ref": "#/$defs/sha256"}, "extraction_method": {"type": "string"}, "identity_strategy": {"enum": ["official_id", "case_number", "canonical_url", "composite_fingerprint"]}}
     }
   }
 }

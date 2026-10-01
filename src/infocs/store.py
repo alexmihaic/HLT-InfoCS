@@ -100,6 +100,8 @@ class RecordStore:
     def validate(self, record: Record) -> Record:
         """Preflight público de modelo, hash y privacidad sin crear ni escribir paths."""
         validated = _validated_record(record)
+        if validated.source_data is not None:
+            raise RecordStoreError("source_data requiere integración de Privacy/publication en 10B-C; escritura bloqueada.")
         try:
             decision = self.privacy_gate.evaluate(validated)
         except Exception:

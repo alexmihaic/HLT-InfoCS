@@ -15,7 +15,7 @@ from urllib.parse import quote
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from infocs.diff.core import content_hash, diff
+from infocs.diff.core import assert_same_hash_contract, content_hash, diff
 from infocs.models import Record
 from infocs.publication.authorization import (
     PublicationAuthorization,
@@ -149,6 +149,7 @@ def update_event(
     """Construye update con rutas del diff común, sin valores anteriores/nuevos."""
     if previous.id != current.id or previous.source.id != current.source.id:
         raise EventValidationError("Un update debe conservar identidad y fuente del Record.")
+    assert_same_hash_contract(previous.to_dict(), current.to_dict())
     if previous.technical.content_hash == current.technical.content_hash:
         return None
     if authorization is None:

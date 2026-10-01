@@ -3,6 +3,10 @@
 Auditoría y propuesta de datos, Phase 10B-A. Fecha: 2026-10-01.
 **No es un contrato implementado ni autoriza migración/publicación.**
 
+Decisión posterior 10B-B: la base tipada `source_data.bdns` y hash v2 explícito
+se concretan en `CANONICAL_ENRICHMENT_CONTRACT.md`. El mapa conserva su alcance
+de auditoría; población de campos, gates, migración y UI siguen pendientes.
+
 ## 1. Purpose
 
 Hacer comprensibles las convocatorias sin confundirlas con concesiones,

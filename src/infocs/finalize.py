@@ -46,6 +46,12 @@ def finalize_record(candidate: RecordCandidate | Mapping[str, Any]) -> Record:
     identity = identify(result)
     result["id"] = identity.record_id
     technical = result.setdefault("technical", {})
+    if "source_data" in result:
+        bdns = result["source_data"]["bdns"]
+        for key in ("instruments", "eligible_beneficiary_types", "sectors", "impact_regions", "documents", "extracts"):
+            if key in bdns:
+                bdns[key] = canonical_set(bdns[key])
+        technical["content_hash_version"] = 2
     technical["identity_strategy"] = identity.strategy
     technical["content_hash"] = content_hash(result)
 
