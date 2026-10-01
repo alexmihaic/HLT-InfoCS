@@ -203,18 +203,17 @@ documentados para baseline y evidencia. No relajar EventStore ni authorization.
 
 ## 12. Privacy/publication follow-up for 10B-C
 
-**Schema support != publication authorization.** Privacy Gate y metadata policy
-actuales permanecen intactos. Hasta integrar los gates, RecordStore.validate/
-write rechazan source_data y el issuer interno de PublicationAuthorization
-también lo rechaza. Son dos bloqueos preventivos de capacidad no autorizada,
-sin nuevas reglas source-specific en EventStore ni bypass configurable.
+**Schema support != publication authorization.** Los bloqueos preventivos de
+10B-B en RecordStore y el issuer se sustituyen en 10B-C por inspección Privacy
+explícita y metadata policy v2, documentadas en
+[ENRICHMENT_GATE_CONTRACT.md](ENRICHMENT_GATE_CONTRACT.md). El Store conserva
+schema/hash/Privacy; el adapter autoriza sólo tras los gates source-specific.
+Sin nuevas reglas source-specific en EventStore ni bypass configurable.
 
-10B-C deberá reemplazar esos bloqueos sólo cuando complete y pruebe recorrido
-de todos los textos/URLs/filenames (incluidos título cooficial, jerarquía,
-clasificaciones, plazos, finalidad, bases, documentos y extractos), metadata
-policy versionada, adapters y authorization. No basta obtener ALLOW del gate
-actual: no inspecciona todavía toda esta superficie. No cambiar reuse ni permitir
-concesiones, fulltext/personas nominativas por enriquecer metadata.
+Se inspeccionan textos/URLs/filenames de título cooficial, jerarquía,
+clasificaciones, plazos, finalidad, bases, documentos y extractos. No cambia
+reuse ni se permiten concesiones, fulltext/personas nominativas por enriquecer
+metadata. La capacidad v2 NO se conecta al runner antes del baseline 10B-D.
 
 ## 13. Compatibility
 
@@ -232,8 +231,7 @@ No nuevas dependencias, datasets paralelos ni cambios productivos BOE/BOP.
 
 ## 14. Next phase
 
-10B-C: mapear source→extensión, resolver casos sin label/URLs/optionalidad,
-Privacy/publication gates y autorizaciones, pruebas fail-closed/Stores,
-compatibilidad del runner frente a transición (bloquear antes de crear update).
+10B-C implementa mapping y gates como capacidad offline separada, manteniendo
+ingest/runner/schedule en v1 y bloqueando diff/update entre contratos.
 No activar refetch/migración por el schedule. 10B-D aprueba e implementa la ruta
 de baseline con evidencia. Frontend y enlaces/document UX siguen posteriores.

@@ -43,8 +43,6 @@ def _issue_publication_authorization(record: Record, policy_id: str) -> Publicat
     """Emite el token sólo para adaptadores de políticas tras su evaluación PASS."""
     if not isinstance(record, Record):
         raise PublicationAuthorizationError("La autorización requiere un Record canónico.")
-    if record.source_data is not None:
-        raise PublicationAuthorizationError("source_data no está autorizado: integración de gates pendiente de 10B-C.")
     if not isinstance(policy_id, str) or not _POLICY_ID_RE.fullmatch(policy_id):
         raise PublicationAuthorizationError("policy_id debe ser un identificador versionado no vacío.")
     if not record.id or not record.source.id or not _HASH_RE.fullmatch(record.technical.content_hash):

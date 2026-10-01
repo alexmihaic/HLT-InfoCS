@@ -1,4 +1,4 @@
-"""Políticas source-specific de publicación de metadata BDNS v1."""
+"""Políticas BDNS: metadata v1 productiva y capacidad enriquecida v2 aislada."""
 
 from __future__ import annotations
 
@@ -17,7 +17,12 @@ from infocs.fetch.bdns.normalize import (
 )
 from infocs.fetch.bdns.config import detail_url_for
 from infocs.models import Category, Record, TerritorialMatchReason
-from infocs.privacy import PrivacyDecision, PrivacyDecisionType
+from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate
+from infocs.diff.core import content_hash
+from infocs.fetch.bdns.enrichment import (
+    BDNS_ENRICHED_NORMALIZER_VERSION, BDNS_ENRICHED_EVENT_POLICY_ID,
+    valid_bdns_supplied_url,
+)
 from infocs.publication.authorization import (
     PublicationAuthorization,
     _issue_publication_authorization,
@@ -52,8 +57,8 @@ class BDNSMetadataPublicationDecision:
         if self.decision is BDNSMetadataPublicationDecisionType.PUBLISHABLE_METADATA:
             if self.reason_code is not None:
                 raise BDNSPublicationPolicyError("publishable_metadata no admite reason_code.")
-        elif self.reason_code != "metadata_scope_not_publishable":
-            raise BDNSPublicationPolicyError("hold requiere metadata_scope_not_publishable.")
+        elif self.reason_code not in {"metadata_scope_not_publishable", "publication_source_data_hold"}:
+            raise BDNSPublicationPolicyError("hold requiere un motivo seguro reconocido.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,7 +121,7 @@ def evaluate_bdns_publication(
     decision = BDNSMetadataPublicationDecision(
         metadata,
         None if metadata is BDNSMetadataPublicationDecisionType.PUBLISHABLE_METADATA
-        else "metadata_scope_not_publishable",
+        else "publication_source_data_hold" if record.source_data is not None else "metadata_scope_not_publishable",
     )
     return BDNSPublicationEvaluation(privacy_decision, eligibility, decision)
 
@@ -132,6 +137,11 @@ def authorize_bdns_event(
         raise BDNSPublicationPolicyError("La autorización sólo admite Records BDNS.")
     if evaluation.privacy_decision.record_id != record.id:
         raise BDNSPublicationPolicyError("La evaluación no corresponde al Record.")
+    if record.source_data is not None:
+        # Una decisión ALLOW v1 o stale ligada sólo al ID no autoriza nueva superficie.
+        actual_privacy = PrivacyGate.default().evaluate(record)
+        if actual_privacy != evaluation.privacy_decision:
+            raise BDNSPublicationPolicyError("privacy_source_data_decision_mismatch")
     canonical = evaluate_bdns_publication(record, evaluation.privacy_decision)
     if canonical != evaluation:
         raise BDNSPublicationPolicyError("La evaluación BDNS no coincide con las políticas actuales.")
@@ -144,10 +154,12 @@ def authorize_bdns_event(
         or canonical.metadata_publication.decision is not BDNSMetadataPublicationDecisionType.PUBLISHABLE_METADATA
     ):
         return None
-    return _issue_publication_authorization(record, BDNS_EVENT_POLICY_ID)
+    policy_id = BDNS_ENRICHED_EVENT_POLICY_ID if record.source_data is not None else BDNS_EVENT_POLICY_ID
+    return _issue_publication_authorization(record, policy_id)
 
 
 def _record_is_publishable_metadata(record: Record) -> bool:
+    enriched = record.source_data is not None
     if (
         record.source.id != BDNS_SOURCE_ID
         or not record.source.official_id
@@ -169,14 +181,43 @@ def _record_is_publishable_metadata(record: Record) -> bool:
         or record.relations
         or record.dates.event_at is not None
         or record.provenance.collector != BDNS_SOURCE_ID
-        or record.provenance.normalizer_version != BDNS_NORMALIZER_VERSION
+        or record.provenance.normalizer_version != (BDNS_ENRICHED_NORMALIZER_VERSION if enriched else BDNS_NORMALIZER_VERSION)
         or record.technical.extraction_method != BDNS_EXTRACTION_METHOD
     ):
         return False
     if not any(_is_canonical_castellon_match(match) for match in record.provenance.territorial_matches):
         return False
+    if enriched and not _enriched_metadata_is_publishable(record):
+        return False
     expected_url = detail_url_for(record.source.official_id)
     return record.source_url == expected_url
+
+
+def _enriched_metadata_is_publishable(record: Record) -> bool:
+    try:
+        Record.from_dict(record.to_dict())
+        if record.technical.content_hash_version != 2 or content_hash(record.to_dict()) != record.technical.content_hash:
+            return False
+        data = record.source_data.bdns
+        if data.budget_total is not None and data.budget_total.currency is not None:
+            return False  # El contrato fuente actual no aporta evidencia de moneda.
+        if CASTELLON_REGION_LABEL not in data.impact_regions:
+            return False
+        hierarchy = data.authority_hierarchy
+        if hierarchy is None:
+            if record.authority is not None:
+                return False
+        else:
+            expected_name = " / ".join(value.strip() for value in (hierarchy.nivel1, hierarchy.nivel2, hierarchy.nivel3) if value is not None)
+            if record.authority is None or record.authority.name != expected_name:
+                return False
+        urls = [data.electronic_office_url]
+        if data.regulatory_bases is not None:
+            urls.append(data.regulatory_bases.official_source_url)
+        urls.extend(item.source_url for item in data.extracts)
+        return all(valid_bdns_supplied_url(url) for url in urls if url is not None)
+    except (ValueError, TypeError, AttributeError):
+        return False
 
 
 def _is_canonical_castellon_match(match) -> bool:

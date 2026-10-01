@@ -7,6 +7,7 @@ from enum import StrEnum
 import json
 from pathlib import Path
 import re
+from urllib.parse import unquote, urlsplit
 from typing import Any, Mapping
 
 from infocs.models import Record
@@ -220,7 +221,7 @@ class PrivacyGate:
 
             self._detect("spanish_personal_identifier", field, _has_valid_personal_identifier, value, reasons)
             self._detect("iban", field, _has_valid_iban, value, reasons)
-            if field in {"title", "description"}:
+            if field in {"title", "description"} or field.startswith("source_data.bdns."):
                 self._detect("personal_email", field, self._has_consumer_email, value, reasons)
                 self._detect("personal_phone", field, self._has_contextual_personal_phone, value, reasons)
                 self._detect("structured_private_address", field, _has_private_address, value, reasons)
@@ -281,7 +282,7 @@ def classify_spanish_tax_identifier(value: str) -> TaxIdentifierClassification |
 
 
 def _inspected_fields(record: Record) -> dict[str, str]:
-    """Devuelve sólo texto público pertinente; excluye URLs, IDs y metadatos."""
+    """Proyección explícita; v1 intacto, superficie BDNS v2 auditada campo a campo."""
     fields: dict[str, str] = {"title": record.title}
     if record.description is not None:
         fields["description"] = record.description
@@ -293,6 +294,67 @@ def _inspected_fields(record: Record) -> dict[str, str]:
         fields["grant.beneficiary.name"] = record.grant.beneficiary.name
         if record.grant.beneficiary.tax_identifier is not None:
             fields["grant.beneficiary.tax_identifier"] = record.grant.beneficiary.tax_identifier
+    if record.source_data is not None:
+        data = record.source_data.bdns
+        prefix = "source_data.bdns."
+
+        def add(path: str, value: str | None, *, url: bool = False) -> None:
+            if value is None:
+                return
+            if url:
+                surfaces = []
+                try:
+                    # '+' sólo como separador form de query, nunca reescribir path.
+                    for initial in (value, urlsplit(value).query.replace("+", " ")):
+                        decoded = initial
+                        surfaces.append(decoded)
+                        for _ in range(4):
+                            next_value = unquote(decoded, errors="strict")
+                            if next_value == decoded:
+                                break
+                            decoded = next_value
+                            surfaces.append(decoded)
+                        if unquote(decoded, errors="strict") != decoded:
+                            raise PrivacyGateError("privacy_source_data_url_encoding_invalid")
+                except (UnicodeError, ValueError):
+                    raise PrivacyGateError("privacy_source_data_url_encoding_invalid") from None
+                value = "\n".join(surfaces)
+            fields[prefix + path] = value
+
+        add("official_title_coofficial", data.official_title_coofficial)
+        if data.authority_hierarchy is not None:
+            add("authority_hierarchy.nivel1", data.authority_hierarchy.nivel1)
+            add("authority_hierarchy.nivel2", data.authority_hierarchy.nivel2)
+            add("authority_hierarchy.nivel3", data.authority_hierarchy.nivel3)
+        add("call_type", data.call_type)
+        for index, value in enumerate(data.instruments):
+            add(f"instruments[{index}]", value)
+        for index, item in enumerate(data.eligible_beneficiary_types):
+            add(f"eligible_beneficiary_types[{index}].label", item.label)
+            add(f"eligible_beneficiary_types[{index}].code", item.code)
+        for index, item in enumerate(data.sectors):
+            add(f"sectors[{index}].label", item.label)
+            add(f"sectors[{index}].code", item.code)
+        for index, value in enumerate(data.impact_regions):
+            add(f"impact_regions[{index}]", value)
+        if data.application is not None:
+            add("application.start_text", data.application.start_text)
+            add("application.end_text", data.application.end_text)
+        add("purpose", data.purpose)
+        if data.regulatory_bases is not None:
+            add("regulatory_bases.description", data.regulatory_bases.description)
+            add("regulatory_bases.official_source_url", data.regulatory_bases.official_source_url, url=True)
+        add("electronic_office_url", data.electronic_office_url, url=True)
+        for index, item in enumerate(data.documents):
+            add(f"documents[{index}].description", item.description)
+            add(f"documents[{index}].filename", item.filename)
+            add(f"documents[{index}].modified_value", item.modified_value)
+        for index, item in enumerate(data.extracts):
+            add(f"extracts[{index}].cve", item.cve)
+            add(f"extracts[{index}].diary", item.diary)
+            add(f"extracts[{index}].title", item.title)
+            add(f"extracts[{index}].title_coofficial", item.title_coofficial)
+            add(f"extracts[{index}].source_url", item.source_url, url=True)
     return fields
 
 

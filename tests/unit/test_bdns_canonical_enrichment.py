@@ -6,7 +6,6 @@ from decimal import Decimal
 import json
 from pathlib import Path
 import sys
-import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,8 +20,6 @@ from infocs.models import (
     BDNSOfficialClassification, BDNSRegulatoryBases, DataValidationError,
     Record, RecordCandidate, SourceData, SourceReference, validate_record_payload,
 )
-from infocs.publication.authorization import _issue_publication_authorization, PublicationAuthorizationError
-from infocs.store import RecordStore, RecordStoreError
 from tests.unit.test_bdns_normalize import normalized
 
 
@@ -281,15 +278,14 @@ class BDNSCanonicalEnrichmentTests(unittest.TestCase):
                 with self.assertRaises(HashContractTransitionError):
                     content_hash(raw)
 
-    def test_schema_support_not_publication_authorization_or_store_write(self):
+    def test_schema_support_not_publication_authorization_without_v2_provenance(self):
+        from infocs.fetch.bdns.publication import authorize_bdns_event, evaluate_bdns_publication
+        from infocs.privacy import PrivacyGate
         record = finalize_record(candidate(enriched_data()))
-        with tempfile.TemporaryDirectory() as directory:
-            store = RecordStore(directory)
-            with self.assertRaises(RecordStoreError):
-                store.write(record)
-            self.assertEqual(list(Path(directory).rglob("*")), [])
-        with self.assertRaises(PublicationAuthorizationError):
-            _issue_publication_authorization(record, "synthetic-policy-v1")
+        privacy = PrivacyGate.default().evaluate(record)
+        publication = evaluate_bdns_publication(record, privacy)
+        self.assertEqual(publication.metadata_publication.decision.value, "hold")
+        self.assertIsNone(authorize_bdns_event(record, publication))
 
 
 if __name__ == "__main__":
