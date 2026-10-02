@@ -1,6 +1,6 @@
 # Estado operativo de InfoCs
 
-Actualizado: 2026-09-30. Este documento resume el estado presente; no es un
+Actualizado: 2026-10-02. Este documento resume el estado presente; no es un
 registro de fases ni sustituye la hoja de ruta canónica.
 
 ## Arquitectura
@@ -26,8 +26,31 @@ no decide políticas BOE/BDNS/BOP.
 | BDNS/SNPSAP | OPS-B productive runner, OPS-C SourceHealth/CLI y OPS-D manual Action publicados. OPS-E.1 añade dispatch explícito de Pages tras commits de datos. OPS-E.2 validó `complete_scope` (2026-09-29): `complete_success`, 3 Records y 3 Events creados; Health `healthy` y cadena automática a Pages PASS. OPS-F validó en producción `incremental_update` (2026-09-28..2026-09-29): `complete_success`, 7 vistos, 7 sin cambios, 0 altas, 0 actualizaciones y 0 Events; creó el primer Manifest incremental `success`, ahora checkpoint compatible, con Health `healthy` y cadena automática a Pages PASS. OPS-G implementa la ejecución diaria incremental a las 08:17 `Europe/Madrid`, con `through_date` de ayer y checkpoint Manifest obligatorio; está pendiente de la primera validación programada. BDNS mantiene el disparo manual y aún no declara el schedule validado. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
-Conteos canónicos: **Records BOE: 1; Records BDNS: 8; Events BDNS: 8;
+Conteos canónicos: **Records BOE: 1; Records BDNS: 40; Events BDNS: 40;
 Records BOP: 0; Events BOP: 0.**
+
+### BDNS — baseline canónico v2
+
+Phase 10B-D2.9 migró los 40 Records BDNS existentes a baselines enriquecidos
+v2 tras demostrar equivalencia fresh-source de todos los hashes v1 y superar
+Privacy, publicación y autorización. El commit canónico
+`27224e9b685c2080b02a9dc7ccd7682a203bac0a` publica conjuntamente los 40
+reemplazos, 40 transition evidences y `data/migrations/bdns/v1-v2/CUTOVER.json`.
+El marker y el population hash son válidos; `productive_hash_version() = 2`
+y el normalizer target es `2.0.0`. La migración generó **0 Events
+administrativos** y conservó intactos los 40 Events históricos.
+
+Las bases reguladoras usan `source_locator`: valor literal suministrado por
+BDNS, material para hash/diff, separado de la clickability derivada. HTTP y
+locators sin esquema se conservan sin rewriting; sólo HTTPS estricto puede
+ser navegable. Clickability no se persiste ni participa en hash.
+
+La migración despachó Pages automáticamente; deployment y smoke público
+PASS (portada, búsqueda Pagefind y tres fichas BDNS). La presentación
+Human Readability del frontend sigue pendiente. La primera colección
+scheduled **v2** sigue pendiente de validación: el último run scheduled
+observado (`37008541972`, 2026-10-02, success) fue anterior al cutover y
+operó sobre v1. No se ejecutó ningún collector manual para probar v2.
 
 ## Siguiente fase de producto
 
@@ -54,8 +77,9 @@ operación/publicación que corresponda:
   explícitamente su scope y cobertura; la limitación no impide avanzar, pero
   debe permanecer visible. La Action manual y la propagación automática
   data(bdns) → Pages quedaron validadas en producción en OPS-E.2. El schedule
-  diario se implementó en OPS-G y está pendiente de la primera ejecución
-  programada; BDNS sigue ofreciendo el modo manual.
+  diario implementado en OPS-G ya tiene ejecuciones v1 success observadas;
+  la primera ejecución programada posterior al cutover v2 sigue pendiente.
+  BDNS sigue ofreciendo el modo manual.
 - BOE: observar la fiabilidad del schedule en operación.
 - BOP: confirmar base oficial de reutilización antes de publicar Records o
   Events.
