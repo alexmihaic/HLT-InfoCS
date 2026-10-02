@@ -17,7 +17,7 @@ COUNTS = (
     "publication_approved_count", "authorization_count", "evidence_count",
     "request_count",
 )
-KEYS = {"status", "migration_id", *COUNTS, "safe_reason"}
+KEYS = {"status", "migration_id", *COUNTS, "safe_reason", "safe_detail_reason", "failure_position"}
 
 
 def fixture(status="blocked"):
@@ -27,6 +27,8 @@ def fixture(status="blocked"):
         **{key: 32 for key in COUNTS},
         "request_count": 128,
         "safe_reason": "migration_v1_source_drift" if status == "blocked" else None,
+        "safe_detail_reason": None,
+        "failure_position": None,
     }
 
 
@@ -44,6 +46,7 @@ class BDNSMigrationWorkflowTests(unittest.TestCase):
                 (root / "bdns-migration-result.json").write_text(payload if raw else json.dumps(payload), encoding="utf-8")
             env = dict(os.environ, RUNNER_TEMP=temporary, PREPARE_RC=str(rc),
                        GITHUB_OUTPUT=str(root / "outputs"), GITHUB_STEP_SUMMARY=str(root / "summary"))
+            env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + env.get("PYTHONPATH", "")
             process = subprocess.run([sys.executable, "-c", self.code], env=env,
                                      capture_output=True, text=True, check=False)
             outputs = (root / "outputs").read_text(encoding="utf-8")
@@ -133,6 +136,32 @@ class BDNSMigrationWorkflowTests(unittest.TestCase):
                 self.assertEqual(process.returncode, 1)
                 self.assertIn("migration_safe_result_invalid", process.stdout)
                 self.assertIn("prepared=false\n", outputs)
+
+    def test_safe_enrichment_detail_and_position_visible_but_blocked(self):
+        payload = dict(fixture(), safe_reason="migration_enrichment_blocked",
+                       safe_detail_reason="enrichment_invalid_url", failure_position=30)
+        process, outputs, summary = self.diagnose(payload)
+        self.assertEqual(process.returncode, 0)
+        result = json.loads(process.stdout.split("=", 1)[1])
+        self.assertEqual(result["safe_detail_reason"], "enrichment_invalid_url")
+        self.assertEqual(result["failure_position"], 30)
+        self.assertIn("prepared=false\n", outputs)
+        self.assertIn("Failure position: 30", summary)
+        self.assertIn('exit "$prepare_rc"', self.workflow)
+
+    def test_unsafe_detail_position_or_success_detail_fail_closed(self):
+        for mutation in (
+            {"safe_detail_reason": "PRIVATE_SOURCE_SENTINEL"},
+            {"safe_detail_reason": ["enrichment_invalid_url"]},
+            {"failure_position": True}, {"failure_position": 0},
+            {"failure_position": 33}, {"failure_position": "PRIVATE_SOURCE_SENTINEL"},
+            {"status": "prepared", "safe_reason": None, "safe_detail_reason": "enrichment_invalid_url"},
+        ):
+            payload = dict(fixture(), **mutation)
+            process, outputs, summary = self.diagnose(payload, rc=0 if payload["status"] == "prepared" else 1)
+            self.assertEqual(process.returncode, 1)
+            self.assertNotIn("PRIVATE_SOURCE_SENTINEL", process.stdout + process.stderr + outputs + summary)
+            self.assertIn("prepared=false\n", outputs)
 
 
 if __name__ == "__main__":

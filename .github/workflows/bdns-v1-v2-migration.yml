@@ -46,6 +46,7 @@ jobs:
           import os
           import re
           from pathlib import Path
+          from infocs.fetch.bdns.migration import SAFE_ENRICHMENT_DETAIL_REASONS
 
           counts = (
               "inventory_count", "fresh_detail_count", "summary_resolved_count",
@@ -53,7 +54,7 @@ jobs:
               "publication_approved_count", "authorization_count", "evidence_count",
               "request_count",
           )
-          keys = ("status", "migration_id", *counts, "safe_reason")
+          keys = ("status", "migration_id", *counts, "safe_reason", "safe_detail_reason", "failure_position")
           reasons = {
               "migration_invalid_inventory", "migration_v1_source_drift",
               "migration_summary_not_resolved", "migration_detail_failure",
@@ -81,6 +82,14 @@ jobs:
               if any(type(result[key]) is not int or result[key] < 0 for key in counts):
                   raise ValueError
               reason = result["safe_reason"]
+              detail_reason = result["safe_detail_reason"]
+              position = result["failure_position"]
+              if detail_reason is not None and (not isinstance(detail_reason, str) or detail_reason not in SAFE_ENRICHMENT_DETAIL_REASONS):
+                  raise ValueError
+              if position is not None and (type(position) is not int or position < 1 or position > result["inventory_count"]):
+                  raise ValueError
+              if status != "blocked" and (detail_reason is not None or position is not None):
+                  raise ValueError
               if status == "blocked":
                   if not isinstance(reason, str) or reason not in reasons:
                       raise ValueError
@@ -98,6 +107,7 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
               handle.write("prepared=" + str(status == "prepared").lower() + "\n")
               handle.write(f"status={status}\nsafe_reason={reason or ''}\nrequest_count={result['request_count']}\n")
+              handle.write(f"safe_detail_reason={detail_reason or ''}\nfailure_position={position or ''}\n")
           labels = ("Inventory", "Fresh details", "Summaries resolved", "V1 matches",
                     "V2 prepared", "Privacy allowed", "Publication approved",
                     "Authorizations", "Evidence", "Requests")
@@ -106,6 +116,7 @@ jobs:
               for label, key in zip(labels, counts, strict=True):
                   handle.write(f"- {label}: {result[key]}\n")
               handle.write(f"\nSafe reason: {reason or 'none'}\n")
+              handle.write(f"\nSafe detail reason: {detail_reason or 'none'}\n\nFailure position: {position or 'none'}\n")
           PY
           exit "$prepare_rc"
       - name: Materialize validated batch and publish single cutover commit

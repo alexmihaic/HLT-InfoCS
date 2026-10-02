@@ -66,6 +66,13 @@ Se requieren N inventories = N detalles únicos validados = N summaries resuelto
 = N authorizations = N evidencias. Un fallo devuelve status blocked y ningún batch.
 Output JSON explícito excluye el batch y todo payload: migration_id, counts,
 request_count y safe_reason. Un safe_reason es código estático, nunca valores.
+Para un bloqueo de preflight se conserva el motivo principal estable y se añade
+`safe_detail_reason` opcional, limitado a los códigos estáticos reales del
+enrichment mediante allowlist cerrada, más `failure_position` opcional (entero
+1-based del inventory de ese checkout). No son identificadores fuente. El
+workflow valida/proyecta ambos en logs y Step Summary antes de propagar exit 1;
+prepared/already_migrated no contienen detalle de fallo. No cambia gates,
+all-or-nothing ni materialización. Códigos internos desconocidos no se publican.
 
 ## 5. Evidence
 

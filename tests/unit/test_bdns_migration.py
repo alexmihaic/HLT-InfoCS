@@ -170,6 +170,52 @@ class BDNSMigrationTests(unittest.TestCase):
     def test_enrichment_failure_aborts_batch(self):
         result = self.prepare(transport=FakeTransport(self.page, replace(self.detail, sectors=(BDNSCodeLabel("A", None),))))
         self.assertEqual(result.safe_reason, "migration_enrichment_blocked")
+        self.assertEqual(result.safe_detail_reason, "enrichment_missing_required_label")
+        self.assertEqual(result.failure_position, 1)
+        self.assertIsNone(result.batch)
+
+    def test_failure_position_uses_ordered_inventory(self):
+        from infocs.fetch.bdns.migration import FreshBDNSObservation, inventory_for_migration
+        from infocs.fetch.bdns.normalize import normalize_bdns_detail
+        from infocs.fetch.bdns.enrichment import prepare_bdns_enriched_record
+        summary = replace(self.page.items[0], numero_convocatoria="900002")
+        detail = replace(self.detail, codigo_bdns="900002")
+        self.store.write(finalize_record(normalize_bdns_detail(summary, detail,
+            detected_at=self.old.dates.detected_at, last_checked_at=self.old.dates.last_checked_at).candidate))
+        records, _, _ = inventory_for_migration(self.store)
+        calls = 0
+        def observe(old, *args):
+            return FreshBDNSObservation(replace(self.page.items[0], numero_convocatoria=old.source.official_id),
+                replace(self.detail, codigo_bdns=old.source.official_id))
+        def preflight(*args, **kwargs):
+            nonlocal calls
+            calls += 1
+            result = prepare_bdns_enriched_record(*args, **kwargs)
+            return replace(result, record=None, safe_reason="enrichment_invalid_url") if calls == 2 else result
+        with patch("infocs.fetch.bdns.migration.collect_fresh_observation", side_effect=observe), \
+             patch("infocs.fetch.bdns.migration.prepare_bdns_enriched_record", side_effect=preflight):
+            result = self.prepare()
+        self.assertEqual(result.failure_position, 2)
+        self.assertEqual(result.v2_prepared_count, 1)
+        self.assertEqual(result.safe_detail_reason, "enrichment_invalid_url")
+        self.assertNotIn(records[1].id, json.dumps(result.to_dict()))
+
+    def test_unknown_detail_never_reaches_result_and_constructor_rejects_it(self):
+        from infocs.fetch.bdns.enrichment import BDNSEnrichedPreflight
+        from infocs.fetch.bdns.migration import BDNSMigrationResult
+        with patch("infocs.fetch.bdns.migration.prepare_bdns_enriched_record",
+                   return_value=BDNSEnrichedPreflight(None, None, None, None, "PRIVATE_SOURCE_SENTINEL")):
+            result = self.prepare()
+        self.assertEqual(result.safe_reason, "migration_enrichment_blocked")
+        self.assertIsNone(result.safe_detail_reason)
+        self.assertNotIn("PRIVATE_SOURCE_SENTINEL", json.dumps(result.to_dict()))
+        with self.assertRaisesRegex(ValueError, "migration_safe_result_invalid"):
+            BDNSMigrationResult("blocked", MIGRATION_ID, safe_detail_reason="PRIVATE_SOURCE_SENTINEL")
+
+    def test_prepared_no_failure_diagnostics(self):
+        result = self.prepare()
+        self.assertIsNone(result.safe_detail_reason)
+        self.assertIsNone(result.failure_position)
 
     def test_evidence_schema_roundtrip_and_binding(self):
         batch = self.prepare().batch

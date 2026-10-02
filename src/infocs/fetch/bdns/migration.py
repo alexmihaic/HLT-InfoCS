@@ -27,6 +27,16 @@ from infocs.store import RecordStore
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
+# Códigos reales del preflight; nunca mensajes arbitrarios ni valores fuente.
+SAFE_ENRICHMENT_DETAIL_REASONS = frozenset({
+    "enrichment_invalid_model", "enrichment_invalid_decimal",
+    "enrichment_duplicate_document_id", "enrichment_invalid_document_metadata",
+    "enrichment_invalid_url", "enrichment_missing_required_label",
+    "enrichment_contract_invalid", "enrichment_territorial_not_included",
+    "enrichment_record_preflight_failed", "privacy_source_data_blocked",
+    "publication_source_data_hold",
+})
+
 
 @dataclass(frozen=True, slots=True)
 class FreshBDNSObservation:
@@ -57,7 +67,24 @@ class BDNSMigrationResult:
     evidence_count: int = 0
     request_count: int = 0
     safe_reason: str | None = None
+    safe_detail_reason: str | None = None
+    failure_position: int | None = None
     batch: BDNSMigrationBatch | None = None
+
+    def __post_init__(self):
+        if self.safe_detail_reason is not None and (
+            not isinstance(self.safe_detail_reason, str)
+            or self.safe_detail_reason not in SAFE_ENRICHMENT_DETAIL_REASONS
+        ):
+            raise ValueError("migration_safe_result_invalid")
+        if self.failure_position is not None and (
+            type(self.failure_position) is not int or self.failure_position < 1
+        ):
+            raise ValueError("migration_safe_result_invalid")
+        if self.status != "blocked" and (
+            self.safe_detail_reason is not None or self.failure_position is not None
+        ):
+            raise ValueError("migration_safe_result_invalid")
 
     def to_dict(self):
         return {field.name: getattr(self, field.name) for field in fields(self) if field.name != "batch"}
@@ -141,6 +168,8 @@ def prepare_baseline_migration(*, record_store: RecordStore, transport,
     counts = {name: 0 for name in ("inventory_count", "fresh_detail_count", "summary_resolved_count",
         "v1_match_count", "v2_prepared_count", "privacy_allowed_count", "publication_approved_count",
         "authorization_count", "evidence_count", "request_count")}
+    detail_reason = None
+    failure_position = None
     try:
         # Validar identidad/versiones software antes de cualquier red.
         BDNSCutover(migration_id, _stamp(clock()), 1, "0" * 64, software_git_sha)
@@ -192,9 +221,15 @@ def prepare_baseline_migration(*, record_store: RecordStore, transport,
                 raise BDNSBaselineError("migration_v1_source_drift")
             counts["v1_match_count"] += 1
         prepared = []
-        for old, observation in zip(originals, observations, strict=True):
+        for position, (old, observation) in enumerate(zip(originals, observations, strict=True), start=1):
             result = prepare_bdns_enriched_record(observation.summary, observation.detail,
                 detected_at=old.dates.detected_at, last_checked_at=observed_at, record_store=record_store)
+            # Proyección cerrada: un nuevo código requiere revisión explícita.
+            detail_reason = result.safe_reason if (
+                isinstance(result.safe_reason, str)
+                and result.safe_reason in SAFE_ENRICHMENT_DETAIL_REASONS
+            ) else None
+            failure_position = position
             if result.record is None:
                 raise BDNSBaselineError("migration_enrichment_blocked")
             if result.privacy is None or result.privacy.decision.value != "allow":
@@ -223,7 +258,13 @@ def prepare_baseline_migration(*, record_store: RecordStore, transport,
         validate_batch(batch, record_store)
         return BDNSMigrationResult("prepared", migration_id, **counts, batch=batch)
     except BDNSBaselineError as error:
-        return BDNSMigrationResult("blocked", migration_id, **counts, safe_reason=str(error))
+        reason = str(error)
+        preflight_blocked = reason in {
+            "migration_enrichment_blocked", "migration_privacy_blocked", "migration_publication_blocked",
+        }
+        return BDNSMigrationResult("blocked", migration_id, **counts, safe_reason=reason,
+            safe_detail_reason=detail_reason if preflight_blocked else None,
+            failure_position=failure_position if preflight_blocked else None)
     except Exception:
         return BDNSMigrationResult("blocked", migration_id, **counts, safe_reason="migration_preflight_failed")
 
