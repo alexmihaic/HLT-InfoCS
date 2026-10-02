@@ -173,11 +173,11 @@ class BDNSCanonicalEnrichmentTests(unittest.TestCase):
                 BDNSCanonicalData(**data)
 
     def test_bases_source_url_allows_http_without_changing_other_urls(self):
-        for url in ("javascript:alert(1)", "https://user:password@example.invalid", "https://bad host/", "https://example.invalid:bad/"):
+        for url in ("javascript:alert(1)", "https://user:password@example.invalid", "https://bad host/"):
             with self.subTest(url=url), self.assertRaises(DataValidationError):
-                BDNSRegulatoryBases(official_source_url=url)
+                BDNSRegulatoryBases(source_locator=url)
         url = "http://public.example.invalid/bases"
-        self.assertEqual(BDNSRegulatoryBases(official_source_url=url).official_source_url, url)
+        self.assertEqual(BDNSRegulatoryBases(source_locator=url).source_locator, url)
         with self.assertRaises(DataValidationError):
             BDNSExtractReference(source_url=url)
         with self.assertRaises(DataValidationError):

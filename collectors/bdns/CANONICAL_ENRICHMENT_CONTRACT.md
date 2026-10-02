@@ -91,16 +91,29 @@ endpoint documentado `…/api/convocatorias/documentos?idDocumento=<id>` en 10B-
 No URL inventada, MIME, sha256, OCR, fulltext, binarios ni local path.
 No se crea una segunda lista Core Document para los mismos adjuntos.
 
-BDNSRegulatoryBases: description?, official_source_url?, independientes. La URL
-recibida admite HTTP/HTTPS sin credenciales exclusivamente en bases (10B-D2.4);
-es estado suministrado por BDNS, no necesariamente un enlace navegable. Para
-linkability se exige HTTPS con el validador estricto, sin flag UI persistido ni
-reescritura del valor. Sede/extractos mantienen HTTPS. Esto valida forma, **no certifica
-autoridad, contenido ni privacidad del destino**. Hosts/procedencia y superficie
-de texto/URL quedan para gates de 10B-C. No se descarga ni analiza el enlace.
-El caso observado rechazaba sólo el esquema HTTP; el resto de restricciones y
-Privacy se mantienen. El ajuste se limita al tipo/schema de bases y sus gates;
-no cambia la proyección hash v2, identidad ni contratos de migración.
+BDNSRegulatoryBases: description?, **source_locator?**, independientes (10B-D2.8).
+SOURCE LOCATOR es el valor literal `urlBasesReguladoras`: string no vacío,
+máximo 2048 caracteres, sin whitespace, controles ASCII/DEL/backslash, escapes
+percent inválidos, UTF-8 inválido ni credenciales detectables (también sin esquema
+y en variante decodificada). No exige host, DNS, puerto válido, ausencia de IP/local
+ni esquema. Si aparece un esquema explícito, sólo se admiten HTTP/HTTPS: no se
+amplían esquemas no web no observados. La validación profunda canónica única es
+`models.valid_bdns_regulatory_bases_source_locator`; schema expresa tipo/longitud
+y shape cerrado, no finge `format: uri` ni replica toda la lógica Python.
+
+CLICKABLE URL es propiedad derivada InfoCs: la única función
+`enrichment.clickable_bdns_regulatory_bases_url` devuelve el literal exclusivamente
+si además pasa la política estricta HTTPS pública de navegación; en otro caso None.
+HTTP y schemeless se conservan pero no se enlazan. Ningún trim, scheme inference,
+HTTP→HTTPS, normalización ni visita remota. No certifica autoridad/destino.
+Sede/extractos conservan HTTPS estricto. Privacy inspecciona siempre el string
+completo literal y decodificado, incluso no parseable, más componentes cuando
+parseables. Persistencia no equivale a navegación ni autorización de publicación.
+
+`source_locator` es material en hash/diff; clickability no se persiste ni participa
+en hash. Se corrige el nombre anterior `official_source_url` sin alias ni migración
+ficticia: no existe baseline v2 público/CUTOVER. Se mantienen hash v2, extension 1.0
+y normalizer 2.0.0. La decisión HTTP de D2.4 queda absorbida por este contrato.
 
 BDNSExtractReference: cve?, diary?, source_url?, publication_date?, title?,
 title_coofficial?. Al menos un dato; URL HTTPS cuando existe. No relations,

@@ -22,7 +22,7 @@ from infocs.diff.core import content_hash
 from infocs.fetch.bdns.enrichment import (
     BDNS_ENRICHED_NORMALIZER_VERSION, BDNS_ENRICHED_EVENT_POLICY_ID,
     valid_bdns_supplied_url,
-    valid_bdns_regulatory_bases_source_url,
+    valid_bdns_regulatory_bases_source_locator,
 )
 from infocs.publication.authorization import (
     PublicationAuthorization,
@@ -214,8 +214,8 @@ def _enriched_metadata_is_publishable(record: Record) -> bool:
                 return False
         urls = [data.electronic_office_url]
         if data.regulatory_bases is not None:
-            bases_url = data.regulatory_bases.official_source_url
-            if bases_url is not None and not valid_bdns_regulatory_bases_source_url(bases_url):
+            bases_url = data.regulatory_bases.source_locator
+            if bases_url is not None and not valid_bdns_regulatory_bases_source_locator(bases_url):
                 return False
         urls.extend(item.source_url for item in data.extracts)
         return all(valid_bdns_supplied_url(url) for url in urls if url is not None)

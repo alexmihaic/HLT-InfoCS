@@ -14,6 +14,7 @@ from infocs.models import (
     BDNSCanonicalData, BDNSDocumentReference, BDNSExtractReference,
     BDNSOfficialClassification, BDNSRegulatoryBases, DataValidationError,
     Record, RecordCandidate, SourceData,
+    MAX_BDNS_SOURCE_LOCATOR_LENGTH, valid_bdns_regulatory_bases_source_locator,
 )
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 BDNS_ENRICHED_NORMALIZER_VERSION = "2.0.0"
 BDNS_ENRICHED_EVENT_POLICY_ID = "bdns.enriched-metadata-publication.v2"
-MAX_BDNS_URL_LENGTH = 2048  # Política cliente InfoCs, no límite SNPSAP.
+MAX_BDNS_URL_LENGTH = MAX_BDNS_SOURCE_LOCATOR_LENGTH
 
 
 class BDNSEnrichmentError(ValueError):
@@ -37,9 +38,11 @@ def valid_bdns_supplied_url(value: str) -> bool:
     return _valid_bdns_url(value, schemes=("https",))
 
 
-def valid_bdns_regulatory_bases_source_url(value: str) -> bool:
-    """Valor fuente de bases HTTP/HTTPS; no implica elegibilidad como enlace."""
-    return _valid_bdns_url(value, schemes=("http", "https"))
+def clickable_bdns_regulatory_bases_url(source_locator: str) -> str | None:
+    """Única elegibilidad derivada; devuelve literal HTTPS o None, sin reparar."""
+    if valid_bdns_regulatory_bases_source_locator(source_locator) and valid_bdns_supplied_url(source_locator):
+        return source_locator
+    return None
 
 
 def _valid_bdns_url(value: str, *, schemes: tuple[str, ...]) -> bool:
@@ -75,8 +78,8 @@ def _url(value: str | None) -> str | None:
     return value  # No reescritura ni normalización semántica.
 
 
-def _regulatory_bases_url(value: str | None) -> str | None:
-    if value is not None and not valid_bdns_regulatory_bases_source_url(value):
+def _regulatory_bases_locator(value: str | None) -> str | None:
+    if value is not None and not valid_bdns_regulatory_bases_source_locator(value):
         raise BDNSEnrichmentError("enrichment_invalid_url")
     return value  # Preservación literal; no HTTP→HTTPS ni descarte silencioso.
 
@@ -124,7 +127,7 @@ def build_bdns_source_data(detail: BDNSConvocatoriaDetail) -> SourceData:
         application = BDNSApplicationPeriod(*application_values) if any(value is not None for value in application_values) else None
         bases = None
         if detail.regulatory_bases_title is not None or detail.regulatory_bases_url is not None:
-            bases = BDNSRegulatoryBases(detail.regulatory_bases_title, _regulatory_bases_url(detail.regulatory_bases_url))
+            bases = BDNSRegulatoryBases(detail.regulatory_bases_title, _regulatory_bases_locator(detail.regulatory_bases_url))
         extracts = tuple(BDNSExtractReference(
             cve=item.cve, diary=item.official_diary, source_url=_url(item.url),
             publication_date=item.publication_date, title=item.title, title_coofficial=item.title_coofficial,

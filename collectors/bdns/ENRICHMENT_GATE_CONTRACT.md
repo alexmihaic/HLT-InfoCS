@@ -26,7 +26,7 @@ la extensión y `provenance.normalizer_version=2.0.0`.
 | textInicio/textFin | application.start_text/end_text |
 | abierto | application.abierto (literal, incluso false) |
 | descripcionFinalidad | purpose |
-| descripcionBasesReguladoras/urlBasesReguladoras | regulatory_bases.description/official_source_url |
+| descripcionBasesReguladoras/urlBasesReguladoras | regulatory_bases.description/source_locator |
 | sedeElectronica | electronic_office_url |
 | sePublicaDiarioOficial | extract_published_in_official_diary |
 | documentos[].id/descripcion/nombreFic/datPublicacion/datMod | documents[].source_document_id/description/filename/published_date/modified_value |
@@ -56,34 +56,40 @@ parser actual conoce.
 
 ## 3. Política de URLs suministradas por BDNS
 
-Sede electrónica y extractos: HTTPS. Bases reguladoras: HTTP/HTTPS como valor
-fuente canónico, no autorización automática para enlazarlo. Todas: sin userinfo/credenciales, sin
-espacios/controles/backslash, escapes percent válidos, host DNS estructuralmente
-válido y puerto válido. Límite InfoCs de 2048 caracteres, no límite oficial SNPSAP.
-No se aceptan IPs literales, hosts de una etiqueta ni sufijos .local/.localhost.
-No existe allowlist institucional nueva: un host de estructura aceptable sigue
-siendo **URL suministrada por BDNS**, no sitio certificado por InfoCs.
+Sede electrónica y extractos mantienen HTTPS estricto: sin userinfo, controles,
+whitespace/backslash, escapes inválidos, IP literal, host de una etiqueta,
+.local/.localhost ni DNS/IDNA/puerto inválido. Límite InfoCs 2048, no cuota SNPSAP.
 
-10B-D2.4: el target histórico 18 fallaba únicamente `url_scheme_not_https`.
-Se adopta una excepción acotada a `regulatory_bases.official_source_url`:
-`valid_bdns_regulatory_bases_source_url()` conserva HTTP/HTTPS literalmente.
-`valid_bdns_supplied_url()` sigue exigiendo HTTPS y es el criterio de elegibilidad
-para enlace navegable en la presentación futura; no se persiste un flag UI.
-No HTTP→HTTPS, descarte silencioso ni ampliación HTTP a sede/extractos.
-Privacy mantiene toda su inspección literal/decodificada de path/query/fragment.
+10B-D2.8 sustituye la excepción HTTP de D2.4 por SOURCE LOCATOR + CLICKABLE URL.
+D2.7 observó 35 HTTPS, 2 HTTP y 3 valores sin esquema entre 40 locators.
+`regulatory_bases.source_locator` conserva el literal validado por
+`valid_bdns_regulatory_bases_source_locator`: no vacío, <=2048, sin whitespace,
+controles ASCII/DEL/backslash, escapes/UTF-8 inválidos ni credenciales detectables.
+Sin exigir scheme/host/DNS/puerto navegables ni prohibir IP/local por clickability.
+Esquemas explícitos no HTTP/HTTPS siguen rechazados por prudencia: no observados.
+El constructor, mapping y publication reutilizan esa misma validación canónica.
+
+`clickable_bdns_regulatory_bases_url` es la única función derivada de navegación:
+literal si es persistible y pasa HTTPS estricto; None para HTTP/schemeless o no
+navegable. No flags UI persistidos, no rewriting/trim, inferencias o visitas.
+El locator literal sigue siendo material en hash v2; clickability queda fuera.
+No ser clickable no causa HOLD por sí solo. Privacy/source eligibility/resto de
+metadata policy y authorization exacta siguen siendo obligatorios.
 
 No se visita el destino, resuelve DNS ni reescribe la URL. Path/query/fragment
 se conservan y se inspeccionan por Privacy tanto literales como decodificados.
 La query también se inspecciona con separadores form `+` como espacios, sin
 aplicar esa transformación al path ni modificar la URL persistida.
-Decodificación UTF-8 estricta, hasta cuatro capas; encoding inválido o sin
+Para bases se inspecciona siempre el string completo literal y decodificado,
+aunque urlsplit no pueda parsearlo. Los componentes parseables se añaden, nunca
+condicionan la inspección del string. Decodificación UTF-8 estricta, hasta cuatro capas; encoding inválido o sin
 estabilizar dentro del límite falla cerrado. No persistir las vistas decodificadas.
 
 ## 4. Privacy: proyección explícita
 
 El gate añade conscientemente: título cooficial; cada nivel de jerarquía;
 tipo; instrumentos; labels/codes de beneficiarios y sectores; regiones;
-textos de solicitud; finalidad; descripción/URL de bases; sede; descripción,
+textos de solicitud; finalidad; descripción/locator de bases; sede; descripción,
 filename y datMod textual de documentos; CVE, diario, títulos y URL de extractos.
 No recursive walker ni cobertura automática de campos futuros.
 

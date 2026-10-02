@@ -250,7 +250,7 @@ source_data.bdns (extension_version)
   received_date?
   application? (start_date?, end_date?, start_text?, end_text?, abierto?)
   purpose?
-  regulatory_bases? (description?, official_source_url?)
+  regulatory_bases? (description?, source_locator?) # nombre cerrado pre-cutover D2.8; clickability derivada
   electronic_office_url?
   extract_published_in_official_diary?
   documents[] (id, description?, filename?, publication_date?, modified_value?)

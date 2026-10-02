@@ -298,14 +298,24 @@ def _inspected_fields(record: Record) -> dict[str, str]:
         data = record.source_data.bdns
         prefix = "source_data.bdns."
 
-        def add(path: str, value: str | None, *, url: bool = False) -> None:
+        def add(path: str, value: str | None, *, url: bool = False, locator: bool = False) -> None:
             if value is None:
                 return
-            if url:
+            if url or locator:
                 surfaces = []
                 try:
                     # '+' sólo como separador form de query, nunca reescribir path.
-                    for initial in (value, urlsplit(value).query.replace("+", " ")):
+                    # Siempre inspeccionar string completo, aunque no sea URL parseable.
+                    initial_values = [value]
+                    try:
+                        parsed = urlsplit(value)
+                    except ValueError:
+                        if not locator:
+                            raise
+                    else:
+                        initial_values.extend((parsed.path, parsed.query, parsed.fragment,
+                                               parsed.query.replace("+", " ")))
+                    for initial in initial_values:
                         decoded = initial
                         surfaces.append(decoded)
                         for _ in range(4):
@@ -343,7 +353,7 @@ def _inspected_fields(record: Record) -> dict[str, str]:
         add("purpose", data.purpose)
         if data.regulatory_bases is not None:
             add("regulatory_bases.description", data.regulatory_bases.description)
-            add("regulatory_bases.official_source_url", data.regulatory_bases.official_source_url, url=True)
+            add("regulatory_bases.source_locator", data.regulatory_bases.source_locator, locator=True)
         add("electronic_office_url", data.electronic_office_url, url=True)
         for index, item in enumerate(data.documents):
             add(f"documents[{index}].description", item.description)

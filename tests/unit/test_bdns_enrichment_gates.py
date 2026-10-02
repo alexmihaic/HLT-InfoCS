@@ -18,6 +18,7 @@ from infocs.finalize import finalize_record
 from infocs.fetch.bdns.enrichment import (
     BDNSEnrichmentError, build_bdns_source_data, normalize_bdns_enriched,
     prepare_bdns_enriched_record, valid_bdns_supplied_url,
+    valid_bdns_regulatory_bases_source_locator, clickable_bdns_regulatory_bases_url,
 )
 from infocs.fetch.bdns.models import BDNSCodeLabel, BDNSRegion
 from infocs.fetch.bdns.publication import (
@@ -149,8 +150,10 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
                       "https://example.invalid/with space", "https://example.invalid/\n",
                       "https://example.invalid/\\path", "https://example.invalid/" + "a" * 2048):
             for field in ("regulatory_bases_url", "electronic_office", "extract"):
-                if field == "regulatory_bases_url" and value == "http://example.invalid/":
-                    continue  # Source value allowed only here; clickable still requires HTTPS.
+                if field == "regulatory_bases_url" and valid_bdns_regulatory_bases_source_locator(value):
+                    self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.source_locator, value)
+                    self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
+                    continue  # Persistencia no equivale a navegabilidad.
                 with self.subTest(field=field, url_kind=value.split(":")[0]):
                     detail = replace(self.detail, extracts=(replace(self.detail.extracts[0], url=value),)) if field == "extract" else replace(self.detail, **{field: value})
                     with self.assertRaisesRegex(BDNSEnrichmentError, "^enrichment_invalid_url$"):
@@ -159,13 +162,13 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
     def test_supplied_urls_not_rewritten_or_certified(self):
         value = "https://sede.example.invalid:443/BASES?x=1&y=2#section"
         self.assertTrue(valid_bdns_supplied_url(value))
-        self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.official_source_url, value)
+        self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.source_locator, value)
 
     def test_http_bases_source_value_preserved_but_not_clickable(self):
         value = "http://public.example.invalid/bases?reference=public#section"
         detail = replace(self.detail, regulatory_bases_url=value)
         data = build_bdns_source_data(detail).bdns
-        self.assertEqual(data.regulatory_bases.official_source_url, value)
+        self.assertEqual(data.regulatory_bases.source_locator, value)
         self.assertFalse(valid_bdns_supplied_url(value))
         record = finalize_record(enriched_candidate(detail))
         self.assertEqual(Record.from_json(record.canonical_json()), record)
@@ -180,9 +183,7 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
 
     def test_http_bases_rejected_shapes_and_privacy_unchanged(self):
         for value in ("http://u:p@example.invalid/", "http://example.invalid/with space",
-                      "http://example.invalid/%GG", "http://127.0.0.1/", "http://[::1]/",
-                      "http://singlelabel/", "http://example.local/", "http://example.localhost/",
-                      "http://bad_host.invalid/", "http://example.invalid:bad/", "http://example.invalid/\x01"):
+                      "http://example.invalid/%GG", "http://example.invalid/\x01"):
             with self.subTest(kind=value.split(":")[0]), self.assertRaisesRegex(BDNSEnrichmentError, "^enrichment_invalid_url$"):
                 build_bdns_source_data(replace(self.detail, regulatory_bases_url=value))
         for value in ("http://example.invalid/persona%40gmail.com",
@@ -270,7 +271,7 @@ class BDNSEnrichmentGateTests(unittest.TestCase):
             **{f"application.{key}": {"application": replace(data.application, **{key: token})} for key in ("start_text", "end_text")},
             "purpose": {"purpose": token},
             "regulatory_bases.description": {"regulatory_bases": replace(data.regulatory_bases, description=token)},
-            "regulatory_bases.official_source_url": {"regulatory_bases": replace(data.regulatory_bases, official_source_url=f"https://example.invalid/{token}")},
+            "regulatory_bases.source_locator": {"regulatory_bases": replace(data.regulatory_bases, source_locator=f"https://example.invalid/{token}")},
             "electronic_office_url": {"electronic_office_url": f"https://example.invalid/?dni={token}"},
             **{f"documents[0].{key}": {"documents": (replace(data.documents[0], **{key: token}),)} for key in ("description", "filename", "modified_value")},
             **{f"extracts[0].{key}": {"extracts": (replace(data.extracts[0], **{key: token}),)} for key in ("cve", "diary", "title", "title_coofficial")},

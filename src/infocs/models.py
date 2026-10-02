@@ -425,17 +425,61 @@ class BDNSApplicationPeriod:
 @dataclass(frozen=True, slots=True)
 class BDNSRegulatoryBases:
     description: str | None = None
-    official_source_url: str | None = None
+    source_locator: str | None = None
 
     def __post_init__(self) -> None:
-        _bdns_fields(self, text=("description", "official_source_url"))
-        if self.official_source_url is not None:
-            _bdns_web_url(self.official_source_url, schemes=("http", "https"))
+        _bdns_fields(self, text=("description", "source_locator"))
+        if self.source_locator is not None and not valid_bdns_regulatory_bases_source_locator(self.source_locator):
+            raise DataValidationError("Locator fuente de bases inválido.")
         if not self.to_dict():
             raise DataValidationError("regulatory_bases no puede estar vacío.")
 
     def to_dict(self) -> dict[str, str]:
         return _bdns_dict(self)
+
+
+MAX_BDNS_SOURCE_LOCATOR_LENGTH = 2048  # Límite InfoCs, no garantía SNPSAP.
+
+
+def valid_bdns_regulatory_bases_source_locator(value: str) -> bool:
+    """Persistencia literal segura; no certifica estructura URL ni navegación."""
+    from urllib.parse import unquote, urlsplit
+
+    if not isinstance(value, str) or not value or len(value) > MAX_BDNS_SOURCE_LOCATOR_LENGTH:
+        return False
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value) or "\\" in value:
+        return False
+    if re.search(r"%(?![0-9a-fA-F]{2})", value):
+        return False
+    try:
+        value.encode("utf-8", errors="strict")
+        variants = [value]
+        for _ in range(4):
+            decoded = unquote(variants[-1], errors="strict")
+            if decoded == variants[-1]:
+                break
+            variants.append(decoded)
+        if unquote(variants[-1], errors="strict") != variants[-1]:
+            return False
+        # No ampliar a esquemas no web no observados, aunque no se vayan a enlazar.
+        scheme = re.match(r"^([a-zA-Z][a-zA-Z0-9+.-]*):", value)
+        if scheme and scheme[1].lower() not in {"http", "https"}:
+            return False
+        for candidate in variants:
+            # Detecta credenciales también en //host y locators sin esquema.
+            authority = candidate.split("://", 1)[-1].removeprefix("//")
+            authority = re.split(r"[/?#]", authority, maxsplit=1)[0]
+            if "@" in authority:
+                return False
+            try:
+                parsed = urlsplit(candidate)
+            except ValueError:
+                continue  # Un locator no parseable sigue siendo texto inspeccionable.
+            if parsed.username is not None or parsed.password is not None:
+                return False
+    except (UnicodeError, ValueError):
+        return False
+    return True
 
 
 @dataclass(frozen=True, slots=True)
