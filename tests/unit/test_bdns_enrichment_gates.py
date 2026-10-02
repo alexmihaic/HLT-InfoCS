@@ -144,8 +144,13 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
     def test_invalid_urls_all_three_fields_fail_closed(self):
         for value in ("http://example.invalid/", "https://u:p@example.invalid/", "javascript:alert(1)",
                       "https://example.invalid:bad/", "https://example.invalid/%GG", "https://127.0.0.1/",
-                      "https://localhost/", "https://example.local/", "https://example.invalid/" + "a" * 2048):
+                      "data:text/plain,test", "file:///bases", "https://localhost/", "https://example.local/",
+                      "https://example.localhost/", "https://singlelabel/", "https://bad_host.invalid/",
+                      "https://example.invalid/with space", "https://example.invalid/\n",
+                      "https://example.invalid/\\path", "https://example.invalid/" + "a" * 2048):
             for field in ("regulatory_bases_url", "electronic_office", "extract"):
+                if field == "regulatory_bases_url" and value == "http://example.invalid/":
+                    continue  # Source value allowed only here; clickable still requires HTTPS.
                 with self.subTest(field=field, url_kind=value.split(":")[0]):
                     detail = replace(self.detail, extracts=(replace(self.detail.extracts[0], url=value),)) if field == "extract" else replace(self.detail, **{field: value})
                     with self.assertRaisesRegex(BDNSEnrichmentError, "^enrichment_invalid_url$"):
@@ -155,6 +160,43 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
         value = "https://sede.example.invalid:443/BASES?x=1&y=2#section"
         self.assertTrue(valid_bdns_supplied_url(value))
         self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.official_source_url, value)
+
+    def test_http_bases_source_value_preserved_but_not_clickable(self):
+        value = "http://public.example.invalid/bases?reference=public#section"
+        detail = replace(self.detail, regulatory_bases_url=value)
+        data = build_bdns_source_data(detail).bdns
+        self.assertEqual(data.regulatory_bases.official_source_url, value)
+        self.assertFalse(valid_bdns_supplied_url(value))
+        record = finalize_record(enriched_candidate(detail))
+        self.assertEqual(Record.from_json(record.canonical_json()), record)
+        with tempfile.TemporaryDirectory() as temporary:
+            result = prepare_bdns_enriched_record(self.summary, detail, detected_at=DETECTED,
+                last_checked_at=CHECKED, record_store=RecordStore(Path(temporary) / "records"))
+            self.assertIsNone(result.safe_reason)
+            self.assertIsNotNone(result.record)
+            self.assertEqual(result.privacy.decision, PrivacyDecisionType.ALLOW)
+            self.assertEqual(result.publication.metadata_publication.decision.value, "publishable_metadata")
+            self.assertTrue(result.authorization.matches(result.record))
+
+    def test_http_bases_rejected_shapes_and_privacy_unchanged(self):
+        for value in ("http://u:p@example.invalid/", "http://example.invalid/with space",
+                      "http://example.invalid/%GG", "http://127.0.0.1/", "http://[::1]/",
+                      "http://singlelabel/", "http://example.local/", "http://example.localhost/",
+                      "http://bad_host.invalid/", "http://example.invalid:bad/", "http://example.invalid/\x01"):
+            with self.subTest(kind=value.split(":")[0]), self.assertRaisesRegex(BDNSEnrichmentError, "^enrichment_invalid_url$"):
+                build_bdns_source_data(replace(self.detail, regulatory_bases_url=value))
+        for value in ("http://example.invalid/persona%40gmail.com",
+                      "http://example.invalid/bases?email=persona%40gmail.com",
+                      "http://example.invalid/bases#persona%40gmail.com"):
+            with self.subTest(position=value.count("?")):
+                with tempfile.TemporaryDirectory() as temporary:
+                    result = prepare_bdns_enriched_record(self.summary,
+                        replace(self.detail, regulatory_bases_url=value), detected_at=DETECTED,
+                        last_checked_at=CHECKED, record_store=RecordStore(Path(temporary) / "records"))
+                    self.assertIsNotNone(result.record)
+                    self.assertNotEqual(result.privacy.decision, PrivacyDecisionType.ALLOW)
+                    self.assertIsNone(result.authorization)
+                    self.assertEqual(result.safe_reason, "privacy_source_data_blocked")
 
     def test_unrepresentable_extract_not_silently_dropped(self):
         extract = replace(self.detail.extracts[0], announcement_number=1, title=None, title_coofficial=None,

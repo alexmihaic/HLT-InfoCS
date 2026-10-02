@@ -172,10 +172,16 @@ class BDNSCanonicalEnrichmentTests(unittest.TestCase):
             with self.subTest(data=data), self.assertRaises(DataValidationError):
                 BDNSCanonicalData(**data)
 
-    def test_urls_require_https_without_credentials(self):
-        for url in ("javascript:alert(1)", "http://example.invalid", "https://user:password@example.invalid", "https://bad host/", "https://example.invalid:bad/"):
+    def test_bases_source_url_allows_http_without_changing_other_urls(self):
+        for url in ("javascript:alert(1)", "https://user:password@example.invalid", "https://bad host/", "https://example.invalid:bad/"):
             with self.subTest(url=url), self.assertRaises(DataValidationError):
                 BDNSRegulatoryBases(official_source_url=url)
+        url = "http://public.example.invalid/bases"
+        self.assertEqual(BDNSRegulatoryBases(official_source_url=url).official_source_url, url)
+        with self.assertRaises(DataValidationError):
+            BDNSExtractReference(source_url=url)
+        with self.assertRaises(DataValidationError):
+            BDNSCanonicalData(electronic_office_url=url)
 
     def test_material_changes_each_modify_hash(self):
         original = enriched_data()

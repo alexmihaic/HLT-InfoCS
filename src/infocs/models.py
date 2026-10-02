@@ -430,7 +430,7 @@ class BDNSRegulatoryBases:
     def __post_init__(self) -> None:
         _bdns_fields(self, text=("description", "official_source_url"))
         if self.official_source_url is not None:
-            _bdns_https_url(self.official_source_url)
+            _bdns_web_url(self.official_source_url, schemes=("http", "https"))
         if not self.to_dict():
             raise DataValidationError("regulatory_bases no puede estar vacío.")
 
@@ -476,16 +476,20 @@ class BDNSExtractReference:
 
 
 def _bdns_https_url(value: str) -> None:
+    _bdns_web_url(value, schemes=("https",))
+
+
+def _bdns_web_url(value: str, *, schemes: tuple[str, ...]) -> None:
     from urllib.parse import urlsplit
 
     try:
         url = urlsplit(value)
-        valid = url.scheme == "https" and bool(url.hostname) and not url.username and not url.password
+        valid = url.scheme in schemes and bool(url.hostname) and url.username is None and url.password is None
         url.port  # Rechaza puertos mal formados.
     except ValueError:
         valid = False
     if not valid or any(char.isspace() for char in value):
-        raise DataValidationError("El enlace fuente requiere HTTPS sin credenciales.")
+        raise DataValidationError("URL fuente con esquema no permitido, estructura inválida o credenciales.")
 
 
 @dataclass(frozen=True, slots=True)

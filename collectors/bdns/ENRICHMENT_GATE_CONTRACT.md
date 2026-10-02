@@ -56,12 +56,21 @@ parser actual conoce.
 
 ## 3. Política de URLs suministradas por BDNS
 
-Bases, sede electrónica y extractos: HTTPS, sin userinfo/credenciales, sin
+Sede electrónica y extractos: HTTPS. Bases reguladoras: HTTP/HTTPS como valor
+fuente canónico, no autorización automática para enlazarlo. Todas: sin userinfo/credenciales, sin
 espacios/controles/backslash, escapes percent válidos, host DNS estructuralmente
 válido y puerto válido. Límite InfoCs de 2048 caracteres, no límite oficial SNPSAP.
 No se aceptan IPs literales, hosts de una etiqueta ni sufijos .local/.localhost.
 No existe allowlist institucional nueva: un host de estructura aceptable sigue
 siendo **URL suministrada por BDNS**, no sitio certificado por InfoCs.
+
+10B-D2.4: el target histórico 18 fallaba únicamente `url_scheme_not_https`.
+Se adopta una excepción acotada a `regulatory_bases.official_source_url`:
+`valid_bdns_regulatory_bases_source_url()` conserva HTTP/HTTPS literalmente.
+`valid_bdns_supplied_url()` sigue exigiendo HTTPS y es el criterio de elegibilidad
+para enlace navegable en la presentación futura; no se persiste un flag UI.
+No HTTP→HTTPS, descarte silencioso ni ampliación HTTP a sede/extractos.
+Privacy mantiene toda su inspección literal/decodificada de path/query/fragment.
 
 No se visita el destino, resuelve DNS ni reescribe la URL. Path/query/fragment
 se conservan y se inspeccionan por Privacy tanto literales como decodificados.

@@ -60,6 +60,7 @@
     "bdns_optional_text": {"type": ["string", "null"], "minLength": 1, "pattern": "\\S"},
     "bdns_optional_date": {"type": ["string", "null"], "format": "date"},
     "bdns_optional_url": {"type": ["string", "null"], "format": "uri", "pattern": "^https://[^/@\\s]+(?:[/?#]|$)"},
+    "bdns_optional_bases_source_url": {"type": ["string", "null"], "format": "uri", "pattern": "^https?://[^/@\\s]+(?:[/?#]|$)"},
     "bdns_budget": {
       "type": "object", "additionalProperties": false, "required": ["value"],
       "properties": {
@@ -101,7 +102,7 @@
         {"required": ["description"], "properties": {"description": {"type": "string"}}},
         {"required": ["official_source_url"], "properties": {"official_source_url": {"type": "string"}}}
       ],
-      "properties": {"description": {"$ref": "#/$defs/bdns_optional_text"}, "official_source_url": {"$ref": "#/$defs/bdns_optional_url"}}
+      "properties": {"description": {"$ref": "#/$defs/bdns_optional_text"}, "official_source_url": {"$ref": "#/$defs/bdns_optional_bases_source_url"}}
     },
     "bdns_document": {
       "type": "object", "additionalProperties": false, "required": ["source_document_id"],

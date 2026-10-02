@@ -34,6 +34,15 @@ class BDNSEnrichmentError(ValueError):
 
 def valid_bdns_supplied_url(value: str) -> bool:
     """URL suministrada por BDNS, NO certificación institucional ni petición."""
+    return _valid_bdns_url(value, schemes=("https",))
+
+
+def valid_bdns_regulatory_bases_source_url(value: str) -> bool:
+    """Valor fuente de bases HTTP/HTTPS; no implica elegibilidad como enlace."""
+    return _valid_bdns_url(value, schemes=("http", "https"))
+
+
+def _valid_bdns_url(value: str, *, schemes: tuple[str, ...]) -> bool:
     if not isinstance(value, str) or not value or len(value) > MAX_BDNS_URL_LENGTH:
         return False
     if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in value) or "\\" in value:
@@ -43,7 +52,7 @@ def valid_bdns_supplied_url(value: str) -> bool:
     try:
         url = urlsplit(value)
         host = url.hostname
-        if url.scheme != "https" or not host or url.username is not None or url.password is not None:
+        if url.scheme not in schemes or not host or url.username is not None or url.password is not None:
             return False
         url.port
         try:
@@ -64,6 +73,12 @@ def _url(value: str | None) -> str | None:
     if value is not None and not valid_bdns_supplied_url(value):
         raise BDNSEnrichmentError("enrichment_invalid_url")
     return value  # No reescritura ni normalización semántica.
+
+
+def _regulatory_bases_url(value: str | None) -> str | None:
+    if value is not None and not valid_bdns_regulatory_bases_source_url(value):
+        raise BDNSEnrichmentError("enrichment_invalid_url")
+    return value  # Preservación literal; no HTTP→HTTPS ni descarte silencioso.
 
 
 def _classifications(values: tuple[BDNSCodeLabel, ...]) -> tuple[BDNSOfficialClassification, ...]:
@@ -109,7 +124,7 @@ def build_bdns_source_data(detail: BDNSConvocatoriaDetail) -> SourceData:
         application = BDNSApplicationPeriod(*application_values) if any(value is not None for value in application_values) else None
         bases = None
         if detail.regulatory_bases_title is not None or detail.regulatory_bases_url is not None:
-            bases = BDNSRegulatoryBases(detail.regulatory_bases_title, _url(detail.regulatory_bases_url))
+            bases = BDNSRegulatoryBases(detail.regulatory_bases_title, _regulatory_bases_url(detail.regulatory_bases_url))
         extracts = tuple(BDNSExtractReference(
             cve=item.cve, diary=item.official_diary, source_url=_url(item.url),
             publication_date=item.publication_date, title=item.title, title_coofficial=item.title_coofficial,

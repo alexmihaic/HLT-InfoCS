@@ -91,10 +91,16 @@ endpoint documentado `…/api/convocatorias/documentos?idDocumento=<id>` en 10B-
 No URL inventada, MIME, sha256, OCR, fulltext, binarios ni local path.
 No se crea una segunda lista Core Document para los mismos adjuntos.
 
-BDNSRegulatoryBases: description?, official_source_url?, independientes. URLs
-recibidas requieren HTTPS sin credenciales; esto valida forma, **no certifica
+BDNSRegulatoryBases: description?, official_source_url?, independientes. La URL
+recibida admite HTTP/HTTPS sin credenciales exclusivamente en bases (10B-D2.4);
+es estado suministrado por BDNS, no necesariamente un enlace navegable. Para
+linkability se exige HTTPS con el validador estricto, sin flag UI persistido ni
+reescritura del valor. Sede/extractos mantienen HTTPS. Esto valida forma, **no certifica
 autoridad, contenido ni privacidad del destino**. Hosts/procedencia y superficie
 de texto/URL quedan para gates de 10B-C. No se descarga ni analiza el enlace.
+El caso observado rechazaba sólo el esquema HTTP; el resto de restricciones y
+Privacy se mantienen. El ajuste se limita al tipo/schema de bases y sus gates;
+no cambia la proyección hash v2, identidad ni contratos de migración.
 
 BDNSExtractReference: cve?, diary?, source_url?, publication_date?, title?,
 title_coofficial?. Al menos un dato; URL HTTPS cuando existe. No relations,
