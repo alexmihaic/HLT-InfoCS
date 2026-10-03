@@ -63,14 +63,17 @@ whitespace/backslash, escapes inválidos, IP literal, host de una etiqueta,
 10B-D2.8 sustituye la excepción HTTP de D2.4 por SOURCE LOCATOR + CLICKABLE URL.
 D2.7 observó 35 HTTPS, 2 HTTP y 3 valores sin esquema entre 40 locators.
 `regulatory_bases.source_locator` conserva el literal validado por
-`valid_bdns_regulatory_bases_source_locator`: no vacío, <=2048, sin whitespace,
-controles ASCII/DEL/backslash, escapes/UTF-8 inválidos ni credenciales detectables.
+`valid_bdns_regulatory_bases_source_locator`: no vacío, <=2048. 10B-D3.4 permite
+exclusivamente U+0020 interno (uno o varios), preservado literalmente; rechaza
+U+0020 de borde, otros whitespace, controles C0/C1, DEL/backslash,
+escapes/UTF-8 inválidos ni credenciales detectables.
 Sin exigir scheme/host/DNS/puerto navegables ni prohibir IP/local por clickability.
 Esquemas explícitos no HTTP/HTTPS siguen rechazados por prudencia: no observados.
 El constructor, mapping y publication reutilizan esa misma validación canónica.
 
 `clickable_bdns_regulatory_bases_url` es la única función derivada de navegación:
-literal si es persistible y pasa HTTPS estricto; None para HTTP/schemeless o no
+literal si es persistible y pasa HTTPS estricto; None para HTTP/schemeless,
+locators con U+0020 interno o no
 navegable. No flags UI persistidos, no rewriting/trim, inferencias o visitas.
 El locator literal sigue siendo material en hash v2; clickability queda fuera.
 No ser clickable no causa HOLD por sí solo. Privacy/source eligibility/resto de

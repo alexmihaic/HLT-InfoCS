@@ -12,6 +12,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -178,6 +179,48 @@ class BDNSRunnerTests(unittest.TestCase):
         )
         self.assertEqual(window, (date(2026, 9, 1), date(2026, 9, 30)))
 
+    def test_real_ingest_url_failure_keeps_primary_and_safe_details(self) -> None:
+        page = replace(self.page, items=(self.page.items[0],), page_number=0,
+            page_size=50, offset=0, total_pages=1, total_elements=1,
+            number_of_elements=1, first=True, last=True, empty=False)
+        detail = replace(self.detail, regulatory_bases_url="https://example.org/unsafe-path ",
+                         electronic_office=None, extracts=())
+        with (patch("infocs.fetch.bdns.baseline.productive_hash_version", return_value=2),
+              patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2),
+              patch.object(self.records, "write") as record_write,
+              patch.object(self.events, "write") as event_write):
+            result = self.run_runner(FakeTransport(page, detail))
+        self.assertEqual(result.status, BDNSRunnerStatus.SOURCE_FAILURE)
+        self.assertEqual(result.error_code, "item_ingestion_failure")
+        self.assertEqual(result.manifest.error_summary.error_code, "item_ingestion_failure")
+        self.assertEqual(result.safe_detail_reason, "enrichment_invalid_url")
+        self.assertEqual(result.failure_position, 1)
+        self.assertEqual(result.safe_field_class, "regulatory_bases")
+        self.assertEqual(runner_exit_code(result.status), 1)
+        self.assertNotIn("example.org", json.dumps(result.to_dict()))
+        record_write.assert_not_called()
+        event_write.assert_not_called()
+
+    def test_later_failure_position_and_untrusted_diagnostics_are_closed(self) -> None:
+        from infocs.fetch.bdns.ingest import BDNSIngestionResult, BDNSIngestionMetrics, BDNSIngestionStatus
+        first = self.page.items[0]
+        page = replace(self.page, items=(first, replace(first, numero_convocatoria="900009")),
+            page_number=0, page_size=50, offset=0, total_pages=1, total_elements=2,
+            number_of_elements=2, first=True, last=True, empty=False)
+        success = BDNSIngestionResult(BDNSIngestionStatus.COMPLETE_SUCCESS, BDNSIngestionMetrics(), 2)
+        failure = BDNSIngestionResult(BDNSIngestionStatus.SOURCE_FAILURE,
+            BDNSIngestionMetrics(errors=1), 2, safe_reason="private_source_value", safe_field_class="private_source_value")
+        class MatchingTransport(FakeTransport):
+            def fetch_detail(inner, code):
+                return BDNSFetchResult(BDNSRequestStatus.SUCCESS, 200,
+                    payload=replace(self.detail, codigo_bdns=code))
+        with patch("infocs.fetch.bdns.runner.ingest_bdns", side_effect=(success, failure)):
+            result = self.run_runner(MatchingTransport(page, self.detail))
+        self.assertEqual(result.failure_position, 2)
+        self.assertEqual(result.safe_detail_reason, "other_safe_internal_reason")
+        self.assertEqual(result.safe_field_class, "other")
+        self.assertNotIn("private_source_value", json.dumps(result.to_dict()))
+
     def test_cli_exit_codes_distinguish_complete_partial_and_failed(self) -> None:
         self.assertEqual(runner_exit_code(BDNSRunnerStatus.COMPLETE_SUCCESS), 0)
         self.assertEqual(runner_exit_code(BDNSRunnerStatus.NO_RESULTS), 0)
@@ -245,6 +288,9 @@ class BDNSRunnerTests(unittest.TestCase):
         self.assertEqual(result.request_count, 2)
         self.assertEqual(result.manifest.status, RunStatus.SUCCESS)
         self.assertEqual(result.metrics.to_manifest_metrics().errors, 0)
+        self.assertNotIn("safe_detail_reason", result.to_dict())
+        self.assertNotIn("failure_position", result.to_dict())
+        self.assertNotIn("safe_field_class", result.to_dict())
 
     def test_existing_complete_incremental_manifest_advances_window_with_overlap(self) -> None:
         # Build a safe successful manifest through a no-results incremental run.

@@ -267,6 +267,70 @@ class BDNSIngestionTests(unittest.TestCase):
         self.assertEqual(result.metrics.records_created, 0)
         self.assertEqual(self.store.list_source("bdns"), ())
 
+    def test_enriched_url_failure_preserves_safe_code_and_family_without_writes(self) -> None:
+        page, detail = fixture_models()
+        detail = replace(detail, regulatory_bases_url="https://example.org/unsafe-path ",
+                         electronic_office=None, extracts=())
+        events = EventStore(self.root / "events")
+        with (
+            patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2),
+            patch.object(self.store, "write") as record_write,
+            patch.object(events, "write") as event_write,
+        ):
+            result = self.run_ingest(FakeTransport(page, (detail,)), event_store=events, max_details=1)
+        self.assertEqual(result.status, BDNSIngestionStatus.SOURCE_FAILURE)
+        self.assertEqual(result.safe_reason, "enrichment_invalid_url")
+        self.assertEqual(result.safe_field_class, "regulatory_bases")
+        self.assertEqual(result.metrics.finalized, 0)
+        self.assertNotIn("example.org", json.dumps(result.to_dict()))
+        record_write.assert_not_called()
+        event_write.assert_not_called()
+
+    def test_unallowlisted_enrichment_exception_is_generic(self) -> None:
+        from infocs.fetch.bdns.enrichment import BDNSEnrichmentError
+        page, detail = fixture_models()
+        with (
+            patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2),
+            patch("infocs.fetch.bdns.ingest.normalize_bdns_enriched",
+                  side_effect=BDNSEnrichmentError("https://example.org/private-title.pdf")),
+        ):
+            result = self.run_ingest(FakeTransport(page, (detail,)),
+                event_store=EventStore(self.root / "events"), max_details=1)
+        self.assertEqual(result.safe_reason, "normalization_error")
+        self.assertEqual(result.safe_field_class, "other")
+        self.assertNotIn("example.org", json.dumps(result.to_dict()))
+
+    def test_each_actual_enrichment_reason_is_allowlisted_without_source_values(self) -> None:
+        from infocs.fetch.bdns.enrichment import BDNSEnrichmentError
+        from infocs.fetch.bdns.diagnostics import BDNS_ENRICHMENT_REASONS
+        page, detail = fixture_models()
+        for reason in sorted(BDNS_ENRICHMENT_REASONS):
+            with (
+                self.subTest(reason=reason),
+                patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2),
+                patch("infocs.fetch.bdns.ingest.normalize_bdns_enriched", side_effect=BDNSEnrichmentError(reason)),
+            ):
+                result = self.run_ingest(FakeTransport(page, (detail,)),
+                    event_store=EventStore(self.root / "events"), max_details=1)
+                self.assertEqual(result.safe_reason, reason)
+                serialized = json.dumps(result.to_dict())
+                self.assertNotIn(detail.codigo_bdns, serialized)
+                self.assertNotIn(detail.title, serialized)
+
+    def test_url_family_projection_uses_existing_validators(self) -> None:
+        from infocs.fetch.bdns.diagnostics import enrichment_url_field_class
+        page, detail = fixture_models()
+        self.assertEqual(enrichment_url_field_class(replace(detail,
+            regulatory_bases_url="example.org/bases", electronic_office="http://example.org", extracts=())),
+            "electronic_office")
+        self.assertEqual(enrichment_url_field_class(replace(detail,
+            regulatory_bases_url="has space ", electronic_office="http://example.org", extracts=())),
+            "multiple_url_families")
+        from infocs.fetch.bdns.models import BDNSExtractMetadata
+        extract = BDNSExtractMetadata(None, None, None, None, None, None, "http://example.org")
+        self.assertEqual(enrichment_url_field_class(replace(detail,
+            regulatory_bases_url=None, electronic_office=None, extracts=(extract,))), "extracts")
+
     def test_one_record_limit_is_enforced_and_region_filter_is_fixed(self) -> None:
         page, detail = fixture_models()
         with self.assertRaises(ValueError):

@@ -24,6 +24,7 @@ from infocs.fetch.bdns.workflow_safety import (  # noqa: E402
     validate_inputs,
     validate_remote_boe_commit,
     validate_runner_result,
+    write_runner_summary,
 )
 from infocs.fetch.bdns.ingest import BDNS_ATTRIBUTION_REQUIREMENTS  # noqa: E402
 from infocs.fetch.bdns.models import BDNSFetchResult, BDNSRequestStatus  # noqa: E402
@@ -117,6 +118,33 @@ class BDNSWorkflowSafetyTests(unittest.TestCase):
         self.assertEqual(result["status"], "partial_success")
         with self.assertRaisesRegex(WorkflowSafetyError, "runner_status_exit_mismatch"):
             validate_runner_result(payload, "", 0)
+
+    def test_safe_item_failure_diagnostics_and_summary(self) -> None:
+        result = dict(run_id=RUN_ID, source_id="bdns", status="source_failure",
+            error_code="item_ingestion_failure", safe_detail_reason="enrichment_invalid_url",
+            failure_position=1, safe_field_class="regulatory_bases")
+        self.assertEqual(validate_runner_result(json.dumps(result), "", 1), result)
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.md"
+            write_runner_summary(summary, result, 1)
+            text = summary.read_text(encoding="utf-8")
+            self.assertIn("enrichment_invalid_url", text)
+            self.assertIn("Failure position: 1", text)
+            self.assertNotIn(RUN_ID, text)
+            self.assertNotIn("https://", text)
+
+    def test_unknown_detail_field_class_and_bad_position_fail_closed(self) -> None:
+        result = dict(run_id=RUN_ID, source_id="bdns", status="source_failure",
+            error_code="item_ingestion_failure", safe_detail_reason="enrichment_invalid_url",
+            failure_position=1, safe_field_class="regulatory_bases")
+        for key, value in (("safe_detail_reason", "private_title"),
+                           ("safe_field_class", "https://example.org/private.pdf"),
+                           ("failure_position", 0), ("failure_position", True),
+                           ("failure_position", "1")):
+            with self.subTest(key=key, value=value), self.assertRaises(WorkflowSafetyError):
+                validate_runner_result(json.dumps({**result, key:value}), "", 1)
+        with self.assertRaises(WorkflowSafetyError):
+            validate_runner_result(json.dumps({**result, "status":"complete_success", "error_code":None}), "", 0)
 
     def test_terminal_stderr_must_be_safe_json_not_human_text(self) -> None:
         diagnostic = (

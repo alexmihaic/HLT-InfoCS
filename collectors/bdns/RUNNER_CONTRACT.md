@@ -62,6 +62,30 @@ full publication contract is in [AUTOMATION_CONTRACT.md](AUTOMATION_CONTRACT.md)
 
 ## Workflow artifact handling
 
+### Safe per-item failure diagnostics (10B-D3.2)
+
+An ingestion normalization failure still aborts the productive run with
+primary `item_ingestion_failure` and exit 1. The Manifest v1 error summary and
+Health keep that primary code; their schemas are unchanged. Runner JSON may
+add `safe_detail_reason`, `failure_position` (1-based attempted item across
+pages), and `safe_field_class`. Successful runs omit these fields.
+
+`diagnostics.py` defines closed allowlists: the seven actual mapping error
+codes (`enrichment_invalid_model`, `enrichment_invalid_decimal`,
+`enrichment_duplicate_document_id`, `enrichment_invalid_document_metadata`,
+`enrichment_invalid_url`, `enrichment_missing_required_label`,
+`enrichment_contract_invalid`), plus safe generic codes `normalization_error`,
+`other_safe_internal_reason`, `no_publishable_record_in_budget`, and
+`search_failure`. Arbitrary exception text is never propagated. URL families
+are projected through the unchanged actual validators, returning only
+`regulatory_bases`, `electronic_office`, `extracts`,
+`multiple_url_families`, or `other`; no source values are emitted.
+
+Workflow validation rejects unknown codes/classes, invalid positions and
+diagnostics on success. The Step Summary prints only this validated safe
+projection, never raw stdout/stderr. No change to gates, retries, checkpoint,
+staging, publication-before-propagation, or Record/Event persistence semantics.
+
 The workflow captures both the process exit code and the runner's stdout
 JSON as machine-readable values. It must branch on the JSON `status` and exit
 code, never parse human-readable console text. A `partial_success` run has

@@ -44,7 +44,7 @@ class BDNSLocatorTests(unittest.TestCase):
                 self.assertNotIn("official_source_url", record.source_data.bdns.regulatory_bases.to_dict())
 
     def test_invalid_storage_shapes_fail_in_helper_and_constructor(self):
-        values = (None, 7, "", " public.example.invalid/", "example.invalid/a b",
+        values = (None, 7, "", " public.example.invalid/", "example.invalid/a b ",
             "example.invalid/\t", "example.invalid/\x00", "example.invalid/\x1f",
             "example.invalid/\x7f", "example.invalid/\\x", "example.invalid/%GG",
             "example.invalid/%", "example.invalid/%FF", "example.invalid/\ud800",
@@ -69,6 +69,62 @@ class BDNSLocatorTests(unittest.TestCase):
                 self.assertTrue(valid_bdns_regulatory_bases_source_locator(value))
                 self.assertEqual(BDNSRegulatoryBases(source_locator=value).source_locator, value)
                 self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
+
+    def test_internal_ascii_spaces_preserve_literal_and_are_never_clickable(self):
+        for value in ("https://example.invalid/A B", "http://example.invalid/A B",
+                      "example.invalid/A B", "https://example.invalid/A  B",
+                      "opaque locator/path text"):
+            with self.subTest(value=value):
+                self.assertTrue(valid_bdns_regulatory_bases_source_locator(value))
+                self.assertEqual(BDNSRegulatoryBases(source_locator=value).source_locator, value)
+                record = finalize_record(enriched_candidate(replace(self.detail, regulatory_bases_url=value)))
+                restored = Record.from_json(record.canonical_json())
+                self.assertEqual(restored.source_data.bdns.regulatory_bases.source_locator, value)
+                self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.source_locator, value)
+                self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
+
+    def test_edges_other_whitespace_and_all_c0_c1_controls_still_rejected(self):
+        values = [" example.invalid/bases", "example.invalid/bases ", " ", "  "]
+        values += ["example.invalid/A" + c + "B" for c in (
+            "\t", "\n", "\r", "\v", "\f", "\u00a0", "\u2003", "\u2028",
+            "\x00", "\x7f", "\x80", "\x9f",
+        )]
+        values += ["example.invalid/A" + chr(code) + "B" for code in (*range(32), *range(127,160))]
+        for value in values:
+            self.assertFalse(valid_bdns_regulatory_bases_source_locator(value))
+            self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
+            with self.assertRaises(DataValidationError):
+                BDNSRegulatoryBases(source_locator=value)
+
+    def test_internal_space_privacy_inspects_full_literal_and_encoded_pii(self):
+        for value, allowed in (
+            ("https://example.invalid/official bases", True),
+            ("https://example.invalid/official bases/12345678Z", False),
+            ("example.invalid/official bases/%31%32%33%34%35%36%37%38%5A", False),
+        ):
+            with tempfile.TemporaryDirectory() as temp:
+                result = prepare_bdns_enriched_record(self.summary, replace(self.detail, regulatory_bases_url=value),
+                    detected_at=DETECTED, last_checked_at=CHECKED, record_store=RecordStore(Path(temp)/"records"))
+                self.assertIsNotNone(result.record)
+                self.assertEqual(result.record.source_data.bdns.regulatory_bases.source_locator, value)
+                self.assertEqual(result.privacy.decision is PrivacyDecisionType.ALLOW, allowed)
+                self.assertEqual(result.safe_reason, None if allowed else "privacy_source_data_blocked")
+                self.assertEqual(result.authorization is not None, allowed)
+
+    def test_internal_space_count_and_position_are_material_not_clickability(self):
+        values = ("example.invalid/A BC", "example.invalid/A  BC", "example.invalid/AB C")
+        records = [finalize_record(enriched_candidate(replace(self.detail, regulatory_bases_url=v))) for v in values]
+        self.assertEqual(len({record.technical.content_hash for record in records}), 3)
+        self.assertTrue(any(c.path == "source_data.bdns.regulatory_bases.source_locator"
+            for c in diff(records[0].to_dict(), records[1].to_dict())))
+        for record, value in zip(records, values, strict=True):
+            self.assertEqual(Record.from_json(record.canonical_json()).source_data.bdns.regulatory_bases.source_locator, value)
+            before = record.canonical_json()
+            self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
+            self.assertEqual(record.canonical_json(), before)
+        with patch("infocs.fetch.bdns.enrichment.clickable_bdns_regulatory_bases_url", return_value="derived"):
+            rebuilt = finalize_record(enriched_candidate(replace(self.detail, regulatory_bases_url=values[0])))
+        self.assertEqual(rebuilt.technical.content_hash, records[0].technical.content_hash)
 
     def test_not_clickable_does_not_hold_publication(self):
         for value in ("http://public.example.invalid/bases", "public.example.invalid/bases"):

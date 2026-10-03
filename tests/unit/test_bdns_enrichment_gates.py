@@ -182,7 +182,7 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
             self.assertTrue(result.authorization.matches(result.record))
 
     def test_http_bases_rejected_shapes_and_privacy_unchanged(self):
-        for value in ("http://u:p@example.invalid/", "http://example.invalid/with space",
+        for value in ("http://u:p@example.invalid/", "http://example.invalid/with space ",
                       "http://example.invalid/%GG", "http://example.invalid/\x01"):
             with self.subTest(kind=value.split(":")[0]), self.assertRaisesRegex(BDNSEnrichmentError, "^enrichment_invalid_url$"):
                 build_bdns_source_data(replace(self.detail, regulatory_bases_url=value))

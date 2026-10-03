@@ -93,7 +93,9 @@ No se crea una segunda lista Core Document para los mismos adjuntos.
 
 BDNSRegulatoryBases: description?, **source_locator?**, independientes (10B-D2.8).
 SOURCE LOCATOR es el valor literal `urlBasesReguladoras`: string no vacío,
-máximo 2048 caracteres, sin whitespace, controles ASCII/DEL/backslash, escapes
+máximo 2048 caracteres. Desde 10B-D3.4 permite U+0020 exclusivamente interno
+(uno o varios), como texto fuente literal, no como URL certificada. Rechaza
+U+0020 de borde, cualquier otro whitespace, controles C0/C1, DEL/backslash, escapes
 percent inválidos, UTF-8 inválido ni credenciales detectables (también sin esquema
 y en variante decodificada). No exige host, DNS, puerto válido, ausencia de IP/local
 ni esquema. Si aparece un esquema explícito, sólo se admiten HTTP/HTTPS: no se
@@ -104,7 +106,8 @@ y shape cerrado, no finge `format: uri` ni replica toda la lógica Python.
 CLICKABLE URL es propiedad derivada InfoCs: la única función
 `enrichment.clickable_bdns_regulatory_bases_url` devuelve el literal exclusivamente
 si además pasa la política estricta HTTPS pública de navegación; en otro caso None.
-HTTP y schemeless se conservan pero no se enlazan. Ningún trim, scheme inference,
+HTTP, schemeless y locators con U+0020 interno se conservan pero no se enlazan.
+No se elimina, codifica ni sustituye el espacio. Ningún trim, scheme inference,
 HTTP→HTTPS, normalización ni visita remota. No certifica autoridad/destino.
 Sede/extractos conservan HTTPS estricto. Privacy inspecciona siempre el string
 completo literal y decodificado, incluso no parseable, más componentes cuando

@@ -15,6 +15,7 @@ from typing import Any, Iterable, Mapping
 from infocs.diff.core import content_hash
 from infocs.events import Event, EventStore
 from infocs.fetch.bdns.ingest import BDNS_ATTRIBUTION_PATH, _attribution_preflight
+from infocs.fetch.bdns.diagnostics import BDNS_ITEM_DETAIL_REASONS, BDNS_SAFE_FIELD_CLASSES
 from infocs.fetch.bdns.runner import (
     BDNS_DEFAULT_OVERLAP_DAYS,
     BDNS_INCREMENTAL_SCOPE_TYPE,
@@ -164,7 +165,8 @@ def validate_runner_result(stdout_text: str, stderr_text: str, exit_code: int) -
     if not isinstance(result, dict):
         raise WorkflowSafetyError("runner_result_not_object")
     required = {"run_id", "source_id", "status", "error_code"}
-    optional = {"metrics", "request_count", "http_statuses"}
+    diagnostic_keys = {"safe_detail_reason", "failure_position", "safe_field_class"}
+    optional = {"metrics", "request_count", "http_statuses"} | diagnostic_keys
     if not required.issubset(result) or set(result) - required - optional:
         raise WorkflowSafetyError("runner_result_shape_invalid")
     if result.get("source_id") != "bdns" or not isinstance(result.get("run_id"), str) or not _RUN_ID_RE.fullmatch(result["run_id"]):
@@ -180,6 +182,19 @@ def validate_runner_result(stdout_text: str, stderr_text: str, exit_code: int) -
             raise WorkflowSafetyError("successful_runner_has_error_code")
     elif not error_code:
         raise WorkflowSafetyError("non_success_runner_missing_error_code")
+    if diagnostic_keys & result.keys():
+        if (not diagnostic_keys.issubset(result) or error_code != "item_ingestion_failure"
+            or status != BDNSRunnerStatus.SOURCE_FAILURE):
+            raise WorkflowSafetyError("runner_failure_diagnostic_shape_invalid")
+        detail = result["safe_detail_reason"]
+        field_class = result["safe_field_class"]
+        position = result["failure_position"]
+        if not isinstance(detail, str) or detail not in BDNS_ITEM_DETAIL_REASONS:
+            raise WorkflowSafetyError("runner_safe_detail_reason_invalid")
+        if not isinstance(field_class, str) or field_class not in BDNS_SAFE_FIELD_CLASSES:
+            raise WorkflowSafetyError("runner_safe_field_class_invalid")
+        if isinstance(position, bool) or not isinstance(position, int) or position < 1:
+            raise WorkflowSafetyError("runner_failure_position_invalid")
     if "metrics" in result:
         metrics = result["metrics"]
         if not isinstance(metrics, dict) or any(
@@ -204,6 +219,21 @@ def validate_runner_result(stdout_text: str, stderr_text: str, exit_code: int) -
     if exit_code != 1 and not {"metrics", "request_count", "http_statuses"}.issubset(result):
         raise WorkflowSafetyError("runner_result_incomplete")
     return result
+
+
+def write_runner_summary(path: str | Path, result: Mapping[str, Any], exit_code: int) -> None:
+    """Validate again, then expose only a closed diagnostic projection."""
+    safe = validate_runner_result(json.dumps(dict(result)), "", exit_code)
+    lines = ["## BDNS collection result", "", f"Status: `{safe['status']}`"]
+    if "failure_position" in safe:
+        lines.extend([
+            "Primary error: `item_ingestion_failure`",
+            f"Safe detail reason: `{safe['safe_detail_reason']}`",
+            f"Failure position: {safe['failure_position']}",
+            f"Safe field class: `{safe['safe_field_class']}`",
+        ])
+    with Path(path).open("a", encoding="utf-8", newline="\n") as summary:
+        summary.write("\n".join(lines) + "\n")
 
 
 def validate_changed_entries(entries: Iterable[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
@@ -506,6 +536,7 @@ def _parser() -> argparse.ArgumentParser:
     result.add_argument("--stdout-file", required=True)
     result.add_argument("--stderr-file", required=True)
     result.add_argument("--exit-code", required=True, type=int)
+    result.add_argument("--github-summary")
     stage = subparsers.add_parser("stage")
     stage.add_argument("--result-file", required=True)
     race = subparsers.add_parser("validate-remote")
@@ -535,6 +566,8 @@ def main(argv: list[str] | None = None) -> int:
                 _read_text_file(args.stderr_file),
                 args.exit_code,
             )
+            if args.github_summary:
+                write_runner_summary(args.github_summary, result, args.exit_code)
             print(json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
         elif args.command == "stage":
             result = json.loads(_read_text_file(args.result_file))

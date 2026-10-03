@@ -24,7 +24,10 @@ from infocs.fetch.bdns.publication import (
 )
 from infocs.fetch.bdns.transport import BDNSTransport
 from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
-from infocs.fetch.bdns.enrichment import normalize_bdns_enriched
+from infocs.fetch.bdns.enrichment import BDNSEnrichmentError, normalize_bdns_enriched
+from infocs.fetch.bdns.diagnostics import (
+    BDNS_ENRICHMENT_REASONS, enrichment_url_field_class, safe_item_field_class,
+)
 from infocs.finalize import finalize_record
 from infocs.models import DataValidationError, Record
 from infocs.privacy import PrivacyDecision, PrivacyDecisionType, PrivacyGate, PrivacyGateError
@@ -106,6 +109,7 @@ class BDNSIngestionResult:
     record_path: Path | None = None
     content_hash: str | None = None
     safe_reason: str | None = None
+    safe_field_class: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         """Resumen sin códigos BDNS, títulos, autoridades, URLs ni payloads."""
@@ -119,6 +123,7 @@ class BDNSIngestionResult:
             "record_path": "data/records/bdns/r-<encoded-record-id>.json" if self.record_path else None,
             "content_hash": self.content_hash,
             "safe_reason": self.safe_reason,
+            "safe_field_class": safe_item_field_class(self.safe_field_class) if self.safe_field_class is not None else None,
         }
 
 
@@ -155,6 +160,8 @@ def ingest_bdns(
     counts = {field.name: 0 for field in fields(BDNSIngestionMetrics)}
     statuses: list[int] = []
     requests = 1
+    normalization_reason = None
+    normalization_field_class = None
     try:
         hash_version = productive_hash_version(record_store, event_store)
         if hash_version == 2 and not isinstance(event_store, EventStore):
@@ -211,8 +218,17 @@ def ingest_bdns(
                 detected_at=started_at,
                 last_checked_at=observed_at,
             )
-        except (BDNSNormalizationError, ValueError):
+        except (BDNSNormalizationError, ValueError) as error:
             counts["errors"] += 1
+            if normalization_reason is None:
+                normalization_reason = (
+                    str(error) if isinstance(error, BDNSEnrichmentError) and str(error) in BDNS_ENRICHMENT_REASONS
+                    else "normalization_error"
+                )
+                normalization_field_class = (
+                    enrichment_url_field_class(detail_result.payload)
+                    if normalization_reason == "enrichment_invalid_url" else "other"
+                )
             continue
 
         territorial = normalized.territorial_decision.status
@@ -412,7 +428,9 @@ def ingest_bdns(
         )
 
     status = BDNSIngestionStatus.SOURCE_FAILURE if counts["errors"] else BDNSIngestionStatus.COMPLETE_SUCCESS
-    return _result(status, counts, requests, statuses, safe_reason="no_publishable_record_in_budget")
+    return _result(status, counts, requests, statuses,
+        safe_reason=normalization_reason or "no_publishable_record_in_budget",
+        safe_field_class=normalization_field_class)
 
 
 def _assert_persistence_gates(record: Record, privacy: PrivacyDecision) -> None:
@@ -453,6 +471,7 @@ def _result(
     record_path: Path | None = None,
     content_hash: str | None = None,
     safe_reason: str | None = None,
+    safe_field_class: str | None = None,
 ) -> BDNSIngestionResult:
     return BDNSIngestionResult(
         status=status,
@@ -464,4 +483,5 @@ def _result(
         record_path=record_path,
         content_hash=content_hash,
         safe_reason=safe_reason,
+        safe_field_class=safe_field_class,
     )

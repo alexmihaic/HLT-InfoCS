@@ -132,7 +132,8 @@ jobs:
           python -m infocs.fetch.bdns.workflow_safety validate-result \
             --stdout-file "$stdout_file" \
             --stderr-file "$stderr_file" \
-            --exit-code "$runner_code" > "$result_file"
+            --exit-code "$runner_code" \
+            --github-summary "$GITHUB_STEP_SUMMARY" > "$result_file"
 
       - name: Validate and stage only canonical BDNS artifacts
         run: python -m infocs.fetch.bdns.workflow_safety stage --result-file "$RUNNER_TEMP/bdns-validated-result.json"

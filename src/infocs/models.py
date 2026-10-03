@@ -447,7 +447,10 @@ def valid_bdns_regulatory_bases_source_locator(value: str) -> bool:
 
     if not isinstance(value, str) or not value or len(value) > MAX_BDNS_SOURCE_LOCATOR_LENGTH:
         return False
-    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value) or "\\" in value:
+    # U+0020 interno es texto fuente, no una URL navegable; jamás se repara.
+    if value[0] == " " or value[-1] == " ":
+        return False
+    if any((c != " " and c.isspace()) or ord(c) < 32 or 127 <= ord(c) <= 159 for c in value) or "\\" in value:
         return False
     if re.search(r"%(?![0-9a-fA-F]{2})", value):
         return False

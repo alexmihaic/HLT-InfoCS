@@ -31,6 +31,7 @@ from infocs.fetch.bdns.models import (
     BDNSSearchQuery,
 )
 from infocs.fetch.bdns.transport import BDNSTransport
+from infocs.fetch.bdns.diagnostics import safe_item_detail_reason, safe_item_field_class
 from infocs.manifests import (
     CollectionMode,
     ErrorSummary,
@@ -108,9 +109,12 @@ class BDNSRunnerResult:
     http_statuses: tuple[int, ...]
     error_code: str | None
     manifest: RunManifest
+    safe_detail_reason: str | None = None
+    failure_position: int | None = None
+    safe_field_class: str | None = None
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        result = {
             "run_id": self.run_id,
             "source_id": "bdns",
             "status": self.status,
@@ -119,6 +123,13 @@ class BDNSRunnerResult:
             "http_statuses": list(self.http_statuses),
             "error_code": self.error_code,
         }
+        if self.error_code == "item_ingestion_failure" and self.failure_position is not None:
+            result.update(
+                safe_detail_reason=safe_item_detail_reason(self.safe_detail_reason),
+                failure_position=self.failure_position,
+                safe_field_class=safe_item_field_class(self.safe_field_class),
+            )
+        return result
 
 
 class _PrefetchedTransport:
@@ -278,6 +289,9 @@ def run_bdns_productive_collection(
     details_attempted = 0
     result_status = BDNSRunnerStatus.SOURCE_FAILURE
     error_code = "runner_preflight_failed"
+    safe_detail_reason = None
+    failure_position = None
+    safe_field_class = None
     try:
         gate.validate()
         from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
@@ -384,7 +398,12 @@ def run_bdns_productive_collection(
                     if item_result.status is BDNSIngestionStatus.PERSISTENCE_BLOCKED:
                         raise _RunFault(BDNSRunnerStatus.PERSISTENCE_BLOCKED, item_result.safe_reason or "persistence_blocked")
                     if item_result.status is BDNSIngestionStatus.SOURCE_FAILURE or item_result.metrics.errors:
-                        raise _RunFault(BDNSRunnerStatus.SOURCE_FAILURE, "item_ingestion_failure")
+                        raise _RunFault(
+                            BDNSRunnerStatus.SOURCE_FAILURE, "item_ingestion_failure",
+                            safe_detail_reason=safe_item_detail_reason(item_result.safe_reason),
+                            failure_position=details_attempted,
+                            safe_field_class=safe_item_field_class(item_result.safe_field_class),
+                        )
 
             if total_pages > max_pages or total_elements > max_details:
                 raise _RunFault(BDNSRunnerStatus.PARTIAL_SUCCESS, "run_budget_exhausted")
@@ -412,6 +431,9 @@ def run_bdns_productive_collection(
     except _RunFault as fault:
         result_status = fault.status
         error_code = fault.code
+        safe_detail_reason = fault.safe_detail_reason
+        failure_position = fault.failure_position
+        safe_field_class = fault.safe_field_class
         counts["errors"] += 1
     except Exception:
         result_status = BDNSRunnerStatus.SOURCE_FAILURE
@@ -462,13 +484,20 @@ def run_bdns_productive_collection(
         http_statuses=tuple(statuses),
         error_code=error_code,
         manifest=manifest,
+        safe_detail_reason=safe_detail_reason,
+        failure_position=failure_position,
+        safe_field_class=safe_field_class,
     )
 
 
 class _RunFault(RuntimeError):
-    def __init__(self, status: str, code: str) -> None:
+    def __init__(self, status: str, code: str, *, safe_detail_reason: str | None = None,
+                 failure_position: int | None = None, safe_field_class: str | None = None) -> None:
         self.status = status
         self.code = code
+        self.safe_detail_reason = safe_detail_reason
+        self.failure_position = failure_position
+        self.safe_field_class = safe_field_class
 
 
 class _RunnerArgumentParser(argparse.ArgumentParser):
