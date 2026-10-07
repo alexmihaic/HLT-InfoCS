@@ -7,6 +7,7 @@ import { encodeRecordId, loadPortalData } from '../lib/data';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
 import { geographyLabels, primaryDate } from '../lib/presentation/recordView';
 import { sourceDetailPath } from '../lib/presentation/sourceDetails';
+import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
 
 const data = await loadPortalData();
 ---
@@ -40,9 +41,10 @@ const data = await loadPortalData();
       <ol class="record-list">
         {data.records.map((record) => {
           const history = data.eventsByRecordId.get(record.id) ?? [];
+          const bdnsView = buildBDNSRecordView(record);
           return (
             <li>
-              <RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, data.sources)} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={history.length > 0} />
+              <RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, data.sources)} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={history.length > 0} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} />
             </li>
           );
         })}

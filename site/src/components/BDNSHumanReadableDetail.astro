@@ -1,0 +1,73 @@
+---
+import type { BDNSRecordView } from '../lib/presentation/bdnsRecordView';
+
+interface Props { view: BDNSRecordView }
+const { view } = Astro.props;
+---
+
+<section class="bdns-detail page-section" aria-labelledby="bdns-call-title">
+  <h2 id="bdns-call-title">Información de la convocatoria</h2>
+  <dl class="detail-grid">
+    {view.budget && <div>
+      <dt>{view.budget.label}</dt>
+      <dd>{view.budget.displayValue}{view.budget.currency && <span> · {view.budget.currency}</span>}
+        {view.budget.currencyNotice && <p class="muted">{view.budget.currencyNotice}</p>}
+      </dd>
+    </div>}
+    {view.callType && <div><dt>{view.callType.label}</dt><dd>{view.callType.value}</dd></div>}
+    {view.receivedDate && <div><dt>{view.receivedDate.label}</dt><dd><time datetime={view.receivedDate.value}>{view.receivedDate.display}</time></dd></div>}
+    {view.instruments.items.length > 0 && <div><dt>{view.instruments.label}</dt><dd><ul>{view.instruments.items.map((item) => <li>{item}</li>)}</ul></dd></div>}
+  </dl>
+
+  {view.authorityHierarchy && <section class="page-section" aria-labelledby="bdns-authority-title">
+    <h3 id="bdns-authority-title">{view.authorityHierarchy.label}</h3>
+    <dl class="detail-grid">{view.authorityHierarchy.items.map((item) => <div><dt>{item.label}</dt><dd>{item.value}</dd></div>)}</dl>
+  </section>}
+
+  {view.purpose && <section class="page-section" aria-labelledby="bdns-purpose-title">
+    <h3 id="bdns-purpose-title">{view.purpose.label}</h3>
+    <p class="bdns-literal">{view.purpose.value}</p>
+  </section>}
+
+  {(view.beneficiaryTypes.items.length > 0 || view.sectors.items.length > 0 || view.impactRegions.items.length > 0) && <section class="page-section" aria-labelledby="bdns-eligibility-title">
+    <h3 id="bdns-eligibility-title">Destinatarios y ámbito</h3>
+    <dl class="detail-grid">
+      {view.beneficiaryTypes.items.length > 0 && <div><dt>{view.beneficiaryTypes.label}</dt><dd><ul>{view.beneficiaryTypes.items.map((item) => <li>{item.label}{item.code !== undefined && <span class="muted" data-pagefind-ignore> · Código: {item.code}</span>}</li>)}</ul></dd></div>}
+      {view.sectors.items.length > 0 && <div><dt>{view.sectors.label}</dt><dd><ul>{view.sectors.items.map((item) => <li>{item.label}{item.code !== undefined && <span class="muted" data-pagefind-ignore> · Código: {item.code}</span>}</li>)}</ul></dd></div>}
+      {view.impactRegions.items.length > 0 && <div><dt>{view.impactRegions.label}</dt><dd><ul>{view.impactRegions.items.map((item) => <li>{item}</li>)}</ul></dd></div>}
+    </dl>
+  </section>}
+
+  {view.application && <section class="page-section" aria-labelledby="bdns-application-title">
+    <h3 id="bdns-application-title">Plazo de solicitud</h3>
+    <dl class="detail-grid">
+      {[view.application.start, view.application.end].map((boundary) => boundary && <div>
+        <dt>{boundary.label}</dt>
+        <dd>
+          {boundary.date && <p><span>Fecha: </span><time datetime={boundary.date.value}>{boundary.date.display}</time></p>}
+          {boundary.text && <p class="bdns-literal"><span>Texto de la fuente: </span>{boundary.text.value}</p>}
+        </dd>
+      </div>)}
+    </dl>
+  </section>}
+
+  {view.regulatoryBases && <section class="page-section" aria-labelledby="bdns-bases-title">
+    <h3 id="bdns-bases-title">{view.regulatoryBases.label}</h3>
+    {view.regulatoryBases.description && <p class="bdns-literal">{view.regulatoryBases.description.value}</p>}
+    {view.regulatoryBases.sourceLocator && <dl class="detail-grid" data-pagefind-ignore><div><dt>{view.regulatoryBases.sourceLocator.label}</dt><dd class="mono-value bdns-literal">{view.regulatoryBases.sourceLocator.value}</dd></div></dl>}
+  </section>}
+
+  {view.documents.items.length > 0 && <section class="page-section" aria-labelledby="bdns-documents-title">
+    <h3 id="bdns-documents-title">{view.documents.label}</h3>
+    <ul>{view.documents.items.map((item) => <li>
+      {item.description && <p class="bdns-literal">{item.description.value}</p>}
+      {item.publishedDate && <p>{item.publishedDate.label}: <time datetime={item.publishedDate.value}>{item.publishedDate.display}</time></p>}
+      {item.filename && <p class="muted" data-pagefind-ignore>{item.filename.label}: <span class="font-mono bdns-literal">{item.filename.value}</span></p>}
+    </li>)}</ul>
+  </section>}
+
+  {view.electronicOffice && <section class="page-section" aria-labelledby="bdns-office-title" data-pagefind-ignore>
+    <h3 id="bdns-office-title">{view.electronicOffice.label}</h3>
+    <p class="font-mono bdns-literal">{view.electronicOffice.value}</p>
+  </section>}
+</section>

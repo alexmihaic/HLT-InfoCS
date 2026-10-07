@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { adaptRecord, parseCanonicalJson } from './canonical';
+import { adaptRecord, assertProductiveRecord, parseCanonicalJson } from './canonical';
 import { PUBLIC_SOURCE_IDS } from './sources';
 import type { FrontendRecord } from './types';
 
@@ -19,7 +19,9 @@ export async function loadRecords(): Promise<FrontendRecord[]> {
   const records = await Promise.all(
     paths.map(async (path) => {
       const text = await readFile(path, 'utf8');
-      return adaptRecord(parseCanonicalJson(text, path), path);
+      const record = adaptRecord(parseCanonicalJson(text, path), path);
+      assertProductiveRecord(record, path);
+      return record;
     }),
   );
 

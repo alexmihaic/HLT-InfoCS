@@ -39,6 +39,11 @@ if (root) {
       return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
     }
 
+    function metadataLiteral(meta: Readonly<Record<string, unknown>> | undefined, key: string): string | null {
+      const value = meta?.[key];
+      return typeof value === 'string' && value.trim().length > 0 ? value : null;
+    }
+
     function publicRecordPath(value: string | null): string | null {
       if (!value) return null;
       try {
@@ -86,6 +91,32 @@ if (root) {
 
       const authority = metadataString(meta, 'authority');
       if (authority) appendText(item, 'p', 'search-result-authority', authority);
+
+      const bdnsCallType = metadataLiteral(meta, 'bdns_call_type');
+      const bdnsBudgetDisplay = metadataLiteral(meta, 'bdns_budget_display');
+      const bdnsBudgetCurrency = metadataLiteral(meta, 'bdns_budget_currency');
+      const bdnsBudgetCurrencyNotice = metadataLiteral(meta, 'bdns_budget_currency_notice');
+      if (bdnsCallType || bdnsBudgetDisplay) {
+        const summary = document.createElement('dl');
+        summary.className = 'record-card-bdns-summary search-result-bdns-summary';
+        if (bdnsCallType) {
+          const fact = document.createElement('div');
+          appendText(fact, 'dt', '', 'Tipo de convocatoria');
+          appendText(fact, 'dd', '', bdnsCallType);
+          summary.append(fact);
+        }
+        if (bdnsBudgetDisplay) {
+          const fact = document.createElement('div');
+          appendText(fact, 'dt', '', 'Presupuesto de la convocatoria');
+          const value = document.createElement('dd');
+          value.append(document.createTextNode(bdnsBudgetDisplay));
+          if (bdnsBudgetCurrency) value.append(document.createTextNode(` · ${bdnsBudgetCurrency}`));
+          if (bdnsBudgetCurrencyNotice) appendText(value, 'span', 'muted', bdnsBudgetCurrencyNotice);
+          fact.append(value);
+          summary.append(fact);
+        }
+        item.append(summary);
+      }
 
       const dateLabel = metadataString(meta, 'primary_date_label');
       const dateValue = metadataString(meta, 'primary_date_value');

@@ -44,6 +44,73 @@ export interface FrontendDocument {
   readonly publicationAllowed: boolean;
 }
 
+export interface FrontendBDNSBudget {
+  readonly value: string;
+  readonly currency?: string;
+}
+
+export interface FrontendBDNSAuthorityHierarchy {
+  readonly nivel1?: string;
+  readonly nivel2?: string;
+  readonly nivel3?: string;
+}
+
+export interface FrontendBDNSClassification {
+  readonly label: string;
+  readonly code?: string;
+}
+
+export interface FrontendBDNSApplication {
+  readonly startDate?: string;
+  readonly endDate?: string;
+  readonly startText?: string;
+  readonly endText?: string;
+  readonly abierto?: boolean;
+}
+
+export interface FrontendBDNSRegulatoryBases {
+  readonly description?: string;
+  readonly sourceLocator?: string;
+}
+
+export interface FrontendBDNSDocument {
+  readonly sourceDocumentId: number;
+  readonly description?: string;
+  readonly filename?: string;
+  readonly publishedDate?: string;
+  readonly modifiedValue?: string;
+}
+
+export interface FrontendBDNSExtract {
+  readonly cve?: string;
+  readonly diary?: string;
+  readonly sourceUrl?: string;
+  readonly publicationDate?: string;
+  readonly title?: string;
+  readonly titleCoofficial?: string;
+}
+
+/** Literal metadata projection; not Privacy/Publication or navigation authorization. */
+export interface FrontendBDNSData {
+  readonly extensionVersion: '1.0';
+  readonly officialTitleCoofficial?: string;
+  readonly authorityHierarchy?: FrontendBDNSAuthorityHierarchy;
+  readonly budgetTotal?: FrontendBDNSBudget;
+  readonly callType?: string;
+  readonly instruments: readonly string[];
+  readonly eligibleBeneficiaryTypes: readonly FrontendBDNSClassification[];
+  readonly sectors: readonly FrontendBDNSClassification[];
+  readonly impactRegions: readonly string[];
+  readonly receivedDate?: string;
+  readonly application?: FrontendBDNSApplication;
+  readonly purpose?: string;
+  readonly regulatoryBases?: FrontendBDNSRegulatoryBases;
+  readonly electronicOfficeUrl?: string;
+  readonly extractPublishedInOfficialDiary?: boolean;
+  readonly documents: readonly FrontendBDNSDocument[];
+  readonly extracts: readonly FrontendBDNSExtract[];
+}
+
 /** Build-time projection of the canonical Record, not a second business model. */
 export interface FrontendRecord {
   readonly id: string;
@@ -64,6 +131,7 @@ export interface FrontendRecord {
   readonly documents?: readonly FrontendDocument[];
   readonly tags: readonly string[];
   readonly contentHash: string;
+  readonly bdns?: FrontendBDNSData;
 }
 
 export interface FrontendEvent {

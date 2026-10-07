@@ -1,6 +1,7 @@
 ---
 import type { FrontendRecord } from '../lib/data/types';
 import type { PrimaryDateView } from '../lib/presentation/recordView';
+import type { BDNSRecordView } from '../lib/presentation/bdnsRecordView';
 import DateValue from './DateValue.astro';
 import RecordMeta from './RecordMeta.astro';
 import SourceLink from './SourceLink.astro';
@@ -13,8 +14,9 @@ interface Props {
   date: PrimaryDateView;
   geography: readonly string[];
   hasHistory: boolean;
+  bdnsSummary?: Pick<BDNSRecordView, 'callType' | 'budget'>;
 }
-const { record, href, source, category, date, geography, hasHistory } = Astro.props;
+const { record, href, source, category, date, geography, hasHistory, bdnsSummary } = Astro.props;
 ---
 
 <article class="record-card">
@@ -22,6 +24,10 @@ const { record, href, source, category, date, geography, hasHistory } = Astro.pr
   <h3><a href={href}>{record.title}</a></h3>
   {record.authority && <p class="record-authority">{record.authority.name}</p>}
   {geography.length > 0 && <ul class="geography-list" aria-label="Ámbito territorial">{geography.map((label) => <li>{label}</li>)}</ul>}
+  {bdnsSummary && (bdnsSummary.callType || bdnsSummary.budget) && <dl class="record-card-bdns-summary">
+    {bdnsSummary.callType && <div><dt>Tipo de convocatoria</dt><dd>{bdnsSummary.callType.value}</dd></div>}
+    {bdnsSummary.budget && <div><dt>Presupuesto de la convocatoria</dt><dd>{bdnsSummary.budget.displayValue}{bdnsSummary.budget.currency && <span> · {bdnsSummary.budget.currency}</span>}{bdnsSummary.budget.currencyNotice && <span class="muted">{bdnsSummary.budget.currencyNotice}</span>}</dd></div>}
+  </dl>}
   <div class="record-card-footer">
     <DateValue label={date.label} value={date.value} display={date.display} />
     <SourceLink href={record.sourceUrl} label="Fuente" />

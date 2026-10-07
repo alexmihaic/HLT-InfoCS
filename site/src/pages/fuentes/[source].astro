@@ -9,6 +9,7 @@ import { loadPortalData, encodeRecordId } from '../../lib/data';
 import { categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { geographyLabels, primaryDate } from '../../lib/presentation/recordView';
 import { SOURCE_EDITORIAL_DETAILS, sourceDetailBySlug, type SourceDetailView } from '../../lib/presentation/sourceDetails';
+import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
 
 interface Props { detail: SourceDetailView }
 
@@ -65,9 +66,10 @@ const { source } = detail;
         ? <EmptyState compact message={source.publicationState === 'publication_pending'
           ? 'No hay registros públicos de esta fuente en InfoCs.'
           : 'No hay publicaciones de esta fuente disponibles ahora mismo.'} />
-        : <ol class="record-list source-record-list">{detail.records.map((record) => (
-          <li><RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={(detail.activity.some((item) => item.recordHref === `/registro/${encodeRecordId(record.id)}/`))} /></li>
-        ))}</ol>}
+        : <ol class="record-list source-record-list">{detail.records.map((record) => {
+          const bdnsView = buildBDNSRecordView(record);
+          return <li><RecordCard record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} date={primaryDate(record)} geography={geographyLabels(record)} hasHistory={(detail.activity.some((item) => item.recordHref === `/registro/${encodeRecordId(record.id)}/`))} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
+        })}</ol>}
     </section>
 
     {detail.activity.length > 0 && <section class="page-section" aria-labelledby="source-activity-title">

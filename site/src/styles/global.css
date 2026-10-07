@@ -63,6 +63,11 @@ main.shell { min-height: calc(100vh - 13rem); padding-block: var(--space-8) var(
 .record-card h3 a { color: var(--text-primary); text-decoration: none; }
 .record-card h3 a:hover { color: var(--color-accent-hover); text-decoration: underline; }
 .record-authority { margin-bottom: var(--space-4); color: var(--text-secondary); }
+.record-card-bdns-summary { display: grid; gap: var(--space-2); margin: 0 0 var(--space-4); color: var(--text-secondary); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.record-card-bdns-summary > div { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: var(--space-1) var(--space-2); }
+.record-card-bdns-summary dt { color: var(--text-tertiary); }
+.record-card-bdns-summary dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.record-card-bdns-summary .muted { display: block; margin-top: var(--space-1); font-size: var(--text-xs); }
 .record-card-footer { flex-wrap: wrap; justify-content: flex-start; padding-top: var(--space-3); border-top: var(--border-1) solid var(--divider); color: var(--text-secondary); font-size: var(--text-sm); }
 .record-card-footer .source-link { margin-left: auto; }
 .source-badge, .category-badge, .status-badge { display: inline-flex; min-height: 1.75rem; align-items: center; gap: var(--space-1); padding: 0.18rem var(--space-2); border: var(--border-1) solid var(--border-default); border-radius: var(--radius-xs); font-size: var(--text-xs); font-weight: var(--font-weight-medium); line-height: var(--leading-snug); white-space: nowrap; }
@@ -129,6 +134,8 @@ main.shell { min-height: calc(100vh - 13rem); padding-block: var(--space-8) var(
 .surface-panel h2 { margin-bottom: var(--space-5); }
 .panel-kicker { margin-bottom: var(--space-2); color: var(--color-info); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); letter-spacing: var(--tracking-label); text-transform: uppercase; }
 .official-panel { border-top: 2px solid var(--color-accent); }
+.bdns-detail { overflow-wrap: anywhere; }
+.bdns-detail .bdns-literal { white-space: pre-wrap; }
 .derived-panel { border-top: 2px solid var(--color-derived); }
 .source-panel { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .source-panel p { max-width: 64ch; margin: 0; color: var(--text-secondary); }

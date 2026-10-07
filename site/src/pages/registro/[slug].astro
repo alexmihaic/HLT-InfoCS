@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import BDNSHumanReadableDetail from '../../components/BDNSHumanReadableDetail.astro';
 import ChangeTimeline from '../../components/ChangeTimeline.astro';
 import InfoCsDerived from '../../components/InfoCsDerived.astro';
 import OfficialData from '../../components/OfficialData.astro';
@@ -10,6 +11,7 @@ import { encodeRecordId, loadPortalData } from '../../lib/data';
 import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { geographyLabels, primaryDate, timelineItems } from '../../lib/presentation/recordView';
+import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
 interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
@@ -24,6 +26,7 @@ export async function getStaticPaths() {
 }
 
 const { record, events, source } = Astro.props as Props;
+const bdnsView = buildBDNSRecordView(record);
 const geographies = geographyLabels(record);
 const date = primaryDate(record);
 const timeline = timelineItems(events);
@@ -41,6 +44,12 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
       <span data-pagefind-meta="primary_date_label">{date.label}</span>
       <span data-pagefind-meta="primary_date_value">{date.display}</span>
       <span data-pagefind-meta="public_url">{recordPath}</span>
+      {bdnsView?.callType && <span data-pagefind-meta="bdns_call_type">{bdnsView.callType.value}</span>}
+      {bdnsView?.budget && <>
+        <span data-pagefind-meta="bdns_budget_display">{bdnsView.budget.displayValue}</span>
+        {bdnsView.budget.currency && <span data-pagefind-meta="bdns_budget_currency">{bdnsView.budget.currency}</span>}
+        {bdnsView.budget.currencyNotice && <span data-pagefind-meta="bdns_budget_currency_notice">{bdnsView.budget.currencyNotice}</span>}
+      </>}
     </div>
     <nav class="breadcrumbs" aria-label="Ruta de navegación">
       <a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Registro</span>
@@ -49,6 +58,7 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
     <header class="detail-header">
       <RecordMeta source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} />
       <h1>{record.title}</h1>
+      {bdnsView?.officialTitleCoofficial && <p class="detail-authority"><span>{bdnsView.officialTitleCoofficial.label}: </span>{bdnsView.officialTitleCoofficial.value}</p>}
       {record.authority && <p class="detail-authority">{record.authority.name}</p>}
     </header>
 
@@ -60,6 +70,7 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
           {record.eventAt && <div><dt>Fecha del acto</dt><dd><time datetime={record.eventAt}>{formatPortalDate(record.eventAt)}</time></dd></div>}
           {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
         </dl>
+        {bdnsView && <BDNSHumanReadableDetail view={bdnsView} />}
       </OfficialData>
 
       <InfoCsDerived>
@@ -74,7 +85,8 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 
     <section class="surface-panel source-panel page-section" aria-labelledby="source-panel-title">
       <div><p class="panel-kicker">Procedencia</p><h2 id="source-panel-title">Fuente oficial</h2><p>El contenido íntegro y la interpretación oficial corresponden al organismo editor.</p></div>
-      <SourceLink href={record.sourceUrl} label="Abrir publicación oficial" />
+      {bdnsView && <p data-pagefind-ignore>Los datos de esta ficha proceden de la Base de Datos Nacional de Subvenciones (BDNS) mediante su fuente oficial.</p>}
+      <SourceLink href={record.sourceUrl} label={bdnsView ? 'Abrir datos oficiales en BDNS' : 'Abrir publicación oficial'} />
       {source.attribution && <p class="attribution">{source.attribution}</p>}
     </section>
 
