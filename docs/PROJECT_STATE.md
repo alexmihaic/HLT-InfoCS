@@ -1,6 +1,6 @@
 # Estado operativo de InfoCs
 
-Actualizado: 2026-10-06. Este documento resume el estado presente; no es un
+Actualizado: 2026-10-07. Este documento resume el estado presente; no es un
 registro de fases ni sustituye la hoja de ruta canónica.
 
 ## Arquitectura
@@ -23,10 +23,10 @@ no decide políticas BOE/BDNS/BOP.
 | Fuente | Estado operativo |
 | --- | --- |
 | BOE | Operativa; 1 Record real; workflow diario/manual, Manifests y Health; Publication Review manual; commits de datos despachan Pages explícitamente. |
-| BDNS/SNPSAP | Runner, Privacy/Publication gates, Records/Events, Manifests y Health operativos. OPS-E.2 validó `complete_scope` y la cadena automática a Pages; OPS-F validó incremental e idempotencia. OPS-G programa incremental diario a las 08:17 `Europe/Madrid`, con `through_date` de ayer y checkpoint Manifest obligatorio. Baseline v2 activo; 10B-D3 cerrado: `BDNS_FIRST_SCHEDULED_V2_RUN_VALIDATED`. El schedule normal v2 y la publicación automática hasta Pages quedaron validados tras el hardening. Se conserva el disparo manual. |
+| BDNS/SNPSAP | Runner, Privacy/Publication gates, Records/Events, Manifests y Health operativos. OPS-E.2 validó `complete_scope` y la cadena automática a Pages; OPS-F validó incremental e idempotencia. OPS-G programa incremental diario a las 08:17 `Europe/Madrid`, con `through_date` de ayer y checkpoint Manifest obligatorio. Baseline v2 activo; 10B-D3 cerrado: `BDNS_FIRST_SCHEDULED_V2_RUN_VALIDATED`. 10B-E cerrado: `BDNS_HUMAN_READABILITY_VALIDATED_AND_PUBLISHED`. El schedule normal v2, la presentación pública y la publicación automática hasta Pages quedaron validados. Se conserva el disparo manual. |
 | BOP Castellón | Transporte, normalización y barreras técnicas listos; `TECHNICALLY_READY_PUBLICATION_BLOCKED`, `reuse_policy_unresolved`; sin Records ni Events públicos. |
 
-Conteos canónicos a 2026-10-06: **Records BOE: 1; Records BDNS: 42; Events BDNS: 42;
+Conteos canónicos a 2026-10-07: **Records BOE: 1; Records BDNS: 44; Events BDNS: 44;
 Records BOP: 0; Events BOP: 0.**
 
 ### BDNS — baseline canónico v2
@@ -47,8 +47,8 @@ locators sin esquema se conservan sin rewriting; sólo HTTPS estricto puede
 ser navegable. Clickability no se persiste ni participa en hash.
 
 La migración despachó Pages automáticamente; deployment y smoke público
-PASS (portada, búsqueda Pagefind y tres fichas BDNS). La presentación
-Human Readability del frontend sigue pendiente. No se ejecutó ningún
+PASS (portada, búsqueda Pagefind y tres fichas BDNS). La presentación Human
+Readability quedó cerrada posteriormente en 10B-E. No se ejecutó ningún
 collector manual para probar v2.
 
 ### 10B-D3 — FIRST SCHEDULED V2 RUN VALIDATION — cerrado
@@ -105,13 +105,42 @@ schedule → collector → canonical commit → Pages dispatch → deployment.
 
 Baseline v2 operativo y validación programada cerrada; no hace falta otra
 migración ni un collector manual de validación. El snapshot actual incorpora
-además una alta automática posterior; no debe confundirse con los conteos
-históricos del run que cierra D3. La presentación enriquecida sigue pendiente.
+además altas automáticas posteriores; no deben confundirse con los conteos
+históricos del run que cierra D3. En ese momento la presentación enriquecida
+seguía pendiente; quedó completada en 10B-E.
 
-## Siguiente fase de producto
+### 10B-E — BDNS HUMAN READABILITY — cerrado
 
-Siguiente bloque funcional: **10B-E — BDNS HUMAN READABILITY**.
-ViewModels, presentación y frontend enriquecidos todavía no implementados.
+Milestone: **`BDNS_HUMAN_READABILITY_VALIDATED_AND_PUBLISHED`**.
+E1 auditó la superficie frontend; E2 incorporó la proyección BDNS tipada; E3
+el ViewModel determinista; E4 la ficha legible; E5 las cards y la búsqueda
+Pagefind; y E6 validó, publicó y comprobó el resultado en producción.
+
+La población actual expone en las fichas presupuesto de convocatoria, tipo,
+instrumentos, finalidad, destinatarios elegibles, sectores, ámbito BDNS,
+recepción, solicitud, bases, metadata documental, título cooficial y
+jerarquía del organismo cuando existen; la sede electrónica se presenta como
+texto, no como enlace. Las cards muestran tipo y presupuesto;
+Pagefind indexa el contenido humano visible aprobado y los resultados añaden
+ese contexto compacto. BOE conserva su superficie anterior; BOP sigue sin
+Records públicos.
+
+Publicación funcional: `fa2c71e77780cb007cb413f7cea8089d7edb53a1`
+(`feat: add BDNS human-readable records`), desplegada por Pages en el run
+`37572598073` con resultado `success`. El smoke de producción cubrió portada,
+fuentes BDNS/BOE/BOP, búsqueda y fichas BDNS/BOE.
+
+Siguen deliberadamente diferidos: estados abierto/cerrado, inferencia de
+moneda, semántica de extractos, enlaces para locators de bases, descarga de
+documentos, filtros/facetas, resúmenes generativos y mapas/exploración
+territorial avanzada. No son bloqueantes para el cierre de 10B-E.
+
+## Siguiente dirección de producto
+
+Dirección futura, no fase activa: **InfoCs — PUBLIC DATA EXPLORATION LAYER**,
+con posibles líneas `Explore Castellón`, `What Changed`, `Territorial History`
+y `Explain This Data`. Human Readability queda como infraestructura
+habilitadora; no hay implementación de esas líneas en 10B-E.
 
 **Phase 09D — Public Product Surfaces complete. Phase 09E — GitHub Pages deployment complete.**
 El portal estático se despliega con GitHub Actions y el dominio personalizado
@@ -120,7 +149,7 @@ no una beta pública. El portal estático carga
 Records/Events canónicos y ofrece portada, fichas de registro, índice y detalle
 de fuentes, cambios, metodología y 404 con el sistema visual aprobado. Usa
 JavaScript mínimo para el tema oscuro/claro y la búsqueda estática. Phase 10A
-implementa búsqueda textual con Pagefind; siguen pendientes los filtros,
+implementa búsqueda textual con Pagefind; continúan pendientes los filtros,
 facetas y refinamientos de orden de Phase 10B, el estado multi-source y los
 datasets/exports. Phase 10 y Phase 09 no están completas. El
 `IMPLEMENTATION_PLAN.md` es la hoja de ruta canónica; este documento es la
@@ -147,5 +176,5 @@ operación/publicación que corresponda:
   resolver la licencia del código/documentación del proyecto (`pyproject.toml`
   conserva `license = TBD`).
 
-**Estado de avance: `PHASE_09E_CUSTOM_DOMAIN_ACTIVE`; `PHASE_10A_STATIC_SEARCH_COMPLETE`; `BDNS_FIRST_SCHEDULED_V2_RUN_VALIDATED`.** Esto no implica
+**Estado de avance: `PHASE_09E_CUSTOM_DOMAIN_ACTIVE`; `PHASE_10A_STATIC_SEARCH_COMPLETE`; `BDNS_FIRST_SCHEDULED_V2_RUN_VALIDATED`; `BDNS_HUMAN_READABILITY_VALIDATED_AND_PUBLISHED`.** Esto no implica
 que las deudas anteriores estén cerradas ni habilita una beta pública.
