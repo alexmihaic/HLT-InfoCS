@@ -24,9 +24,9 @@ from infocs.fetch.bdns.publication import (
 )
 from infocs.fetch.bdns.transport import BDNSTransport
 from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
-from infocs.fetch.bdns.enrichment import BDNSEnrichmentError, normalize_bdns_enriched
+from infocs.fetch.bdns.enrichment import BDNSEnrichmentError, normalize_bdns_enriched, project_bdns_electronic_office_url
 from infocs.fetch.bdns.diagnostics import (
-    BDNS_ENRICHMENT_REASONS, enrichment_url_field_class, safe_item_field_class,
+    BDNS_ENRICHMENT_REASONS, BDNS_WARNING_CODES, enrichment_url_field_class, safe_item_field_class,
 )
 from infocs.finalize import finalize_record
 from infocs.models import DataValidationError, Record
@@ -110,10 +110,17 @@ class BDNSIngestionResult:
     content_hash: str | None = None
     safe_reason: str | None = None
     safe_field_class: str | None = None
+    safe_warning_codes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.safe_warning_codes, tuple) or any(
+            not isinstance(code, str) or code not in BDNS_WARNING_CODES for code in self.safe_warning_codes
+        ):
+            raise ValueError("invalid_bdns_warning_codes")
 
     def to_dict(self) -> dict[str, object]:
         """Resumen sin códigos BDNS, títulos, autoridades, URLs ni payloads."""
-        return {
+        result = {
             "status": self.status.value,
             "metrics": self.metrics.to_dict(),
             "request_count": self.request_count,
@@ -125,6 +132,9 @@ class BDNSIngestionResult:
             "safe_reason": self.safe_reason,
             "safe_field_class": safe_item_field_class(self.safe_field_class) if self.safe_field_class is not None else None,
         }
+        if self.safe_warning_codes:
+            result["safe_warning_codes"] = list(self.safe_warning_codes)
+        return result
 
 
 def ingest_bdns(
@@ -162,6 +172,11 @@ def ingest_bdns(
     requests = 1
     normalization_reason = None
     normalization_field_class = None
+    warning_codes: list[str] = []
+
+    def _result(*args, **kwargs) -> BDNSIngestionResult:
+        return _make_result(*args, safe_warning_codes=tuple(warning_codes), **kwargs)
+
     try:
         hash_version = productive_hash_version(record_store, event_store)
         if hash_version == 2 and not isinstance(event_store, EventStore):
@@ -212,6 +227,10 @@ def ingest_bdns(
             if observed_at < started_at:
                 raise ValueError("observation timestamp precedes the run start.")
             normalizer = normalize_bdns_enriched if hash_version == 2 else normalize_bdns_detail
+            if hash_version == 2:
+                _, warning = project_bdns_electronic_office_url(detail_result.payload.electronic_office)
+                if warning is not None:
+                    warning_codes.append(warning)
             normalized = normalizer(
                 summary,
                 detail_result.payload,
@@ -460,7 +479,7 @@ def _validate_aware_timestamp(value: datetime, field: str) -> None:
         raise ValueError(f"{field} debe incluir zona horaria.")
 
 
-def _result(
+def _make_result(
     status: BDNSIngestionStatus,
     counts: dict[str, int],
     requests: int,
@@ -472,6 +491,7 @@ def _result(
     content_hash: str | None = None,
     safe_reason: str | None = None,
     safe_field_class: str | None = None,
+    safe_warning_codes: tuple[str, ...] = (),
 ) -> BDNSIngestionResult:
     return BDNSIngestionResult(
         status=status,
@@ -484,4 +504,5 @@ def _result(
         content_hash=content_hash,
         safe_reason=safe_reason,
         safe_field_class=safe_field_class,
+        safe_warning_codes=safe_warning_codes,
     )

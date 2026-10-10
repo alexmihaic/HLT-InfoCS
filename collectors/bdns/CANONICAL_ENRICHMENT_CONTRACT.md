@@ -35,7 +35,7 @@ desconocidos aceptados por adelantado.
 | application? | BDNSApplicationPeriod | fechaInicio/FinSolicitud, textInicio/Fin, abierto |
 | purpose? | string | descripcionFinalidad, no objeto inventado |
 | regulatory_bases? | BDNSRegulatoryBases | descripcionBasesReguladoras/urlBasesReguladoras |
-| electronic_office_url? | HTTPS string | sedeElectronica, no ficha única inferida |
+| electronic_office_url? | HTTPS string | Proyección segura de sedeElectronica, no ficha única inferida |
 | extract_published_in_official_diary? | bool | sePublicaDiarioOficial |
 | documents | tuple[BDNSDocumentReference] | Metadata de documentos, no binarios |
 | extracts | tuple[BDNSExtractReference] | Metadata de anuncios; no fulltext |
@@ -113,6 +113,18 @@ Sede/extractos conservan HTTPS estricto. Privacy inspecciona siempre el string
 completo literal y decodificado, incluso no parseable, más componentes cuando
 parseables. Persistencia no equivale a navegación ni autorización de publicación.
 
+La sede es una proyección opcional: None se omite, HTTPS válido conserva su
+literal y cualquier string fuera de la política estricta se proyecta a None.
+No se conserva el raw rechazado. Sólo ese campo es fail-soft; no relaja
+extractos/bases ni los demás gates. `electronic_office_url` es la proyección
+literal HTTPS elegible, no todos los valores raw de `sedeElectronica`; la UI
+actual puede seguir mostrándola como texto. El aviso técnico cerrado
+`electronic_office_dropped_invalid_url` queda fuera del Record y su hash.
+
+InfoCs does not repair source locators.
+Invalid optional locator does not become a clickable URL.
+Invalid optional locator does not invalidate unrelated canonical metadata.
+
 `source_locator` es material en hash/diff; clickability no se persiste ni participa
 en hash. Se corrige el nombre anterior `official_source_url` sin alias ni migración
 ficticia: no existe baseline v2 público/CUTOVER. Se mantienen hash v2, extension 1.0
@@ -131,7 +143,10 @@ jerarquía literal, regiones, recepción, plazos fecha/texto/indicador, finalida
 bases/enlace recibido, sede/enlace recibido, indicador de diario,
 documentos (ID, textos, fechas) y metadata de extractos.
 
-URLs recibidas de bases/extractos/sede son dato fuente; document URL reconstruida
+Bases/extractos y la sede aceptada son dato fuente; la sede descartada no es
+material. Ausencia y raw inválido producen la misma proyección/hash si los demás
+datos son iguales. No migración de Records existentes, bump de extensión 1.0
+ni cambio de hash v2 por esta corrección. Document URL reconstruida
 no es nuevo estado. DatMod es señal de modificación de metadata fuente, no
 prueba de cuáles bytes/document text cambiaron. Ningún hash PDF inventado.
 

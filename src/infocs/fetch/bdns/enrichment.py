@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 BDNS_ENRICHED_NORMALIZER_VERSION = "2.0.0"
 BDNS_ENRICHED_EVENT_POLICY_ID = "bdns.enriched-metadata-publication.v2"
 MAX_BDNS_URL_LENGTH = MAX_BDNS_SOURCE_LOCATOR_LENGTH
+BDNS_ELECTRONIC_OFFICE_DROPPED = "electronic_office_dropped_invalid_url"
 
 
 class BDNSEnrichmentError(ValueError):
@@ -36,6 +37,13 @@ class BDNSEnrichmentError(ValueError):
 def valid_bdns_supplied_url(value: str) -> bool:
     """URL suministrada por BDNS, NO certificación institucional ni petición."""
     return _valid_bdns_url(value, schemes=("https",))
+
+
+def project_bdns_electronic_office_url(value: str | None) -> tuple[str | None, str | None]:
+    """Optional safe projection; no repair, raw persistence or gate bypass."""
+    if value is None or valid_bdns_supplied_url(value):
+        return value, None
+    return None, BDNS_ELECTRONIC_OFFICE_DROPPED
 
 
 def clickable_bdns_regulatory_bases_url(source_locator: str) -> str | None:
@@ -139,7 +147,7 @@ def build_bdns_source_data(detail: BDNSConvocatoriaDetail) -> SourceData:
             sectors=_classifications(detail.sectors),
             impact_regions=tuple(item.description for item in detail.regions),
             received_date=detail.fecha_recepcion, application=application, purpose=detail.purpose,
-            regulatory_bases=bases, electronic_office_url=_url(detail.electronic_office),
+            regulatory_bases=bases, electronic_office_url=project_bdns_electronic_office_url(detail.electronic_office)[0],
             extract_published_in_official_diary=detail.extract_published_in_official_diary,
             documents=documents, extracts=extracts,
         )

@@ -86,6 +86,33 @@ diagnostics on success. The Step Summary prints only this validated safe
 projection, never raw stdout/stderr. No change to gates, retries, checkpoint,
 staging, publication-before-propagation, or Record/Event persistence semantics.
 
+### Non-error electronic office diagnostics
+
+An invalid optional electronic office is projected to None, never repaired.
+Ingest carries allowlisted `safe_warning_codes`; `BDNSRunnerResult` exposes
+optional `safe_diagnostics` with the only key
+`electronic_office_dropped_invalid_url` and a non-negative integer count.
+The producer omits zero counts. Workflow validation rejects arbitrary keys,
+booleans, strings, negative counts and payloads. Step Summary may display the
+validated count, never an item identity or source value.
+
+Success may contain diagnostics while errors remains zero. These counters
+are outside RunMetrics/Manifest/Health; no gate, checkpoint, exit or staging
+semantics change. Success still omits failure details. Real failures keep
+their primary/reason/position; dropped offices do not contaminate the family
+of blocking URL errors.
+
+For `item_ingestion_failure`, `_RunFault.error_already_counted` explicitly marks
+an error already merged from ingestion metrics. The handler adds no second
+error in that case; a source failure with zero internal errors still adds one.
+Multiple internal errors are preserved without clamping. Other fault branches
+and runner states retain their existing accounting. Historical Manifests,
+including the original errors=2, are never rewritten.
+
+InfoCs does not repair source locators.
+Invalid optional locator does not become a clickable URL.
+Invalid optional locator does not invalidate unrelated canonical metadata.
+
 The workflow captures both the process exit code and the runner's stdout
 JSON as machine-readable values. It must branch on the JSON `status` and exit
 code, never parse human-readable console text. A `partial_success` run has

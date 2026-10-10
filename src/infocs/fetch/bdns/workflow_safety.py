@@ -15,7 +15,8 @@ from typing import Any, Iterable, Mapping
 from infocs.diff.core import content_hash
 from infocs.events import Event, EventStore
 from infocs.fetch.bdns.ingest import BDNS_ATTRIBUTION_PATH, _attribution_preflight
-from infocs.fetch.bdns.diagnostics import BDNS_ITEM_DETAIL_REASONS, BDNS_SAFE_FIELD_CLASSES
+from infocs.fetch.bdns.diagnostics import BDNS_ITEM_DETAIL_REASONS, BDNS_SAFE_FIELD_CLASSES, BDNS_WARNING_CODES
+from infocs.fetch.bdns.enrichment import BDNS_ELECTRONIC_OFFICE_DROPPED
 from infocs.fetch.bdns.runner import (
     BDNS_DEFAULT_OVERLAP_DAYS,
     BDNS_INCREMENTAL_SCOPE_TYPE,
@@ -166,7 +167,7 @@ def validate_runner_result(stdout_text: str, stderr_text: str, exit_code: int) -
         raise WorkflowSafetyError("runner_result_not_object")
     required = {"run_id", "source_id", "status", "error_code"}
     diagnostic_keys = {"safe_detail_reason", "failure_position", "safe_field_class"}
-    optional = {"metrics", "request_count", "http_statuses"} | diagnostic_keys
+    optional = {"metrics", "request_count", "http_statuses", "safe_diagnostics"} | diagnostic_keys
     if not required.issubset(result) or set(result) - required - optional:
         raise WorkflowSafetyError("runner_result_shape_invalid")
     if result.get("source_id") != "bdns" or not isinstance(result.get("run_id"), str) or not _RUN_ID_RE.fullmatch(result["run_id"]):
@@ -195,6 +196,11 @@ def validate_runner_result(stdout_text: str, stderr_text: str, exit_code: int) -
             raise WorkflowSafetyError("runner_safe_field_class_invalid")
         if isinstance(position, bool) or not isinstance(position, int) or position < 1:
             raise WorkflowSafetyError("runner_failure_position_invalid")
+    if "safe_diagnostics" in result:
+        diagnostics = result["safe_diagnostics"]
+        if (not isinstance(diagnostics, dict) or set(diagnostics) - BDNS_WARNING_CODES
+            or any(type(count) is not int or count < 0 for count in diagnostics.values())):
+            raise WorkflowSafetyError("runner_safe_diagnostics_invalid")
     if "metrics" in result:
         metrics = result["metrics"]
         if not isinstance(metrics, dict) or any(
@@ -232,6 +238,9 @@ def write_runner_summary(path: str | Path, result: Mapping[str, Any], exit_code:
             f"Failure position: {safe['failure_position']}",
             f"Safe field class: `{safe['safe_field_class']}`",
         ])
+    dropped = safe.get("safe_diagnostics", {}).get(BDNS_ELECTRONIC_OFFICE_DROPPED, 0)
+    if dropped:
+        lines.append(f"electronic_office descartado por no cumplir el contrato de URL: {dropped}")
     with Path(path).open("a", encoding="utf-8", newline="\n") as summary:
         summary.write("\n".join(lines) + "\n")
 

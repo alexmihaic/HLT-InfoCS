@@ -19,6 +19,7 @@ from infocs.fetch.bdns.enrichment import (
     BDNSEnrichmentError, build_bdns_source_data, normalize_bdns_enriched,
     prepare_bdns_enriched_record, valid_bdns_supplied_url,
     valid_bdns_regulatory_bases_source_locator, clickable_bdns_regulatory_bases_url,
+    project_bdns_electronic_office_url, BDNS_ELECTRONIC_OFFICE_DROPPED,
 )
 from infocs.fetch.bdns.models import BDNSCodeLabel, BDNSRegion
 from infocs.fetch.bdns.publication import (
@@ -150,6 +151,11 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
                       "https://example.invalid/with space", "https://example.invalid/\n",
                       "https://example.invalid/\\path", "https://example.invalid/" + "a" * 2048):
             for field in ("regulatory_bases_url", "electronic_office", "extract"):
+                if field == "electronic_office":
+                    self.assertEqual(project_bdns_electronic_office_url(value), (None, BDNS_ELECTRONIC_OFFICE_DROPPED))
+                    self.assertIsNone(build_bdns_source_data(replace(self.detail, electronic_office=value)).bdns.electronic_office_url)
+                    self.assertFalse(valid_bdns_supplied_url(value))
+                    continue
                 if field == "regulatory_bases_url" and valid_bdns_regulatory_bases_source_locator(value):
                     self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.source_locator, value)
                     self.assertIsNone(clickable_bdns_regulatory_bases_url(value))
@@ -163,6 +169,46 @@ class BDNSEnrichmentMappingTests(unittest.TestCase):
         value = "https://sede.example.invalid:443/BASES?x=1&y=2#section"
         self.assertTrue(valid_bdns_supplied_url(value))
         self.assertEqual(build_bdns_source_data(replace(self.detail, regulatory_bases_url=value)).bdns.regulatory_bases.source_locator, value)
+
+    def test_electronic_office_projection_preserves_https_and_none_without_warning(self):
+        value = "https://sede.example.invalid:443/CASE?x=%41#section"
+        self.assertEqual(project_bdns_electronic_office_url(None), (None, None))
+        projected, warning = project_bdns_electronic_office_url(value)
+        self.assertIs(projected, value)
+        self.assertIsNone(warning)
+        self.assertEqual(build_bdns_source_data(replace(self.detail, electronic_office=value)).bdns.electronic_office_url, value)
+
+    def test_electronic_office_drop_preserves_other_data_and_all_publication_gates(self):
+        baseline = build_bdns_source_data(replace(self.detail, electronic_office=None)).to_dict()
+        for value in ("sede.example.invalid/path", "http://sede.example.invalid/path",
+                      "https://sede.example.invalid/with space", "https://u:p@sede.example.invalid/", "https://127.0.0.1/"):
+            detail = replace(self.detail, electronic_office=value)
+            self.assertEqual(build_bdns_source_data(detail).to_dict(), baseline)
+            with tempfile.TemporaryDirectory() as temporary:
+                result = prepare_bdns_enriched_record(self.summary, detail, detected_at=DETECTED,
+                    last_checked_at=CHECKED, record_store=RecordStore(Path(temporary) / "records"))
+                self.assertIsNone(result.safe_reason)
+                self.assertEqual(result.privacy.decision, PrivacyDecisionType.ALLOW)
+                self.assertEqual(result.publication.metadata_publication.decision.value, "publishable_metadata")
+                self.assertTrue(result.authorization.matches(result.record))
+                self.assertNotIn("electronic_office_url", result.record.source_data.bdns.to_dict())
+
+    def test_electronic_office_drop_does_not_bypass_other_failures(self):
+        invalid_office = replace(self.detail, electronic_office="sede.example.invalid/path")
+        for detail, reason in (
+            (replace(invalid_office, total_budget=Decimal("-1")), "enrichment_invalid_decimal"),
+            (replace(invalid_office, documents=self.detail.documents * 2), "enrichment_duplicate_document_id"),
+            (replace(invalid_office, sectors=(BDNSCodeLabel("CODE", None),)), "enrichment_missing_required_label"),
+            (replace(invalid_office, regulatory_bases_url="https://example.invalid/unsafe "), "enrichment_invalid_url"),
+            (replace(invalid_office, extracts=(replace(self.detail.extracts[0], url="http://example.invalid/"),)), "enrichment_invalid_url"),
+        ):
+            with self.assertRaisesRegex(BDNSEnrichmentError, "^" + reason + "$"):
+                build_bdns_source_data(detail)
+        with tempfile.TemporaryDirectory() as temporary:
+            result = prepare_bdns_enriched_record(self.summary, replace(invalid_office, purpose="12345678Z"),
+                detected_at=DETECTED, last_checked_at=CHECKED, record_store=RecordStore(Path(temporary) / "records"))
+            self.assertEqual(result.safe_reason, "privacy_source_data_blocked")
+            self.assertIsNone(result.authorization)
 
     def test_http_bases_source_value_preserved_but_not_clickable(self):
         value = "http://public.example.invalid/bases?reference=public#section"

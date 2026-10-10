@@ -230,6 +230,100 @@ class BDNSRunnerTests(unittest.TestCase):
         self.assertEqual(runner_exit_code(BDNSRunnerStatus.PERSISTENCE_BLOCKED), 1)
         self.assertEqual(runner_exit_code("unknown_status"), 1)
 
+    def test_v2_optional_office_diagnostic_counts_without_errors_or_health_failure(self):
+        from infocs.fetch.bdns.enrichment import BDNS_ELECTRONIC_OFFICE_DROPPED
+        first = self.page.items[0]
+        items = (first, replace(first, numero_convocatoria="900009"))
+        page = replace(self.page, items=items, page_number=0, page_size=50, offset=0,
+            total_pages=1, total_elements=2, number_of_elements=2, first=True, last=True, empty=False)
+        class MatchingTransport(FakeTransport):
+            def fetch_detail(inner, code):
+                return BDNSFetchResult(BDNSRequestStatus.SUCCESS, 200,
+                    payload=replace(self.detail, codigo_bdns=code, electronic_office="sede.example.invalid/path"))
+        with (patch("infocs.fetch.bdns.baseline.productive_hash_version", return_value=2),
+              patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2)):
+            result = self.run_runner(MatchingTransport(page, self.detail))
+        self.assertEqual(result.status, BDNSRunnerStatus.COMPLETE_SUCCESS)
+        self.assertIsNone(result.error_code)
+        self.assertEqual(result.metrics.errors, 0)
+        self.assertEqual(result.metrics.created, 2)
+        self.assertEqual(result.metrics.events_created, 2)
+        self.assertEqual(result.to_dict()["safe_diagnostics"], {BDNS_ELECTRONIC_OFFICE_DROPPED: 2})
+        self.assertNotIn("safe_detail_reason", result.to_dict())
+        self.assertNotIn("safe_diagnostics", result.manifest.to_dict())
+        self.assertEqual(result.manifest.metrics.errors, 0)
+        self.assertEqual(runner_exit_code(result.status), 0)
+        health = json.loads(self.health.read_text())
+        self.assertEqual(health["status"], "healthy")
+        self.assertEqual(health["consecutive_failures"], 0)
+
+    def test_diagnostic_does_not_double_count_actual_item_failure_or_change_position(self):
+        from infocs.fetch.bdns.enrichment import BDNS_ELECTRONIC_OFFICE_DROPPED
+        page = replace(self.page, items=(self.page.items[0],), page_number=0, page_size=50,
+            offset=0, total_pages=1, total_elements=1, number_of_elements=1, first=True, last=True, empty=False)
+        detail = replace(self.detail, electronic_office="sede.example.invalid/path",
+            regulatory_bases_url="https://example.invalid/bases ")
+        with (patch("infocs.fetch.bdns.baseline.productive_hash_version", return_value=2),
+              patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2)):
+            result = self.run_runner(FakeTransport(page, detail))
+        self.assertEqual(result.status, BDNSRunnerStatus.SOURCE_FAILURE)
+        self.assertEqual(result.error_code, "item_ingestion_failure")
+        self.assertEqual(result.safe_field_class, "regulatory_bases")
+        self.assertEqual(result.failure_position, 1)
+        self.assertEqual(result.metrics.errors, 1)
+        self.assertEqual(result.manifest.metrics.errors, 1)
+        self.assertEqual(result.to_dict()["safe_diagnostics"], {BDNS_ELECTRONIC_OFFICE_DROPPED: 1})
+        self.assertEqual(runner_exit_code(result.status), 1)
+
+    def test_item_failure_counts_internal_errors_once_and_adds_missing_error(self):
+        from infocs.fetch.bdns.ingest import BDNSIngestionResult, BDNSIngestionMetrics, BDNSIngestionStatus
+        page = replace(self.page, items=(self.page.items[0],), page_number=0, page_size=50,
+            offset=0, total_pages=1, total_elements=1, number_of_elements=1, first=True, last=True, empty=False)
+        for errors in (0, 1, 3):
+            with self.subTest(internal_errors=errors), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                failed = BDNSIngestionResult(BDNSIngestionStatus.SOURCE_FAILURE,
+                    BDNSIngestionMetrics(errors=errors), 2, safe_reason="enrichment_invalid_url", safe_field_class="extracts")
+                with patch("infocs.fetch.bdns.runner.ingest_bdns", return_value=failed):
+                    self.records, self.events = RecordStore(root / "records"), EventStore(root / "events")
+                    self.manifests, self.health = ManifestStore(root / "manifests"), root / "health.json"
+                    result = self.run_runner(FakeTransport(page, self.detail))
+                self.assertEqual(result.metrics.errors, errors or 1)
+                self.assertEqual(result.manifest.metrics.errors, errors or 1)
+                self.assertEqual(result.manifest.status, RunStatus.FAILED)
+                self.assertEqual(result.manifest.error_summary.error_code, "item_ingestion_failure")
+                self.assertEqual(result.safe_detail_reason, "enrichment_invalid_url")
+                self.assertEqual(result.failure_position, 1)
+                self.assertEqual(runner_exit_code(result.status), 1)
+
+    def test_non_item_fault_error_counts_remain_unchanged(self):
+        from infocs.fetch.bdns.ingest import BDNSIngestionResult, BDNSIngestionMetrics, BDNSIngestionStatus
+        page = replace(self.page, items=(self.page.items[0],), page_number=0, page_size=50,
+            offset=0, total_pages=1, total_elements=1, number_of_elements=1, first=True, last=True, empty=False)
+        class BrokenTransport(FakeTransport):
+            def search(inner, query):
+                if inner.status is BDNSRequestStatus.SOURCE_FAILURE:
+                    return BDNSFetchResult(BDNSRequestStatus.SOURCE_FAILURE, 503, reason="http_failure")
+                return super().search(query)
+            def fetch_detail(inner, code):
+                return BDNSFetchResult(BDNSRequestStatus.SOURCE_FAILURE, 503, reason="http_failure")
+        for status, expected_code, expected_errors in (
+            (None, "search_failure", 1), ("detail", "detail_failure", 2),
+            (BDNSIngestionStatus.TERRITORIAL_CONTRACT_DRIFT, "territorial_contract_drift", 2),
+            (BDNSIngestionStatus.PERSISTENCE_BLOCKED, "record_preflight_failed", 2)):
+            with self.subTest(code=expected_code), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                transport = BrokenTransport(page, self.detail, status=BDNSRequestStatus.SOURCE_FAILURE if status is None else BDNSRequestStatus.SUCCESS) if status in (None, "detail") else FakeTransport(page, self.detail)
+                response = BDNSIngestionResult(status or BDNSIngestionStatus.SOURCE_FAILURE,
+                    BDNSIngestionMetrics(errors=1), 2, safe_reason="record_preflight_failed") if status not in (None, "detail") else None
+                with patch("infocs.fetch.bdns.runner.ingest_bdns", return_value=response):
+                    self.records, self.events = RecordStore(root / "records"), EventStore(root / "events")
+                    self.manifests, self.health = ManifestStore(root / "manifests"), root / "health.json"
+                    result = self.run_runner(transport)
+                self.assertEqual(result.error_code, expected_code)
+                self.assertEqual(result.metrics.errors, expected_errors)
+                self.assertEqual(result.manifest.metrics.errors, expected_errors)
+
     def test_invalid_cli_invocation_uses_terminal_exit_code_one(self) -> None:
         with redirect_stderr(StringIO()), self.assertRaises(SystemExit) as raised:
             main([])

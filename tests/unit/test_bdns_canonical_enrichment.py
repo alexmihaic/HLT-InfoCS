@@ -49,6 +49,32 @@ def candidate(data=None):
 
 
 class BDNSCanonicalEnrichmentTests(unittest.TestCase):
+    def test_dropped_electronic_office_is_identical_to_source_absence_in_hash_and_payload(self):
+        from infocs.fetch.bdns.enrichment import normalize_bdns_enriched
+        from tests.unit.test_bdns_normalize import source_models, DETECTED, CHECKED
+        summary, detail = source_models()
+        records = [finalize_record(normalize_bdns_enriched(summary, replace(detail, electronic_office=value),
+            detected_at=DETECTED, last_checked_at=CHECKED).candidate)
+            for value in (None, "sede.example.invalid/path", "http://sede.example.invalid/")]
+        for record in records:
+            self.assertEqual(record.canonical_json(), records[0].canonical_json())
+            self.assertEqual(semantic_payload(record.to_dict()), semantic_payload(records[0].to_dict()))
+            self.assertEqual(record.technical.content_hash, records[0].technical.content_hash)
+            self.assertEqual(record.technical.content_hash_version, 2)
+            self.assertNotIn("electronic_office_url", record.source_data.bdns.to_dict())
+
+    def test_valid_office_projection_keeps_existing_style_bytes_hash_and_materiality(self):
+        from infocs.fetch.bdns.enrichment import project_bdns_electronic_office_url
+        data = enriched_data()
+        original = finalize_record(candidate(data))
+        projected, warning = project_bdns_electronic_office_url(data.electronic_office_url)
+        current = finalize_record(candidate(replace(data, electronic_office_url=projected)))
+        self.assertIsNone(warning)
+        self.assertEqual(current.canonical_json(), original.canonical_json())
+        self.assertEqual(current.technical.content_hash, original.technical.content_hash)
+        changed = finalize_record(candidate(replace(data, electronic_office_url="https://sede.example.invalid/changed")))
+        self.assertNotEqual(changed.technical.content_hash, original.technical.content_hash)
+
     def test_legacy_record_and_boe_json_remain_unchanged(self):
         legacy = finalize_record(candidate())
         self.assertNotIn("source_data", legacy.to_dict())

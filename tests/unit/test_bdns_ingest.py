@@ -322,14 +322,52 @@ class BDNSIngestionTests(unittest.TestCase):
         page, detail = fixture_models()
         self.assertEqual(enrichment_url_field_class(replace(detail,
             regulatory_bases_url="example.org/bases", electronic_office="http://example.org", extracts=())),
-            "electronic_office")
+            "other")
         self.assertEqual(enrichment_url_field_class(replace(detail,
             regulatory_bases_url="has space ", electronic_office="http://example.org", extracts=())),
-            "multiple_url_families")
+            "regulatory_bases")
         from infocs.fetch.bdns.models import BDNSExtractMetadata
         extract = BDNSExtractMetadata(None, None, None, None, None, None, "http://example.org")
         self.assertEqual(enrichment_url_field_class(replace(detail,
             regulatory_bases_url=None, electronic_office=None, extracts=(extract,))), "extracts")
+
+    def test_invalid_office_v2_ingest_succeeds_with_non_error_warning_and_event(self):
+        from infocs.fetch.bdns.enrichment import BDNS_ELECTRONIC_OFFICE_DROPPED
+        page, detail = fixture_models()
+        detail = replace(detail, electronic_office="sede.example.invalid/path")
+        events = EventStore(self.root / "events")
+        with patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2):
+            result = self.run_ingest(FakeTransport(page, (detail,)), event_store=events, max_details=1)
+        self.assertEqual(result.status, BDNSIngestionStatus.COMPLETE_SUCCESS)
+        self.assertEqual(result.metrics.errors, 0)
+        self.assertEqual(result.operation, BDNSRecordOperation.CREATE)
+        self.assertEqual(result.metrics.events_created, 1)
+        self.assertEqual(result.safe_warning_codes, (BDNS_ELECTRONIC_OFFICE_DROPPED,))
+        self.assertEqual(result.to_dict()["safe_warning_codes"], [BDNS_ELECTRONIC_OFFICE_DROPPED])
+        record = self.store.list_source("bdns")[0]
+        self.assertIsNone(record.source_data.bdns.electronic_office_url)
+        self.assertNotIn(detail.electronic_office, record.canonical_json())
+        self.assertNotIn(detail.electronic_office, json.dumps(result.to_dict()))
+        with patch("infocs.fetch.bdns.ingest.productive_hash_version", return_value=2):
+            again = self.run_ingest(FakeTransport(page, (detail,)), event_store=events, max_details=1)
+        self.assertEqual(again.operation, BDNSRecordOperation.NO_CHANGE)
+        self.assertEqual(again.metrics.events_created, 0)
+        self.assertEqual(again.metrics.errors, 0)
+        self.assertEqual(again.safe_warning_codes, (BDNS_ELECTRONIC_OFFICE_DROPPED,))
+
+    def test_warning_codes_are_closed_and_not_failure_reasons(self):
+        from infocs.fetch.bdns.ingest import BDNSIngestionResult, BDNSIngestionMetrics
+        from infocs.fetch.bdns.diagnostics import BDNS_WARNING_CODES, BDNS_ITEM_DETAIL_REASONS
+        self.assertFalse(BDNS_WARNING_CODES & BDNS_ITEM_DETAIL_REASONS)
+        self.assertNotIn("safe_warning_codes", BDNSIngestionResult(BDNSIngestionStatus.COMPLETE_SUCCESS, BDNSIngestionMetrics(), 0).to_dict())
+        from infocs.fetch.bdns.diagnostics import BDNSDiagnosticCounts
+        self.assertEqual(BDNSDiagnosticCounts().to_dict(), {})
+        for value in (-1, True, "1"):
+            with self.assertRaisesRegex(ValueError, "^invalid_bdns_diagnostic_count$"):
+                BDNSDiagnosticCounts(value)
+        with self.assertRaisesRegex(ValueError, "^invalid_bdns_warning_codes$"):
+            BDNSIngestionResult(BDNSIngestionStatus.COMPLETE_SUCCESS, BDNSIngestionMetrics(), 0,
+                safe_warning_codes=("https://example.invalid/private",))
 
     def test_one_record_limit_is_enforced_and_region_filter_is_fixed(self) -> None:
         page, detail = fixture_models()

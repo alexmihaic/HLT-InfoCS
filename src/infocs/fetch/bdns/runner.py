@@ -31,7 +31,8 @@ from infocs.fetch.bdns.models import (
     BDNSSearchQuery,
 )
 from infocs.fetch.bdns.transport import BDNSTransport
-from infocs.fetch.bdns.diagnostics import safe_item_detail_reason, safe_item_field_class
+from infocs.fetch.bdns.diagnostics import BDNSDiagnosticCounts, safe_item_detail_reason, safe_item_field_class
+from infocs.fetch.bdns.enrichment import BDNS_ELECTRONIC_OFFICE_DROPPED
 from infocs.manifests import (
     CollectionMode,
     ErrorSummary,
@@ -112,6 +113,11 @@ class BDNSRunnerResult:
     safe_detail_reason: str | None = None
     failure_position: int | None = None
     safe_field_class: str | None = None
+    safe_diagnostics: BDNSDiagnosticCounts = BDNSDiagnosticCounts()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.safe_diagnostics, BDNSDiagnosticCounts):
+            raise ValueError("invalid_bdns_diagnostics")
 
     def to_dict(self) -> dict[str, object]:
         result = {
@@ -129,6 +135,8 @@ class BDNSRunnerResult:
                 failure_position=self.failure_position,
                 safe_field_class=safe_item_field_class(self.safe_field_class),
             )
+        if self.safe_diagnostics.to_dict():
+            result["safe_diagnostics"] = self.safe_diagnostics.to_dict()
         return result
 
 
@@ -292,6 +300,7 @@ def run_bdns_productive_collection(
     safe_detail_reason = None
     failure_position = None
     safe_field_class = None
+    dropped_electronic_offices = 0
     try:
         gate.validate()
         from infocs.fetch.bdns.baseline import BDNSBaselineError, productive_hash_version
@@ -393,6 +402,7 @@ def run_bdns_productive_collection(
                         attribution_path=BDNS_ATTRIBUTION_PATH,
                     )
                     _merge_ingestion_metrics(counts, item_result.metrics)
+                    dropped_electronic_offices += item_result.safe_warning_codes.count(BDNS_ELECTRONIC_OFFICE_DROPPED)
                     if item_result.status is BDNSIngestionStatus.TERRITORIAL_CONTRACT_DRIFT:
                         raise _RunFault(BDNSRunnerStatus.TERRITORIAL_CONTRACT_DRIFT, "territorial_contract_drift")
                     if item_result.status is BDNSIngestionStatus.PERSISTENCE_BLOCKED:
@@ -403,6 +413,7 @@ def run_bdns_productive_collection(
                             safe_detail_reason=safe_item_detail_reason(item_result.safe_reason),
                             failure_position=details_attempted,
                             safe_field_class=safe_item_field_class(item_result.safe_field_class),
+                            error_already_counted=item_result.metrics.errors > 0,
                         )
 
             if total_pages > max_pages or total_elements > max_details:
@@ -434,7 +445,8 @@ def run_bdns_productive_collection(
         safe_detail_reason = fault.safe_detail_reason
         failure_position = fault.failure_position
         safe_field_class = fault.safe_field_class
-        counts["errors"] += 1
+        if not fault.error_already_counted:
+            counts["errors"] += 1
     except Exception:
         result_status = BDNSRunnerStatus.SOURCE_FAILURE
         error_code = "runner_failure"
@@ -487,17 +499,20 @@ def run_bdns_productive_collection(
         safe_detail_reason=safe_detail_reason,
         failure_position=failure_position,
         safe_field_class=safe_field_class,
+        safe_diagnostics=BDNSDiagnosticCounts(dropped_electronic_offices),
     )
 
 
 class _RunFault(RuntimeError):
     def __init__(self, status: str, code: str, *, safe_detail_reason: str | None = None,
-                 failure_position: int | None = None, safe_field_class: str | None = None) -> None:
+                 failure_position: int | None = None, safe_field_class: str | None = None,
+                 error_already_counted: bool = False) -> None:
         self.status = status
         self.code = code
         self.safe_detail_reason = safe_detail_reason
         self.failure_position = failure_position
         self.safe_field_class = safe_field_class
+        self.error_already_counted = error_already_counted
 
 
 class _RunnerArgumentParser(argparse.ArgumentParser):

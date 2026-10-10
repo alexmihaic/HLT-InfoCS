@@ -46,7 +46,7 @@ nuevo algoritmo. No se cambian hash, identity ni diff en esta fase.
 Cada elemento representable de los campos aprobados se conserva. Si falta el
 label de una clasificación, no se deduce desde su código ni se omite el elemento:
 falla todo el enriquecimiento antes de Candidate/Privacy. Igual para documento
-duplicado, Decimal o metadata inválida, URL rechazada y extracto que sólo conserva
+duplicado, Decimal o metadata inválida, URL de bases/extractos rechazada y extracto que sólo conserva
 un numAnuncio excluido y no tiene metadata representable.
 
 `BDNSEnrichmentError` sólo contiene un código estático seguro. La ruta no devuelve
@@ -54,11 +54,28 @@ un candidato enriquecido incompleto. Campos deliberadamente excluidos por el
 contrato no cuentan como errores; no es un parser raw nuevo ni amplía lo que el
 parser actual conoce.
 
+Excepción acotada: la sede electrónica opcional usa
+`project_bdns_electronic_office_url`, que devuelve proyección y aviso técnico.
+None → None sin aviso; HTTPS válido → literal sin aviso; valor fuera de política
+→ None + `electronic_office_dropped_invalid_url`, sin enrichment error por sí solo.
+No se descartan otros datos ni se capturan genéricamente errores de los gates.
+
 ## 3. Política de URLs suministradas por BDNS
 
 Sede electrónica y extractos mantienen HTTPS estricto: sin userinfo, controles,
 whitespace/backslash, escapes inválidos, IP literal, host de una etiqueta,
 .local/.localhost ni DNS/IDNA/puerto inválido. Límite InfoCs 2048, no cuota SNPSAP.
+
+Para sede, el contrato estricto determina qué se proyecta, sin reparar el raw;
+la key inválida se omite al serializar. Extractos siguen fallando si no pasan.
+Una sede HTTPS que pasa sintaxis sigue bajo Privacy literal/decoded: PII o
+encoding inválido no se transforman en descarte fail-soft para eludir el gate.
+Publication ya permite sede ausente; source eligibility, autorización y
+Record/Event preflights siguen obligatorios. Versiones/schema no cambian.
+
+InfoCs does not repair source locators.
+Invalid optional locator does not become a clickable URL.
+Invalid optional locator does not invalidate unrelated canonical metadata.
 
 10B-D2.8 sustituye la excepción HTTP de D2.4 por SOURCE LOCATOR + CLICKABLE URL.
 D2.7 observó 35 HTTPS, 2 HTTP y 3 valores sin esquema entre 40 locators.
@@ -160,6 +177,12 @@ v2→v2 puede construirse con autorización válida; no se escribe ningún Event
 durante 10B-C. No primitive de migración añadida.
 
 ## 7. Códigos seguros
+
+`electronic_office_dropped_invalid_url` pertenece a una allowlist separada de
+avisos non-error. No es un `safe_reason` de fallo ni incrementa errors. Ingest
+lo transporta como `safe_warning_codes`; runner agrega su contador cerrado en
+`safe_diagnostics`. La familia de un error URL bloqueante sólo considera ahora
+bases/extractos; las clases históricas siguen admitidas en la observabilidad.
 
 | Código | Resultado |
 | --- | --- |

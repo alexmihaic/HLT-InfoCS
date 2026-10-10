@@ -155,6 +155,36 @@ class BDNSWorkflowSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(WorkflowSafetyError, "runner_result_not_json"):
             validate_runner_result("", "usage: runner --mode ...", 1)
 
+    def test_success_non_error_diagnostic_and_neutral_summary(self) -> None:
+        code = "electronic_office_dropped_invalid_url"
+        result = dict(run_id=RUN_ID, source_id="bdns", status="complete_success", error_code=None,
+            metrics={"errors": 0}, request_count=3, http_statuses=[200], safe_diagnostics={code: 2})
+        self.assertEqual(validate_runner_result(json.dumps(result), "", 0), result)
+        with tempfile.TemporaryDirectory() as directory:
+            summary = Path(directory) / "summary.md"
+            write_runner_summary(summary, result, 0)
+            text = summary.read_text(encoding="utf-8")
+            self.assertIn("electronic_office descartado por no cumplir el contrato de URL: 2", text)
+            self.assertNotIn("Failure position", text)
+            self.assertNotIn(RUN_ID, text)
+            self.assertNotIn("https://", text)
+        failure = dict(run_id=RUN_ID, source_id="bdns", status="source_failure", error_code="item_ingestion_failure",
+            safe_detail_reason="enrichment_invalid_url", safe_field_class="extracts", failure_position=2,
+            safe_diagnostics={code: 1})
+        self.assertEqual(validate_runner_result(json.dumps(failure), "", 1), failure)
+        self.assertEqual(validate_runner_result(json.dumps({**result, "safe_diagnostics": {code: 0}}), "", 0)["safe_diagnostics"], {code: 0})
+
+    def test_non_error_diagnostics_reject_arbitrary_keys_counts_and_payload(self) -> None:
+        code = "electronic_office_dropped_invalid_url"
+        result = dict(run_id=RUN_ID, source_id="bdns", status="complete_success", error_code=None,
+            metrics={"errors": 0}, request_count=3, http_statuses=[200])
+        invalid = ({"unknown_source_value": 1}, {code: -1}, {code: True}, {code: 1.5},
+            {code: "https://example.invalid/private"}, {code: {"raw": "private"}}, [code], None,
+            {code: 1, "record_id": 1})
+        for value in invalid:
+            with self.subTest(shape=type(value).__name__), self.assertRaisesRegex(WorkflowSafetyError, "runner_safe_diagnostics_invalid"):
+                validate_runner_result(json.dumps({**result, "safe_diagnostics": value}), "", 0)
+
     def test_only_canonical_bdns_json_paths_and_non_deletions_are_allowed(self) -> None:
         allowed = (
             ("A", "data/records/bdns/r-example.json"),
@@ -246,6 +276,9 @@ class BDNSWorkflowSafetyTests(unittest.TestCase):
             entries = tuple(("A", path) for path in paths)
             self.assertEqual(result.status, "complete_success")
             self.assertEqual(len(validate_generated_artifacts(root, entries, result.to_dict())), 4)
+            with_diagnostic = {**result.to_dict(), "safe_diagnostics": {"electronic_office_dropped_invalid_url": 1}}
+            validated = validate_runner_result(json.dumps(with_diagnostic), "", 0)
+            self.assertEqual(len(validate_generated_artifacts(root, entries, validated)), 4)
 
 
 if __name__ == "__main__":  # pragma: no cover
