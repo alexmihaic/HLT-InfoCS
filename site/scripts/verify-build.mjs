@@ -1,7 +1,8 @@
 // Verifies the built static portal in site/dist against the canonical public
 // data in ../data. No dependencies, no network. Run after `npm run build`:
 //   node scripts/verify-build.mjs
-// Diagnostics name pages and rules only; they never print record payloads.
+// Diagnostics are public in CI: they name rules and use opaque labels
+// (source + ordinal) instead of official IDs, slugs or paths that encode them.
 import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -36,6 +37,15 @@ const page = (...parts) => join(DIST, ...parts, 'index.html');
 const readPage = async (path) => (existsSync(path) ? readFile(path, 'utf8') : undefined);
 const encodeRecordId = (id) => `r-${Buffer.from(id, 'utf8').toString('hex')}`;
 const show = (path) => relative(DIST, path).split(sep).join('/');
+// Opaque labels, filled once records and organism slugs are known.
+const recordLabels = new Map(); // record slug -> records/<source>#<ordinal>
+const organismLabels = new Map(); // organism slug -> organismos#<ordinal>
+const pageLabel = (path) => {
+  const parts = show(path).split('/');
+  if (parts[0] === 'registro' && parts.length > 1) return recordLabels.get(parts[1]) ?? 'registro/(sin Record)';
+  if (parts[0] === 'organismos' && parts.length > 2) return organismLabels.get(parts[1]) ?? 'organismos/(desconocido)';
+  return parts.join('/');
+};
 const count = (text, pattern) => (text.match(pattern) ?? []).length;
 const decode = (text) => text.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
   .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
@@ -61,10 +71,18 @@ for (const path of await files(join(DATA, 'records'), '.json')) {
 }
 
 // --- 1. Record pages reference real Records; publishing is all-or-nothing per source
+{
+  const perSource = new Map();
+  for (const record of records) {
+    const source = /^[a-z0-9_-]{1,64}$/.test(record.source?.id ?? '') ? record.source.id : '?';
+    perSource.set(source, (perSource.get(source) ?? 0) + 1);
+    recordLabels.set(encodeRecordId(record.id), `records/${source}#${perSource.get(source)}`);
+  }
+}
 const recordPages = (await files(join(DIST, 'registro'), 'index.html'));
 const pageSlugs = new Set(recordPages.map((path) => relative(join(DIST, 'registro'), dirname(path)).split(sep).join('/')));
 const slugToRecord = new Map(records.map((record) => [encodeRecordId(record.id), record]));
-for (const slug of pageSlugs) if (!slugToRecord.has(slug)) fail('ficha sin Record canónico', `registro/${slug}/`);
+for (const slug of pageSlugs) if (!slugToRecord.has(slug)) fail('ficha sin Record canónico');
 const publishedSources = new Set([...pageSlugs].map((slug) => slugToRecord.get(slug)?.source?.id).filter(Boolean));
 for (const record of records) {
   if (publishedSources.has(record.source.id) && !pageSlugs.has(encodeRecordId(record.id))) {
@@ -117,6 +135,7 @@ if (!organismIndex) fail('falta /organismos/');
 else {
   if (!visibleText(organismIndex).includes('Administración convocante (según BDNS)')) fail('/organismos/ no etiqueta el campo como dato BDNS');
   const slugs = [...organismIndex.matchAll(/href="\/organismos\/([^"/]+)\/"/g)].map((match) => match[1]);
+  slugs.forEach((slug, index) => { if (!organismLabels.has(slug)) organismLabels.set(slug, `organismos#${index + 1}`); });
   if (new Set(slugs).size !== slugs.length) fail('slugs de organismo duplicados');
   const expected = new Map();
   for (const record of publishedRecords) {
@@ -127,14 +146,14 @@ else {
   let grouped = 0;
   for (const slug of slugs) {
     const html = await readPage(page('organismos', slug));
-    if (!html) { fail('página de organismo inexistente', slug); continue; }
+    if (!html) { fail('página de organismo inexistente', organismLabels.get(slug)); continue; }
     const links = [...html.matchAll(/<h3><a href="\/registro\/([^"/]+)\/">/g)].map((match) => match[1]);
-    if (links.length === 0) fail('organismo sin registros', slug);
+    if (links.length === 0) fail('organismo sin registros', organismLabels.get(slug));
     for (const recordSlug of links) {
       const record = slugToRecord.get(recordSlug);
-      if (!record || !pageSlugs.has(recordSlug)) fail('organismo enlaza un registro inexistente', slug);
-      else if (record.source.id !== 'bdns') fail('organismo agrupa un registro no BDNS', slug);
-      else if (authoritySlugOf(record) !== slug) fail('registro agrupado bajo un organismo distinto de su nivel2', slug);
+      if (!record || !pageSlugs.has(recordSlug)) fail('organismo enlaza un registro inexistente', organismLabels.get(slug));
+      else if (record.source.id !== 'bdns') fail('organismo agrupa un registro no BDNS', organismLabels.get(slug));
+      else if (authoritySlugOf(record) !== slug) fail('registro agrupado bajo un organismo distinto de su nivel2', organismLabels.get(slug));
     }
     grouped += links.length;
   }
@@ -146,7 +165,7 @@ else {
 for (const record of publishedRecords) {
   const html = await readPage(page('registro', encodeRecordId(record.id)));
   if (!html) continue;
-  const where = `${record.source.id}:${record.source.official_id ?? '?'}`;
+  const where = recordLabels.get(encodeRecordId(record.id));
   if (record.source.id === 'boe') {
     if (html.includes('<dt>Nivel administrativo</dt>')) fail('ficha BOE muestra «Nivel administrativo»', where);
     if (html.includes('<dt>Organismo</dt>')) fail('ficha BOE presenta la sección del sumario como «Organismo»', where);
@@ -182,15 +201,15 @@ for (const path of await files(DIST, '.html')) {
     const value = decode(match[2]).trim();
     if (value === '' || value.startsWith('#')) continue;
     if (HAS_SCHEME.test(value)) {
-      if (!SAFE_EXTERNAL.test(value)) fail(`protocolo no permitido en ${match[1]}`, `${show(path)}: ${value.split(':')[0]}:`);
+      if (!SAFE_EXTERNAL.test(value)) fail(`protocolo no permitido en ${match[1]}`, `${pageLabel(path)}: ${/^[a-z][a-z0-9+.-]{0,15}$/i.test(value.split(':')[0]) ? value.split(':')[0] : '?'}:`);
       continue;
     }
-    if (value.startsWith('//')) { fail('URL relativa al protocolo', show(path)); continue; }
+    if (value.startsWith('//')) { fail('URL relativa al protocolo', pageLabel(path)); continue; }
     const clean = value.split(/[?#]/)[0];
     const target = clean.startsWith('/') ? join(DIST, clean) : resolve(dirname(path), clean);
-    if (!target.startsWith(DIST)) { fail('enlace interno fuera del sitio', show(path)); continue; }
+    if (!target.startsWith(DIST)) { fail('enlace interno fuera del sitio', pageLabel(path)); continue; }
     const candidates = clean.endsWith('/') ? [join(target, 'index.html')] : [target, `${target}.html`, join(target, 'index.html')];
-    if (!candidates.some((candidate) => existsSync(candidate))) fail('enlace interno roto', `${show(path)} → ${clean}`);
+    if (!candidates.some((candidate) => existsSync(candidate))) fail('enlace interno roto', `${pageLabel(path)} → ${pageLabel(target)}`);
   }
 }
 

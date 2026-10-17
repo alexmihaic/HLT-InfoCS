@@ -2,18 +2,21 @@
 
 Reutiliza los contratos existentes (JSON Schema en ``schemas/`` y los stores y
 modelos de ``infocs``) para que la validación no diverja de la escritura. Es de
-sólo lectura: no escribe, no consulta la red y sus diagnósticos sólo incluyen
-rutas relativas y tipos de error, nunca payloads.
+sólo lectura y no consulta la red. Los diagnósticos son públicos en CI: nunca
+incluyen payloads, identificadores oficiales ni rutas que los contengan. Cada
+fallo se identifica por tipo de artefacto, fuente y ordinal del archivo dentro
+de esa fuente (orden lexicográfico de rutas), más un código de causa.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path, PurePosixPath
+from pathlib import Path
+import re
 import sys
 
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 
 from infocs.diff.core import content_hash
 from infocs.events import EventStore
@@ -36,6 +39,49 @@ class CanonicalDataError(ValueError):
     """Un artefacto canónico no cumple su contrato."""
 
 
+_SAFE_SEGMENT = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}\Z")
+_SAFE_FIELD = re.compile(r"[a-z_][a-z0-9_]{0,63}\Z")
+
+
+def _safe_segment(value: str) -> str:
+    return value if _SAFE_SEGMENT.match(value) else "?"
+
+
+def artifact_label(data: Path, path: Path, ordinals: dict[Path, int]) -> str:
+    """Etiqueta pública sin identificadores: ``tipo/fuente#ordinal``."""
+    parts = path.relative_to(data).parts
+    kind = _safe_segment(parts[0]) if parts else "?"
+    if kind == "health":
+        source = _safe_segment(path.stem)
+    else:
+        source = _safe_segment(parts[1]) if len(parts) > 2 or (len(parts) == 2 and path.is_dir()) else "-"
+    ordinal = ordinals.get(path)
+    return f"{kind}/{source}" + (f"#{ordinal}" if ordinal is not None else "")
+
+
+def failure_reason(error: Exception) -> str:
+    """Código de causa sin valores de datos."""
+    if isinstance(error, CanonicalDataError):
+        return f"CanonicalDataError({error})"
+    if isinstance(error, ValidationError):
+        field = ".".join(
+            str(part) if isinstance(part, int) or _SAFE_FIELD.match(str(part)) else "*"
+            for part in error.absolute_path
+        ) or "raíz"
+        return f"SchemaValidationError({error.validator}@{field})"
+    return type(error).__name__
+
+
+def _ordinals(files: list[Path], data: Path) -> dict[Path, int]:
+    counters: dict[tuple[str, ...], int] = {}
+    result: dict[Path, int] = {}
+    for path in files:
+        group = path.relative_to(data).parts[:2]
+        counters[group] = counters.get(group, 0) + 1
+        result[path] = counters[group]
+    return result
+
+
 def _json_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
         return []
@@ -54,9 +100,12 @@ def validate_canonical_data(root: Path) -> dict[str, int]:
     counts = {kind: 0 for kind in _SCHEMAS}
     record_hashes: dict[str, str] = {}
 
+    ordinals: dict[Path, int] = {}
+    for kind in _SCHEMAS:
+        ordinals.update(_ordinals(_json_files(data / kind), data))
+
     def fail(path: Path, error: Exception) -> None:
-        relative = PurePosixPath(path.relative_to(root).as_posix())
-        errors.append(f"{relative}: {type(error).__name__}")
+        errors.append(f"{artifact_label(data, path, ordinals)}: {failure_reason(error)}")
 
     record_store = RecordStore(data / "records")
     record_schema = _validator(root, "records")
