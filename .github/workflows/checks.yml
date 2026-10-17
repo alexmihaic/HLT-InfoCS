@@ -1,0 +1,67 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python tests and canonical data
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prepare Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install InfoCs runtime
+        run: python -m pip install -e .
+
+      - name: Run unit test suite
+        run: python -m unittest discover -s tests
+
+      - name: Validate canonical public data
+        run: python scripts/validate_canonical_data.py
+
+  portal:
+    name: Portal check, build and artifact verification
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+        working-directory: site
+
+      - name: Run portal unit tests
+        run: node --test scripts/portal.test.mjs
+        working-directory: site
+
+      - name: Check Astro project
+        run: npm run check
+        working-directory: site
+
+      - name: Build static portal
+        run: npm run build
+        working-directory: site
+
+      - name: Verify built portal
+        run: node scripts/verify-build.mjs
+        working-directory: site

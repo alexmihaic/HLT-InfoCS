@@ -10,7 +10,7 @@ import TechnicalDetails from '../../components/TechnicalDetails.astro';
 import { encodeRecordId, loadPortalData } from '../../lib/data';
 import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
-import { geographyLabels, primaryDate, timelineItems } from '../../lib/presentation/recordView';
+import { authorityPresentation, geographyLabels, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
@@ -31,6 +31,7 @@ const geographies = geographyLabels(record);
 const date = primaryDate(record);
 const timeline = timelineItems(events);
 const recordPath = `/registro/${encodeRecordId(record.id)}/`;
+const authority = authorityPresentation(record);
 ---
 
 <BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
@@ -39,7 +40,7 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
       <span data-pagefind-meta="kind">record</span>
       <span data-pagefind-meta="source">{sourceLabel(record.sourceId, [source])}</span>
       <span data-pagefind-meta="category">{categoryLabel(record.category)}</span>
-      {record.authority && <span data-pagefind-meta="authority">{record.authority.name}</span>}
+      {authority && authority.label === 'Organismo' && <span data-pagefind-meta="authority">{authority.value}</span>}
       <span data-pagefind-meta="primary_date_iso">{date.value}</span>
       <span data-pagefind-meta="primary_date_label">{date.label}</span>
       <span data-pagefind-meta="primary_date_value">{date.display}</span>
@@ -59,13 +60,13 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
       <RecordMeta source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} />
       <h1>{record.title}</h1>
       {bdnsView?.officialTitleCoofficial && <p class="detail-authority"><span>{bdnsView.officialTitleCoofficial.label}: </span>{bdnsView.officialTitleCoofficial.value}</p>}
-      {record.authority && <p class="detail-authority">{record.authority.name}</p>}
+      {authority && <p class="detail-authority">{authority.label === 'Organismo' ? authority.value : `${authority.label}: ${authority.value}`}</p>}
     </header>
 
     <div class="detail-columns">
       <OfficialData>
         <dl class="detail-grid">
-          {record.authority && <div><dt>Organismo</dt><dd>{record.authority.name}</dd></div>}
+          {authority && <div><dt>{authority.label}</dt><dd>{authority.value}</dd></div>}
           {record.publishedAt && <div><dt>Publicado</dt><dd><time datetime={record.publishedAt}>{formatPortalDate(record.publishedAt)}</time></dd></div>}
           {record.eventAt && <div><dt>Fecha del acto</dt><dd><time datetime={record.eventAt}>{formatPortalDate(record.eventAt)}</time></dd></div>}
           {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
@@ -76,7 +77,7 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
       <InfoCsDerived>
         <dl class="detail-grid">
           <div><dt>Tipo</dt><dd>{categoryLabel(record.category)}</dd></div>
-          {record.administrationLevel && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
+          {record.administrationLevel && showsAdministrationLevel(record) && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
           {geographies.length > 0 && <div><dt>Ámbito territorial</dt><dd>{geographies.join(' · ')}</dd></div>}
         </dl>
         <p class="muted">Los campos no disponibles en la fuente o no normalizados no se completan.</p>

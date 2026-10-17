@@ -14,8 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checks:
+    name: Required checks before deploy
+    uses: ./.github/workflows/checks.yml
+
   build:
     name: Check and build static portal
+    needs: checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,6 +43,10 @@ jobs:
 
       - name: Build static portal
         run: npm run build
+        working-directory: site
+
+      - name: Verify built portal
+        run: node scripts/verify-build.mjs
         working-directory: site
 
       - name: Upload Pages artifact

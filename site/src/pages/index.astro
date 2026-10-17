@@ -4,42 +4,93 @@ import RecordCard from '../components/RecordCard.astro';
 import EmptyState from '../components/EmptyState.astro';
 import StatusBadge from '../components/StatusBadge.astro';
 import { encodeRecordId, loadPortalData } from '../lib/data';
+import { loadPortalStatus } from '../lib/data/status';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
-import { geographyLabels, primaryDate } from '../lib/presentation/recordView';
-import { sourceDetailPath } from '../lib/presentation/sourceDetails';
+import { byPrimaryDateDesc, geographyLabels, primaryDate } from '../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
+import { NOT_COVERED, sourceCoverage } from '../lib/presentation/coverage';
+import { authorityGroups } from '../lib/presentation/authorities';
+import { formatPortalDateTime } from '../lib/presentation/dates';
+
+const HOME_RECORD_LIMIT = 20;
 
 const data = await loadPortalData();
+const status = await loadPortalStatus(data.sources.map((source) => source.sourceId));
+const coverage = sourceCoverage(data.sources, status);
+const recent = [...data.records].sort(byPrimaryDateDesc).slice(0, HOME_RECORD_LIMIT);
+const organismCount = authorityGroups(data.records).length;
+const publishedSources = coverage.filter((source) => source.published);
 ---
 
 <BaseLayout
-  title="Últimas publicaciones relevantes para Castellón"
-  description="Publicaciones oficiales organizadas por InfoCs, con procedencia y acceso a la fuente original."
+  title="Actividad pública de Castellón desde fuentes oficiales"
+  description="Publicaciones oficiales relevantes para Castellón, con procedencia, cobertura y acceso a la fuente original."
   currentPage="home"
 >
   <section class="home-hero" aria-labelledby="page-title">
     <div>
       <p class="eyebrow">Datos públicos · fuentes oficiales</p>
       <h1 id="page-title">Actividad pública de Castellón desde las fuentes oficiales.</h1>
-      <p class="lede">InfoCs reúne publicaciones verificables, conserva su procedencia y ayuda a consultarlas con menos fricción.</p>
+      <p class="lede">InfoCs reúne en un solo lugar publicaciones oficiales que afectan a Castelló de la Plana y a la provincia de Castellón. Cada ficha enlaza a la fuente original, que es siempre la referencia válida.</p>
     </div>
     <p class="hero-note">Una ciudadanía más fuerte empieza por saber qué se publica y dónde comprobarlo.</p>
+  </section>
+
+  <section class="page-section" aria-labelledby="what-title">
+    <div class="section-heading"><div><p class="eyebrow">Para qué sirve</p><h2 id="what-title">Qué puedes consultar</h2></div></div>
+    <ul class="home-uses">
+      <li><a href="/fuentes/bdns/">Convocatorias de subvenciones</a> con ámbito en la provincia de Castellón, con presupuesto, plazo y destinatarios tal como los publica BDNS.</li>
+      <li><a href="/organismos/">Qué administración convoca</a>: {organismCount} {organismCount === 1 ? 'administración' : 'administraciones'} según la jerarquía oficial de BDNS.</li>
+      <li><a href="/fuentes/boe/">Publicaciones del BOE</a> relacionadas con Castellón, una vez revisadas para su publicación.</li>
+      <li><a href="/buscar/">Búsqueda</a> por título, organismo o término, y <a href="/cambios/">cambios observados</a> en las publicaciones.</li>
+    </ul>
+  </section>
+
+  <section class="page-section" aria-labelledby="coverage-title">
+    <div class="section-heading">
+      <div><p class="eyebrow">Cobertura y actualización</p><h2 id="coverage-title">Qué fuentes tienen contenido público</h2></div>
+      <p class="count-note">{data.records.length} {data.records.length === 1 ? 'registro publicado' : 'registros publicados'} en {publishedSources.length} {publishedSources.length === 1 ? 'fuente' : 'fuentes'}</p>
+    </div>
+    <div class="source-summary-grid">
+      {coverage.map((source) => (
+        <article class="source-tile coverage-tile">
+          <div class="source-tile-header"><h3>{sourceLabel(source.sourceId, data.sources)}</h3><StatusBadge label={source.statusLabel} tone={source.statusTone} /></div>
+          <p>{source.scope}</p>
+          <p class="coverage-count">{source.recordCountLabel}</p>
+          {source.facts.length > 0 && <dl class="coverage-facts">
+            {source.facts.map((fact) => <div><dt>{fact.label}</dt><dd>{fact.datetime ? <time datetime={fact.datetime}>{fact.value}</time> : fact.value}</dd></div>)}
+          </dl>}
+          {source.detailPath && <a class="text-link" href={source.detailPath}>Ver ficha de fuente →</a>}
+        </article>
+      ))}
+    </div>
+    <p class="method-note coverage-note">Las fechas de ejecución indican cuándo InfoCs completó por última vez una comprobación de la fuente; no garantizan que la fuente oficial no tenga publicaciones posteriores ni sustituyen las fechas oficiales de cada publicación. Una ejecución sin incidencias tampoco significa que se recoja toda la información de una administración.</p>
+  </section>
+
+  <section class="page-section" aria-labelledby="not-covered-title">
+    <div class="surface-panel">
+      <p class="eyebrow">Límites actuales</p>
+      <h2 id="not-covered-title">Qué no cubre todavía InfoCs</h2>
+      <dl class="not-covered-list">
+        {NOT_COVERED.map((item) => <div><dt>{item.title}</dt><dd>{item.detail}</dd></div>)}
+      </dl>
+    </div>
   </section>
 
   <section class="page-section" aria-labelledby="records-title">
     <div class="section-heading">
       <div>
-        <p class="eyebrow">Orden cronológico</p>
-        <h2 id="records-title">Publicaciones</h2>
+        <p class="eyebrow">Más recientes primero</p>
+        <h2 id="records-title">Últimas publicaciones</h2>
       </div>
-      <p class="count-note">{data.records.length} {data.records.length === 1 ? 'registro público' : 'registros públicos'}</p>
+      <a class="text-link" href="/registros/">Ver los {data.records.length} registros →</a>
     </div>
 
-    {data.records.length === 0 ? (
+    {recent.length === 0 ? (
       <EmptyState message="Todavía no hay publicaciones disponibles. Consulta las fuentes oficiales para acceder a sus contenidos." />
     ) : (
       <ol class="record-list">
-        {data.records.map((record) => {
+        {recent.map((record) => {
           const history = data.eventsByRecordId.get(record.id) ?? [];
           const bdnsView = buildBDNSRecordView(record);
           return (
@@ -50,29 +101,8 @@ const data = await loadPortalData();
         })}
       </ol>
     )}
+    <p class="count-note home-dates-note">«Publicado» es la fecha oficial de publicación; «Recibida en BDNS» es la fecha oficial en que BDNS registró la convocatoria, que no es una fecha de publicación; «Detectado por InfoCs» es cuándo InfoCs la observó por primera vez.</p>
   </section>
 
-  <section class="page-section" aria-labelledby="source-summary-title">
-    <div class="section-heading"><div><p class="eyebrow">Procedencia</p><h2 id="source-summary-title">Fuentes integradas</h2></div><a class="text-link" href="/fuentes/">Cómo se recogen →</a></div>
-    <div class="source-summary-grid">
-      {data.sources.map((source) => (
-        <article class="source-tile">
-          <div class="source-tile-header"><h3>{sourceLabel(source.sourceId, data.sources)}</h3><StatusBadge label={source.statusLabel} tone={source.publicationState === 'publication_pending' ? 'pending' : 'active'} /></div>
-          <p>{source.summary}</p>
-          <p class="count-note">{source.publicationState === 'publication_pending'
-            ? 'Sin registros públicos en InfoCs'
-            : `${source.recordCount} ${source.recordCount === 1 ? 'registro disponible' : 'registros disponibles'}`}</p>
-          {sourceDetailPath(source.sourceId) && <a class="text-link" href={sourceDetailPath(source.sourceId)!}>Ver ficha de fuente →</a>}
-        </article>
-      ))}
-    </div>
-  </section>
-
-  <section class="page-section" aria-labelledby="method-summary-title">
-    <div class="surface-panel">
-      <p class="eyebrow">Procedencia</p>
-      <h2 id="method-summary-title">Datos oficiales, organizados con claridad</h2>
-      <p class="method-note">InfoCs conserva enlaces a las fuentes, normaliza metadatos con reglas explícitas y registra observaciones cuando hay historial. El estado de una fuente aquí es editorial, no un indicador de salud técnica.</p>
-    </div>
-  </section>
+  <p class="count-note build-note">Portal generado el <time datetime={status.builtAt}>{formatPortalDateTime(status.builtAt)}</time> a partir de los datos públicos disponibles en ese momento.</p>
 </BaseLayout>

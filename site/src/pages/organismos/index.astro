@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { loadPortalData } from '../../lib/data';
+import { AUTHORITY_GROUP_LABEL, authorityGroups } from '../../lib/presentation/authorities';
+
+const data = await loadPortalData();
+const groups = authorityGroups(data.records);
+---
+
+<BaseLayout title="Organismos" description="Convocatorias de subvenciones publicadas en InfoCs agrupadas por la administración convocante que indica BDNS." currentPage="organisms">
+  <section class="page-intro" aria-labelledby="page-title">
+    <p class="eyebrow">{AUTHORITY_GROUP_LABEL}</p>
+    <h1 id="page-title">Organismos</h1>
+    <p class="lede">Convocatorias de subvenciones agrupadas por la administración convocante tal como figura en la Base de Datos Nacional de Subvenciones (BDNS). Es el nombre literal de la fuente: InfoCs no lo normaliza, no lo convierte en municipio y no une nombres parecidos.</p>
+  </section>
+
+  <section aria-labelledby="organisms-title">
+    <div class="section-heading"><div><p class="eyebrow">Listado</p><h2 id="organisms-title">Administraciones convocantes</h2></div><p class="count-note">{groups.length} {groups.length === 1 ? 'administración' : 'administraciones'}</p></div>
+    {groups.length === 0
+      ? <EmptyState message="No hay convocatorias BDNS con administración convocante indicada." />
+      : <ol class="organism-list">
+        {groups.map((group) => <li><a class="organism-link" href={`/organismos/${group.slug}/`}><span class="organism-name">{group.name}</span><span class="count-note">{group.records.length} {group.records.length === 1 ? 'convocatoria' : 'convocatorias'}</span></a></li>)}
+      </ol>}
+    <p class="method-note organism-note">Sólo se incluyen convocatorias BDNS publicadas en InfoCs que indican este dato. Las publicaciones del BOE no se agrupan aquí porque el BOE identifica la sección del boletín, no el organismo emisor.</p>
+  </section>
+</BaseLayout>
