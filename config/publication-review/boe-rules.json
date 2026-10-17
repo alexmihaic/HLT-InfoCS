@@ -1,0 +1,37 @@
+{
+  "schema_version": "1",
+  "source_id": "boe",
+  "policy_id": "boe.rule-publication.v1",
+  "enabled": false,
+  "authorization": null,
+  "exclusions": {
+    "section_codes": ["2A", "4", "5B", "5C"],
+    "title_terms": ["nombramiento", "nombra", "cese", "jubilacion", "toma de posesion", "admitidos", "excluidos", "aprobados", "notificacion", "notifica", "edicto", "emplazamiento", "requisitoria", "citacion", "sancionador", "embargo", "subasta", "extravio", "fallecimiento", "don", "dona"]
+  },
+  "rules": [
+    {
+      "rule_id": "boe-2b-local-employment-call",
+      "enabled": false,
+      "section_code": "2B",
+      "category": "employment",
+      "department_names": ["ADMINISTRACIÓN LOCAL"],
+      "territorial_fields": ["title"],
+      "territorial_reasons_all": ["province_exact"],
+      "territorial_reasons_any": ["municipality_exact", "authority_exact"],
+      "title_must_match_any": ["convocatoria"],
+      "title_must_not_match_any": []
+    },
+    {
+      "rule_id": "boe-5a-local-procurement-tender",
+      "enabled": false,
+      "section_code": "5A",
+      "category": "procurement",
+      "department_names": ["ADMINISTRACIÓN LOCAL"],
+      "territorial_fields": ["title", "heading"],
+      "territorial_reasons_all": [],
+      "territorial_reasons_any": ["municipality_exact", "authority_exact"],
+      "title_must_match_any": ["licitacion"],
+      "title_must_not_match_any": ["formalizacion", "adjudicacion", "desierto"]
+    }
+  ]
+}

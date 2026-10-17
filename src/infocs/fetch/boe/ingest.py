@@ -16,6 +16,12 @@ from infocs.fetch.boe.models import (
 )
 from infocs.fetch.boe.normalize import BOENormalizationError, normalize_boe_item
 from infocs.fetch.boe.publication import authorize_boe_event
+from infocs.fetch.boe.publication_rules import (
+    BOEPublicationRulePolicy,
+    BOERulePolicyError,
+    evaluate_boe_publication,
+    publication_decision_for,
+)
 from infocs.fetch.boe.review_queue import ReviewQueueEntry, ReviewQueueObservation
 from infocs.fetch.boe.territorial import (
     BOETerritorialRegistry,
@@ -119,6 +125,7 @@ def ingest_boe_summary(
     event_store: EventStore | None = None,
     privacy_gate: PrivacyGate | None = None,
     run_id: str | None = None,
+    publication_rules: BOEPublicationRulePolicy | None = None,
 ) -> BOEIngestionResult:
     """Procesa una edición BOE sin aplicar reconciliación de snapshots.
 
@@ -132,6 +139,11 @@ def ingest_boe_summary(
         publication_review_config.validate()
     except PublicationReviewError:
         raise BOEIngestionError("La configuración de Publication Review no es válida.") from None
+
+    if publication_rules is not None and not isinstance(publication_rules, BOEPublicationRulePolicy):
+        raise BOEIngestionError("La política de reglas BOE no es válida.")
+    # Una política desactivada no se evalúa: comportamiento idéntico al manual.
+    active_rules = publication_rules if publication_rules is not None and publication_rules.enabled else None
 
     gate = privacy_gate if privacy_gate is not None else PrivacyGate.default()
     try:
@@ -190,9 +202,15 @@ def ingest_boe_summary(
             continue
         metrics["privacy_allowed"] += 1
 
+        rule_evaluation = None
         try:
             publication_decision = review_publication(record, privacy_decision, publication_review_config)
-        except PublicationReviewError:
+            if active_rules is not None:
+                rule_evaluation = evaluate_boe_publication(
+                    item, decision, record, privacy_decision, publication_review_config, active_rules,
+                )
+                publication_decision = publication_decision_for(rule_evaluation, publication_decision)
+        except (PublicationReviewError, BOERulePolicyError):
             raise BOEIngestionError("Publication Review falló; batch abortado antes de escribir.") from None
         if publication_decision.decision is PublicationDecisionType.HOLD:
             metrics["publication_hold"] += 1
@@ -219,7 +237,9 @@ def ingest_boe_summary(
         metrics["publication_approved"] += 1
         review_observations.append(ReviewQueueObservation("boe", item.official_id, None))
         try:
-            authorization = authorize_boe_event(record, privacy_decision, publication_decision)
+            authorization = authorize_boe_event(
+                record, privacy_decision, publication_decision, rule_evaluation=rule_evaluation,
+            )
         except ValueError:
             raise BOEIngestionError("No se pudo autorizar el Event tras aprobación BOE.") from None
         if authorization is None:
