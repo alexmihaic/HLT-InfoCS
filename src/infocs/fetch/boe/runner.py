@@ -21,6 +21,7 @@ from infocs.fetch.boe.ingest import (
 )
 from infocs.fetch.boe.manifest import manifest_from_boe_result
 from infocs.fetch.boe.models import BOEFetchResult, BOEFetchStatus
+from infocs.fetch.boe.publication_rules import BOEPublicationRulePolicy
 from infocs.fetch.boe.review_queue import BOEReviewQueueStore
 from infocs.fetch.boe.territorial import load_castellon_registry
 from infocs.fetch.boe.transport import BOETransport
@@ -92,6 +93,7 @@ def run_boe_collection(
     review_config: PublicationReviewConfig | None = None,
     privacy_gate: PrivacyGate | None = None,
     software_metadata: SoftwareMetadata | None = None,
+    publication_rules: BOEPublicationRulePolicy | None = None,
 ) -> BOEIngestionResult:
     """Ejecuta una fecha, finaliza Manifest y materializa Health derivado.
 
@@ -119,6 +121,9 @@ def run_boe_collection(
         active_gate = privacy_gate or PrivacyGate.default()
         active_review = review_config or PublicationReviewConfig.from_file()
         active_review.validate()
+        # Desactivada por defecto: sólo actúa si la configuración versionada la
+        # habilita con autorización registrada (validada al cargarla).
+        active_rules = publication_rules or BOEPublicationRulePolicy.from_file()
         active_gate.validate()
         active_transport = transport or BOETransport()
         active_record_store = record_store or RecordStore(PROJECT_ROOT / "data" / "records", privacy_gate=active_gate)
@@ -134,6 +139,7 @@ def run_boe_collection(
             publication_review_config=active_review,
             privacy_gate=active_gate,
             run_id=run_id,
+            publication_rules=active_rules,
         )
         if result.review_queue_observations:
             try:
