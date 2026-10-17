@@ -1,0 +1,7 @@
+---
+import type { PrimaryDateView } from '../lib/presentation/recordView';
+interface Props { date: PrimaryDateView }
+const { date } = Astro.props;
+const kind = date.label === 'Publicado' ? 'published' : date.label === 'Recibida en BDNS' ? 'received' : 'detected';
+---
+<p class="date-stamp" data-date-kind={kind}><span class="date-stamp-label">{date.label}</span> <time datetime={date.value}>{date.display}</time></p>

@@ -118,7 +118,7 @@ else {
     }
   }
   const listMatch = home.match(/<ol class="record-list"[^>]*>([\s\S]*?)<\/ol>/);
-  const homeCards = listMatch ? count(listMatch[1], /<article class="record-card"/g) : 0;
+  const homeCards = listMatch ? count(listMatch[1], /data-record-item/g) : 0;
   if (homeCards !== Math.min(HOME_LIMIT, publishedRecords.length)) fail(`la portada debe listar ${Math.min(HOME_LIMIT, publishedRecords.length)} registros recientes`, `${homeCards}`);
   if (!home.includes('href="/registros/"')) fail('la portada no enlaza a todos los registros');
   for (const pattern of FRESHNESS_CLAIMS) if (pattern.test(text)) fail('afirmación de frescura no acreditada en portada', String(pattern));
@@ -127,7 +127,7 @@ else {
 // --- 3. All records page ------------------------------------------------------------
 const allPage = await readPage(page('registros'));
 if (!allPage) fail('falta /registros/');
-else if (count(allPage, /<article class="record-card"/g) !== publishedRecords.length) fail('/registros/ no lista todos los registros publicados');
+else if (count(allPage, /data-record-item/g) !== publishedRecords.length) fail('/registros/ no lista todos los registros publicados');
 
 // --- 4. Organisms --------------------------------------------------------------------
 const organismIndex = await readPage(page('organismos'));
@@ -147,7 +147,7 @@ else {
   for (const slug of slugs) {
     const html = await readPage(page('organismos', slug));
     if (!html) { fail('página de organismo inexistente', organismLabels.get(slug)); continue; }
-    const links = [...html.matchAll(/<h3><a href="\/registro\/([^"/]+)\/">/g)].map((match) => match[1]);
+    const links = [...html.matchAll(/<h3[^>]*><a href="\/registro\/([^"/]+)\/">/g)].map((match) => match[1]);
     if (links.length === 0) fail('organismo sin registros', organismLabels.get(slug));
     for (const recordSlug of links) {
       const record = slugToRecord.get(recordSlug);
@@ -182,14 +182,34 @@ if (allPage) {
   // An official publication date takes precedence over the BDNS reception date.
   const received = bdns.filter((record) => record.source_data?.bdns?.received_date && !record.dates?.published_at).length;
   const published = bdns.filter((record) => record.dates?.published_at).length;
-  if (count(text, /Publicado:/g) < published) fail('tarjetas BDNS con fecha oficial de publicación sin «Publicado»');
-  if (count(text, /Recibida en BDNS:/g) !== received) fail('tarjetas BDNS sin «Recibida en BDNS» o con etiqueta indebida', `${count(text, /Recibida en BDNS:/g)}/${received}`);
+  if (count(allPage, /data-date-kind="published"/g) < published) fail('tarjetas BDNS con fecha oficial de publicación sin «Publicado»');
+  const receivedCount = count(allPage, /data-date-kind="received"[^>]*>\s*<span class="date-stamp-label">Recibida en BDNS<\/span>/g);
+  if (receivedCount !== received) fail('tarjetas BDNS sin «Recibida en BDNS» o con etiqueta indebida', `${receivedCount}/${received}`);
   const withDeadline = bdns.filter((record) => {
     const application = record.source_data?.bdns?.application;
     return application?.end_date || application?.end_text?.trim();
   }).length;
   if (count(text, /Plazo \(dato oficial\)/g) !== withDeadline) fail('tarjetas BDNS sin «Plazo (dato oficial)»', `${count(text, /Plazo \(dato oficial\)/g)}/${withDeadline}`);
   for (const pattern of STATE_CLAIMS) if (pattern.test(text)) fail('estado administrativo inferido en tarjetas', String(pattern));
+}
+
+// --- 6b. Shared UI controls and record detail order ---------------------------------
+for (const path of [page(), page('registros')]) {
+  const html = await readPage(path);
+  if (html && !html.includes('data-view-toggle')) fail('listado sin control Lista/Tarjetas', show(path));
+}
+if (home && (!home.includes('data-theme-select') || !home.includes('value="auto"'))) fail('falta el selector de tema Automático/Claro/Oscuro');
+for (const record of publishedRecords) {
+  const html = await readPage(page('registro', encodeRecordId(record.id)));
+  if (!html) continue;
+  const where = recordLabels.get(encodeRecordId(record.id));
+  const titleAt = html.indexOf('<h1');
+  const linkAt = html.indexOf('source-link-primary');
+  const layoutAt = html.indexOf('class="detail-layout"');
+  if (linkAt < 0 || !(titleAt < linkAt && linkAt < layoutAt)) fail('el enlace oficial no aparece justo después del título', where);
+  if (record.source.id === 'bdns' && linkAt >= 0 && !/source-link-primary[^>]*>[^<]*JSON/.test(html.slice(linkAt - 200, linkAt + 400))) {
+    fail('el enlace BDNS no indica que abre JSON de la API', where);
+  }
 }
 
 // --- 7. Links: allowed protocols and internal targets ------------------------------

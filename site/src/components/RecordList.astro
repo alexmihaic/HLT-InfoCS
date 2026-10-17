@@ -1,0 +1,31 @@
+---
+import type { FrontendRecord, SourceMeta } from '../lib/data/types';
+import { encodeRecordId } from '../lib/data';
+import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
+import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
+import EmptyState from './EmptyState.astro';
+import RecordItem from './RecordItem.astro';
+import ViewToggle from './ViewToggle.astro';
+
+interface Props {
+  records: readonly FrontendRecord[];
+  sources: readonly SourceMeta[];
+  historyIds: ReadonlySet<string>;
+  countLabel?: string;
+  emptyMessage?: string;
+}
+const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no hay publicaciones disponibles.' } = Astro.props;
+---
+
+<div class="records-toolbar">
+  {countLabel && <p class="count-note">{countLabel}</p>}
+  <ViewToggle />
+</div>
+{records.length === 0
+  ? <EmptyState message={emptyMessage} />
+  : <ol class="record-list" data-record-list>
+    {records.map((record) => {
+      const bdnsView = buildBDNSRecordView(record);
+      return <li><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
+    })}
+  </ol>}

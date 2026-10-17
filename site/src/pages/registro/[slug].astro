@@ -10,7 +10,7 @@ import TechnicalDetails from '../../components/TechnicalDetails.astro';
 import { encodeRecordId, loadPortalData } from '../../lib/data';
 import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
-import { authorityPresentation, geographyLabels, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
+import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
@@ -32,10 +32,11 @@ const date = primaryDate(record);
 const timeline = timelineItems(events);
 const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 const authority = authorityPresentation(record);
+const deadline = officialDeadline(record);
 ---
 
 <BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
-  <article class="detail-page detail-shell" data-pagefind-body>
+  <article class="detail-page" data-pagefind-body>
     <div class="visually-hidden" data-pagefind-ignore aria-hidden="true">
       <span data-pagefind-meta="kind">record</span>
       <span data-pagefind-meta="source">{sourceLabel(record.sourceId, [source])}</span>
@@ -53,50 +54,68 @@ const authority = authorityPresentation(record);
       </>}
     </div>
     <nav class="breadcrumbs" aria-label="Ruta de navegación">
-      <a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Registro</span>
+      <a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/registros/">Registros</a><span aria-hidden="true">/</span><span aria-current="page">Ficha</span>
     </nav>
 
     <header class="detail-header">
       <RecordMeta source={sourceLabel(record.sourceId, [source])} category={categoryLabel(record.category)} />
-      <h1>{record.title}</h1>
-      {bdnsView?.officialTitleCoofficial && <p class="detail-authority"><span>{bdnsView.officialTitleCoofficial.label}: </span>{bdnsView.officialTitleCoofficial.value}</p>}
-      {authority && <p class="detail-authority">{authority.label === 'Organismo' ? authority.value : `${authority.label}: ${authority.value}`}</p>}
+      <h1 class:list={{ 'is-uppercase': isUppercaseTitle(record.title) }}>{record.title}</h1>
+      {bdnsView?.officialTitleCoofficial && <p class="detail-subtitle"><span class="fact-label">{bdnsView.officialTitleCoofficial.label}: </span>{bdnsView.officialTitleCoofficial.value}</p>}
     </header>
 
-    <div class="detail-columns">
-      <OfficialData>
-        <dl class="detail-grid">
-          {authority && <div><dt>{authority.label}</dt><dd>{authority.value}</dd></div>}
-          {record.publishedAt && <div><dt>Publicado</dt><dd><time datetime={record.publishedAt}>{formatPortalDate(record.publishedAt)}</time></dd></div>}
-          {record.eventAt && <div><dt>Fecha del acto</dt><dd><time datetime={record.eventAt}>{formatPortalDate(record.eventAt)}</time></dd></div>}
-          {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
-        </dl>
-        {bdnsView && <BDNSHumanReadableDetail view={bdnsView} />}
-      </OfficialData>
+    <section class="key-facts" aria-label="Datos clave">
+      <dl class="key-facts-grid">
+        <div><dt>{date.label}</dt><dd><time datetime={date.value}>{date.display}</time></dd></div>
+        {deadline && <div><dt>{deadline.label}</dt><dd>{deadline.date && <time datetime={deadline.date.value}>{deadline.date.display}</time>}{deadline.date && deadline.text && <span> · </span>}{deadline.text && <span>{deadline.text}</span>}</dd></div>}
+        {bdnsView?.budget && <div><dt>{bdnsView.budget.label}</dt><dd><span class="money">{bdnsView.budget.displayValue}</span>{bdnsView.budget.currency && <span> {bdnsView.budget.currency}</span>}{bdnsView.budget.currencyNotice && <span class="fact-note">{bdnsView.budget.currencyNotice}</span>}</dd></div>}
+        {authority && <div class="key-facts-wide"><dt>{authority.label}</dt><dd>{authority.value}</dd></div>}
+      </dl>
+      <div class="key-facts-actions" data-pagefind-ignore>
+        <SourceLink href={record.sourceUrl} variant="primary" label={record.sourceId === 'bdns' ? 'Datos oficiales en BDNS (JSON de la API)' : record.sourceId === 'boe' ? 'Abrir publicación oficial en el BOE' : 'Abrir publicación oficial'} />
+        {record.sourceId === 'bdns' && <p class="fact-note">El enlace abre la respuesta en formato JSON de la API oficial de BDNS, no una ficha web.</p>}
+      </div>
+    </section>
 
-      <InfoCsDerived>
-        <dl class="detail-grid">
-          <div><dt>Tipo</dt><dd>{categoryLabel(record.category)}</dd></div>
-          {record.administrationLevel && showsAdministrationLevel(record) && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
-          {geographies.length > 0 && <div><dt>Ámbito territorial</dt><dd>{geographies.join(' · ')}</dd></div>}
-        </dl>
-        <p class="muted">Los campos no disponibles en la fuente o no normalizados no se completan.</p>
-      </InfoCsDerived>
+    <div class="detail-layout">
+      <div class="detail-main">
+        <OfficialData>
+          <dl class="detail-grid">
+            {record.publishedAt && <div><dt>Publicado</dt><dd><time datetime={record.publishedAt}>{formatPortalDate(record.publishedAt)}</time></dd></div>}
+            {record.eventAt && <div><dt>Fecha del acto</dt><dd><time datetime={record.eventAt}>{formatPortalDate(record.eventAt)}</time></dd></div>}
+            {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
+            {record.sourceId === 'boe' && record.officialId && <div><dt>Identificador BOE</dt><dd class="mono-value">{record.officialId}</dd></div>}
+          </dl>
+          {bdnsView && <BDNSHumanReadableDetail view={bdnsView} />}
+        </OfficialData>
+        <ChangeTimeline items={timeline} />
+      </div>
+
+      <aside class="detail-aside" aria-label="Información complementaria">
+        <InfoCsDerived>
+          <dl class="detail-grid detail-grid-single">
+            <div><dt>Tipo</dt><dd>{categoryLabel(record.category)}</dd></div>
+            {record.administrationLevel && showsAdministrationLevel(record) && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
+            {geographies.length > 0 && <div><dt>Ámbito territorial</dt><dd>{geographies.join(' · ')}</dd></div>}
+          </dl>
+          <p class="fact-note">Los campos no disponibles en la fuente o no normalizados no se completan.</p>
+        </InfoCsDerived>
+
+        <section class="surface-panel aside-panel" aria-labelledby="source-panel-title">
+          <p class="panel-kicker">Procedencia</p>
+          <h2 id="source-panel-title">Fuente oficial</h2>
+          <p>El contenido íntegro y la interpretación oficial corresponden al organismo editor.</p>
+          {bdnsView && <p data-pagefind-ignore>Los datos de esta ficha proceden de la Base de Datos Nacional de Subvenciones (BDNS) mediante su fuente oficial.</p>}
+          {source.attribution && <p class="attribution">{source.attribution}</p>}
+        </section>
+
+        <section class="surface-panel aside-panel" aria-labelledby="method-note-title">
+          <p class="panel-kicker">Trazabilidad</p>
+          <h2 id="method-note-title">Procesamiento por InfoCs</h2>
+          <p>InfoCs organiza metadatos estructurados, conserva el enlace oficial y aplica controles de privacidad antes de publicar. Esta ficha no sustituye a la fuente original ni ofrece asesoramiento jurídico.</p>
+        </section>
+
+        <div data-pagefind-ignore><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
+      </aside>
     </div>
-
-    <section class="surface-panel source-panel page-section" aria-labelledby="source-panel-title">
-      <div><p class="panel-kicker">Procedencia</p><h2 id="source-panel-title">Fuente oficial</h2><p>El contenido íntegro y la interpretación oficial corresponden al organismo editor.</p></div>
-      {bdnsView && <p data-pagefind-ignore>Los datos de esta ficha proceden de la Base de Datos Nacional de Subvenciones (BDNS) mediante su fuente oficial.</p>}
-      <SourceLink href={record.sourceUrl} label={bdnsView ? 'Abrir datos oficiales en BDNS' : 'Abrir publicación oficial'} />
-      {source.attribution && <p class="attribution">{source.attribution}</p>}
-    </section>
-
-    <section class="page-section" aria-labelledby="method-note-title">
-      <p class="eyebrow">Trazabilidad</p><h2 id="method-note-title">Procesamiento por InfoCs</h2>
-      <p class="method-note">InfoCs organiza metadatos estructurados, conserva el enlace oficial y aplica controles de privacidad antes de publicar. Esta ficha no sustituye a la fuente original ni ofrece asesoramiento jurídico.</p>
-    </section>
-
-    <ChangeTimeline items={timeline} />
-    <div class="page-section" data-pagefind-ignore><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
   </article>
 </BaseLayout>

@@ -1,0 +1,39 @@
+---
+import type { FrontendRecord } from '../lib/data/types';
+import type { BDNSRecordView } from '../lib/presentation/bdnsRecordView';
+import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate } from '../lib/presentation/recordView';
+import DateStamp from './DateStamp.astro';
+import RecordMeta from './RecordMeta.astro';
+
+interface Props {
+  record: FrontendRecord;
+  href: string;
+  source: string;
+  category: string;
+  hasHistory: boolean;
+  bdnsSummary?: Pick<BDNSRecordView, 'callType' | 'budget'>;
+}
+const { record, href, source, category, hasHistory, bdnsSummary } = Astro.props;
+const authority = authorityPresentation(record);
+const deadline = officialDeadline(record);
+const geography = geographyLabels(record);
+// Rows show the most specific official body name (BDNS nivel3) when available;
+// the full literal hierarchy remains on the record page.
+const authorityText = record.sourceId === 'bdns' ? record.bdns?.authorityHierarchy?.nivel3 ?? authority?.value : authority?.value;
+const hasFacts = Boolean(bdnsSummary?.budget || bdnsSummary?.callType || deadline);
+---
+
+<article class="record-item" data-record-item>
+  <DateStamp date={primaryDate(record)} />
+  <div class="record-item-main">
+    <div class="record-item-meta"><RecordMeta source={source} category={category} />{hasHistory && <span class="history-indicator">Historial</span>}</div>
+    <h3 class:list={['record-item-title', { 'is-uppercase': isUppercaseTitle(record.title) }]}><a href={href}>{record.title}</a></h3>
+    {authority && authorityText && <p class="record-item-authority">{record.sourceId === 'boe' && <span class="fact-label">{authority.label}: </span>}{authorityText}</p>}
+    {geography.length > 0 && <p class="record-item-geography">{geography.join(' · ')}</p>}
+  </div>
+  {hasFacts && <dl class="record-item-facts">
+    {bdnsSummary?.budget && <div><dt>Presupuesto</dt><dd><span class="money">{bdnsSummary.budget.displayValue}</span>{bdnsSummary.budget.currency && <span> {bdnsSummary.budget.currency}</span>}{bdnsSummary.budget.currencyNotice && <span class="fact-note">{bdnsSummary.budget.currencyNotice}</span>}</dd></div>}
+    {deadline && <div><dt>{deadline.label}</dt><dd>{deadline.date && <time datetime={deadline.date.value}>{deadline.date.display}</time>}{deadline.date && deadline.text && <span> · </span>}{deadline.text && <span class="deadline-text">{deadline.text}</span>}</dd></div>}
+    {bdnsSummary?.callType && <div class="record-item-calltype"><dt>Tipo de convocatoria</dt><dd>{bdnsSummary.callType.value}</dd></div>}
+  </dl>}
+</article>

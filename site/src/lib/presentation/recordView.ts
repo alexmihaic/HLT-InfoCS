@@ -92,3 +92,11 @@ export function timelineItems(events: readonly FrontendEvent[]): readonly Timeli
     display: formatPortalDate(event.observedAt),
   }));
 }
+
+/**
+ * True when an official title is written entirely in capitals. Used only to
+ * adjust typography; the title text itself is always rendered literally.
+ */
+export function isUppercaseTitle(title: string): boolean {
+  return title !== title.toLocaleLowerCase('es') && title === title.toLocaleUpperCase('es');
+}
