@@ -1,0 +1,33 @@
+<div class="view-toggle" role="group" aria-label="Presentación de los registros" data-view-toggle hidden>
+  <button type="button" data-view-option="list" aria-pressed="true">Lista</button>
+  <button type="button" data-view-option="cards" aria-pressed="false">Tarjetas</button>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const groups = [...document.querySelectorAll<HTMLElement>('[data-view-toggle]')];
+
+  function sync() {
+    const view = root.dataset.recordView === 'cards' ? 'cards' : 'list';
+    for (const button of document.querySelectorAll<HTMLButtonElement>('[data-view-option]')) {
+      button.setAttribute('aria-pressed', String(button.dataset.viewOption === view));
+    }
+  }
+
+  for (const group of groups) {
+    group.hidden = false;
+    group.addEventListener('click', (event) => {
+      const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('[data-view-option]') : null;
+      if (!button) return;
+      const view = button.dataset.viewOption === 'cards' ? 'cards' : 'list';
+      root.dataset.recordView = view;
+      try {
+        localStorage.setItem('infocs-view', view);
+      } catch {
+        // The view stays active for this page even if storage is blocked.
+      }
+      sync();
+    });
+  }
+  sync();
+</script>

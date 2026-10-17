@@ -1,0 +1,40 @@
+---
+interface Props { id: string }
+const { id } = Astro.props;
+---
+<div class="theme-select">
+  <label for={id}>Tema</label>
+  <select id={id} data-theme-select>
+    <option value="auto">Automático</option>
+    <option value="light">Claro</option>
+    <option value="dark">Oscuro</option>
+  </select>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const media = window.matchMedia('(prefers-color-scheme: light)');
+  const selects = [...document.querySelectorAll<HTMLSelectElement>('[data-theme-select]')];
+
+  function apply(preference: string) {
+    const value = preference === 'light' || preference === 'dark' ? preference : 'auto';
+    root.dataset.themePreference = value;
+    root.dataset.theme = value === 'auto' ? (media.matches ? 'light' : 'dark') : value;
+    for (const select of selects) select.value = value;
+  }
+
+  apply(root.dataset.themePreference ?? 'auto');
+  for (const select of selects) {
+    select.addEventListener('change', () => {
+      apply(select.value);
+      try {
+        localStorage.setItem('infocs-theme', root.dataset.themePreference ?? 'auto');
+      } catch {
+        // The choice stays active for this page even if storage is blocked.
+      }
+    });
+  }
+  media.addEventListener('change', () => {
+    if (root.dataset.themePreference === 'auto') apply('auto');
+  });
+</script>

@@ -23,13 +23,23 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title} · InfoCs</title>
+    <meta name="color-scheme" content="dark light" />
     <script is:inline>
-      try {
-        const savedTheme = localStorage.getItem('infocs-theme');
-        document.documentElement.dataset.theme = savedTheme === 'light' ? 'light' : 'dark';
-      } catch {
-        document.documentElement.dataset.theme = 'dark';
-      }
+      (function () {
+        var root = document.documentElement;
+        var preference = 'auto';
+        var view = 'list';
+        try {
+          var savedTheme = localStorage.getItem('infocs-theme');
+          if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto') preference = savedTheme;
+          if (localStorage.getItem('infocs-view') === 'cards') view = 'cards';
+        } catch (error) {}
+        var prefersLight = false;
+        try { prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches; } catch (error) {}
+        root.dataset.themePreference = preference;
+        root.dataset.theme = preference === 'auto' ? (prefersLight ? 'light' : 'dark') : preference;
+        root.dataset.recordView = view;
+      })();
     </script>
   </head>
   <body>
