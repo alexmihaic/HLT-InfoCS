@@ -160,7 +160,10 @@ for (const record of publishedRecords) {
 if (allPage) {
   const text = visibleText(allPage);
   const bdns = publishedRecords.filter((record) => record.source.id === 'bdns');
-  const received = bdns.filter((record) => record.source_data?.bdns?.received_date).length;
+  // An official publication date takes precedence over the BDNS reception date.
+  const received = bdns.filter((record) => record.source_data?.bdns?.received_date && !record.dates?.published_at).length;
+  const published = bdns.filter((record) => record.dates?.published_at).length;
+  if (count(text, /Publicado:/g) < published) fail('tarjetas BDNS con fecha oficial de publicación sin «Publicado»');
   if (count(text, /Recibida en BDNS:/g) !== received) fail('tarjetas BDNS sin «Recibida en BDNS» o con etiqueta indebida', `${count(text, /Recibida en BDNS:/g)}/${received}`);
   const withDeadline = bdns.filter((record) => {
     const application = record.source_data?.bdns?.application;
