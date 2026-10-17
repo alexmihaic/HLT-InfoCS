@@ -76,3 +76,7 @@ data/local/
 *.sqlite3
 *.db
 *.duckdb
+
+# Private or non-publishable research evidence (e.g. PLACSP identity cohorts).
+# .gitignore does not protect against `git add -f`; keep private cohorts outside the repo.
+docs/evidence/

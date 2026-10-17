@@ -23,6 +23,8 @@ import MethodologySection from '../components/MethodologySection.astro';
     <MethodologySection id="inclusion" title="Cómo se incluyen registros">
       <p>InfoCs utiliza campos estructurados y reglas documentadas para cada fuente. La cobertura territorial es Castelló de la Plana y la provincia de Castellón; una publicación estatal o autonómica amplia no se atribuye automáticamente al territorio. No se usan coincidencias difusas ni modelos de lenguaje para decidir la inclusión territorial.</p>
       <p>Los campos que la fuente o las reglas no permiten determinar se omiten o permanecen sin clasificar.</p>
+      <p>En BDNS se incluyen convocatorias cuyo ámbito declarado en la propia base de datos es la provincia de Castellón; las de ámbito autonómico o estatal amplio no se incluyen. En el BOE, las publicaciones que cumplen los criterios territoriales pasan además una revisión antes de publicarse: hasta entonces se cuentan como pendientes de revisión, sin mostrar su contenido.</p>
+      <p>La página de <a href="/organismos/">organismos</a> agrupa convocatorias BDNS por la administración convocante que indica la fuente, con su nombre literal. No se unen nombres parecidos ni se deduce un municipio a partir de ese nombre.</p>
     </MethodologySection>
 
     <MethodologySection id="official-vs-processed" title="Dato oficial y procesado por InfoCs">
@@ -31,6 +33,8 @@ import MethodologySection from '../components/MethodologySection.astro';
 
     <MethodologySection id="dates" title="Fechas">
       <p>Cuando existe una fecha oficial de publicación, se muestra como «Publicado». Si no existe, la fecha visible se identifica como «Detectado por InfoCs». La hora de un evento de InfoCs representa una observación del sistema, no la fecha en que la administración publicó el contenido.</p>
+      <p>En BDNS, «Recibida en BDNS» es la fecha oficial en que la base de datos registró la convocatoria; no es una fecha de publicación. El plazo se muestra tal como lo indica la fuente: InfoCs no calcula si una convocatoria está abierta o cerrada.</p>
+      <p>La portada indica la última ejecución satisfactoria registrada de cada fuente y la fecha en que se generó el portal. Son marcas del funcionamiento de InfoCs, no fechas oficiales ni una garantía de actualización en tiempo real.</p>
     </MethodologySection>
 
     <MethodologySection id="changes" title="Cambios">
