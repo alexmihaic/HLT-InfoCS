@@ -100,10 +100,16 @@ def prepare(*items: BOEItem, review_config=None):
 class PublicationReviewTests(unittest.TestCase):
     def test_versioned_initial_config_has_exact_explicit_decisions(self) -> None:
         approved = PublicationReviewConfig.from_file(ROOT / "config/publication-review/boe-initial.json")
-        self.assertEqual(approved.approved_ids, frozenset({"BOE-A-2026-19457"}))
-        self.assertEqual(len(approved.entries), 7)
+        self.assertEqual(approved.approved_ids, frozenset({
+            "BOE-A-2026-19457",
+            # BOE-03: convocatorias 2B revisadas individualmente en BOE-02.
+            "BOE-A-2026-20043", "BOE-A-2026-20044", "BOE-A-2026-20420", "BOE-A-2026-21372",
+        }))
+        self.assertEqual(len(approved.entries), 11)
         self.assertEqual({entry.official_id for entry in approved.entries}, {
-            "BOE-A-2026-19433", "BOE-A-2026-19457", "BOE-B-2026-30223",
+            "BOE-A-2026-19433", "BOE-A-2026-19457",
+            "BOE-A-2026-20043", "BOE-A-2026-20044", "BOE-A-2026-20420", "BOE-A-2026-21372",
+            "BOE-B-2026-30223",
             "BOE-B-2026-30232", "BOE-B-2026-30240", "BOE-B-2026-30520",
             "BOE-B-2026-30592",
         })

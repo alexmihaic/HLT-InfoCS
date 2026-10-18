@@ -13,6 +13,26 @@
       "reason_code": "reviewed_safe"
     },
     {
+      "official_id": "BOE-A-2026-20043",
+      "decision": "approved",
+      "reason_code": "reviewed_safe"
+    },
+    {
+      "official_id": "BOE-A-2026-20044",
+      "decision": "approved",
+      "reason_code": "reviewed_safe"
+    },
+    {
+      "official_id": "BOE-A-2026-20420",
+      "decision": "approved",
+      "reason_code": "reviewed_safe"
+    },
+    {
+      "official_id": "BOE-A-2026-21372",
+      "decision": "approved",
+      "reason_code": "reviewed_safe"
+    },
+    {
       "official_id": "BOE-B-2026-30223",
       "decision": "hold",
       "reason_code": "personal_content_review"
