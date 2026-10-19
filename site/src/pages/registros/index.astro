@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import RecordFilters from '../../components/RecordFilters.astro';
 import RecordList from '../../components/RecordList.astro';
 import { loadPortalData } from '../../lib/data';
 import { byPrimaryDateDesc } from '../../lib/presentation/recordView';
@@ -16,6 +17,7 @@ const records = [...data.records].sort(byPrimaryDateDesc);
   </header>
 
   <section aria-label="Registros">
+    <RecordFilters records={records} />
     <RecordList records={records} sources={data.sources} historyIds={new Set(data.eventsByRecordId.keys())} countLabel={`${records.length} ${records.length === 1 ? 'registro publicado' : 'registros publicados'}`} />
   </section>
 </BaseLayout>

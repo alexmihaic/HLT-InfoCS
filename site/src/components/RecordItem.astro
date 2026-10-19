@@ -2,6 +2,7 @@
 import type { FrontendRecord } from '../lib/data/types';
 import type { BDNSRecordView } from '../lib/presentation/bdnsRecordView';
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate } from '../lib/presentation/recordView';
+import { derivedMunicipality } from '../lib/presentation/territory';
 import DateStamp from './DateStamp.astro';
 import RecordMeta from './RecordMeta.astro';
 
@@ -17,6 +18,7 @@ const { record, href, source, category, hasHistory, bdnsSummary } = Astro.props;
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
 const geography = geographyLabels(record);
+const municipality = derivedMunicipality(record);
 // Rows show the most specific official body name (BDNS nivel3) when available;
 // the full literal hierarchy remains on the record page.
 const authorityText = record.sourceId === 'bdns' ? record.bdns?.authorityHierarchy?.nivel3 ?? authority?.value : authority?.value;
@@ -29,6 +31,7 @@ const hasFacts = Boolean(bdnsSummary?.budget || bdnsSummary?.callType || deadlin
     <div class="record-item-meta"><RecordMeta source={source} category={category} />{hasHistory && <span class="history-indicator">Historial</span>}</div>
     <h3 class:list={['record-item-title', { 'is-uppercase': isUppercaseTitle(record.title) }]}><a href={href}>{record.title}</a></h3>
     {authority && authorityText && <p class="record-item-authority">{record.sourceId === 'boe' && <span class="fact-label">{authority.label}: </span>}{authorityText}</p>}
+    {municipality && <p class="record-item-territory"><span class="fact-label">{municipality.label} (InfoCs): </span>{municipality.name}</p>}
     {geography.length > 0 && <p class="record-item-geography">{geography.join(' · ')}</p>}
   </div>
   {hasFacts && <dl class="record-item-facts">

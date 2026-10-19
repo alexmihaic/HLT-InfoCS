@@ -3,6 +3,7 @@ import type { FrontendRecord, SourceMeta } from '../lib/data/types';
 import { encodeRecordId } from '../lib/data';
 import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
+import { derivedMunicipality } from '../lib/presentation/territory';
 import EmptyState from './EmptyState.astro';
 import RecordItem from './RecordItem.astro';
 import ViewToggle from './ViewToggle.astro';
@@ -18,7 +19,7 @@ const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no ha
 ---
 
 <div class="records-toolbar">
-  {countLabel && <p class="count-note">{countLabel}</p>}
+  {countLabel && <p class="count-note" data-record-count>{countLabel}</p>}
   <ViewToggle />
 </div>
 {records.length === 0
@@ -26,6 +27,8 @@ const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no ha
   : <ol class="record-list" data-record-list>
     {records.map((record) => {
       const bdnsView = buildBDNSRecordView(record);
-      return <li><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
+      const municipality = derivedMunicipality(record);
+      return <li data-category={record.category} data-municipality={municipality?.code}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
     })}
   </ol>}
+<p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados.</p>

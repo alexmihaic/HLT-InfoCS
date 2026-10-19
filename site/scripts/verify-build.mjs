@@ -212,6 +212,39 @@ for (const record of publishedRecords) {
   }
 }
 
+// --- 6c. Derived municipality (EMPLEO-01) -------------------------------------------
+// Mirrors territory.ts: one distinct exact INE municipality match in the BOE title.
+const expectedMunicipality = (record) => {
+  if (record.source.id !== 'boe') return null;
+  const matches = (record.provenance?.territorial_matches ?? []).map((match) => {
+    try { return JSON.parse(match.detail); } catch { return null; }
+  }).filter((d) => d && d.boe_reason === 'municipality_exact' && d.field === 'title'
+    && String(d.method).startsWith('official_variant') && /^12\d{3}$/.test(d.entity_code)
+    && String(d.entity_name).split('/').map((v) => v.trim()).includes(d.matched_text));
+  const codes = new Set(matches.map((d) => d.entity_code));
+  if (codes.size !== 1) return null;
+  const issuer = /^(?:Resolución de \d{1,2} de [a-záéíóú]+ de \d{4}, del|Anuncio del|Edicto del) Ayuntamiento de /u.exec(record.title);
+  const rest = issuer ? record.title.slice(issuer[0].length) : '';
+  const convocante = matches.some((d) => issuer && rest.startsWith(d.matched_text) && !/^[\p{L}\p{N}]/u.test(rest.slice(d.matched_text.length)));
+  return { code: matches[0].entity_code, label: convocante ? 'Municipio convocante' : 'Municipio relacionado' };
+};
+if (allPage) {
+  const filters = allPage.includes('data-record-filters');
+  if (!filters) fail('/registros/ sin filtros de tipo y municipio');
+  for (const record of publishedRecords) {
+    const expected = expectedMunicipality(record);
+    const slug = encodeRecordId(record.id);
+    const where = recordLabels.get(slug);
+    const li = allPage.match(new RegExp(`<li[^>]*>(?:(?!<li[ >]).)*?href="/registro/${slug}/"`, 's'));
+    const attr = li ? (li[0].match(/^<li[^>]*data-municipality="([^"]*)"/) ?? [])[1] : undefined;
+    if ((expected?.code) !== attr) fail('municipio derivado distinto del esperado en el listado', where);
+    const html = await readPage(page('registro', slug));
+    if (!html) continue;
+    if (expected && !html.includes(`<dt>${expected.label}</dt>`)) fail('ficha sin municipio derivado esperado', where);
+    if (!expected && /<dt>Municipio (convocante|relacionado)<\/dt>/.test(html)) fail('ficha con municipio sin evidencia suficiente', where);
+  }
+}
+
 // --- 7. Links: allowed protocols and internal targets ------------------------------
 const SAFE_EXTERNAL = /^https:\/\//i;
 const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
