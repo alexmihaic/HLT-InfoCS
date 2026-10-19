@@ -15,6 +15,7 @@ import type {
   FrontendGeography,
   FrontendGrant,
   FrontendRecord,
+  FrontendTerritorialMatch,
 } from './types';
 
 const ADMINISTRATION_LEVELS = new Set<AdministrationLevel>([
@@ -87,7 +88,42 @@ export function adaptRecord(value: unknown, label: string): FrontendRecord {
     tags: record.tags === undefined ? [] : stringArray(record.tags, `${label}.tags`),
     contentHash: hashString(technical.content_hash, `${label}.technical.content_hash`),
     ...(bdns !== undefined ? { bdns } : {}),
+    ...territorialMatchesOf(record.provenance),
   };
+}
+
+/**
+ * Reads only the exact BOE territorial evidence kept in provenance. Each
+ * `detail` is a JSON string written by the BOE normalizer; anything that does
+ * not match the expected closed shape is ignored (no evidence, no assignment).
+ */
+function territorialMatchesOf(provenance: unknown): { territorialMatches?: FrontendTerritorialMatch[] } {
+  if (typeof provenance !== 'object' || provenance === null) return {};
+  const raw = (provenance as ObjectValue).territorial_matches;
+  if (!Array.isArray(raw)) return {};
+  const matches: FrontendTerritorialMatch[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'object' || entry === null || typeof (entry as ObjectValue).detail !== 'string') continue;
+    let detail: unknown;
+    try {
+      detail = JSON.parse((entry as ObjectValue).detail as string);
+    } catch {
+      continue;
+    }
+    if (typeof detail !== 'object' || detail === null) continue;
+    const d = detail as ObjectValue;
+    const fields = ['boe_reason', 'entity_code', 'entity_name', 'field', 'matched_text', 'method'] as const;
+    if (!fields.every((key) => typeof d[key] === 'string')) continue;
+    matches.push({
+      reason: d.boe_reason as string,
+      entityCode: d.entity_code as string,
+      entityName: d.entity_name as string,
+      field: d.field as string,
+      matchedText: d.matched_text as string,
+      method: d.method as string,
+    });
+  }
+  return matches.length > 0 ? { territorialMatches: matches } : {};
 }
 
 /** Historic direct adapter calls may omit BDNS data; the public loader may not. */

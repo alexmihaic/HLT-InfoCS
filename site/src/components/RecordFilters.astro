@@ -1,0 +1,89 @@
+---
+import type { FrontendRecord } from '../lib/data/types';
+import { categoryLabel } from '../lib/presentation/labels';
+import { derivedMunicipality, municipalityShortName } from '../lib/presentation/territory';
+
+interface Props { records: readonly FrontendRecord[] }
+const { records } = Astro.props;
+
+const categories = new Map<string, number>();
+const municipalities = new Map<string, { name: string; count: number }>();
+for (const record of records) {
+  categories.set(record.category, (categories.get(record.category) ?? 0) + 1);
+  const municipality = derivedMunicipality(record);
+  if (municipality) {
+    const current = municipalities.get(municipality.code) ?? { name: municipalityShortName(municipality.name), count: 0 };
+    municipalities.set(municipality.code, { ...current, count: current.count + 1 });
+  }
+}
+const categoryOptions = [...categories.entries()]
+  .map(([value, count]) => ({ value, label: categoryLabel(value), count }))
+  .sort((left, right) => left.label.localeCompare(right.label, 'es'));
+const municipalityOptions = [...municipalities.entries()]
+  .map(([value, { name, count }]) => ({ value, label: name, count }))
+  .sort((left, right) => left.label.localeCompare(right.label, 'es'));
+---
+
+<form class="record-filters" action="/registros/" method="get" data-record-filters aria-label="Filtrar registros">
+  <div class="record-filter">
+    <label for="filter-tipo">Tipo</label>
+    <select id="filter-tipo" name="tipo">
+      <option value="">Todos los tipos</option>
+      {categoryOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
+    </select>
+  </div>
+  <div class="record-filter">
+    <label for="filter-municipio">Municipio (identificado por InfoCs)</label>
+    <select id="filter-municipio" name="municipio">
+      <option value="">Todos los municipios</option>
+      {municipalityOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
+    </select>
+  </div>
+  <noscript><button class="search-submit" type="submit">Filtrar</button></noscript>
+  <p class="fact-note record-filter-note">InfoCs identifica el municipio solo cuando el título oficial del BOE nombra un único municipio del nomenclátor INE. Las publicaciones sin municipio identificado aparecen con «Todos los municipios».</p>
+</form>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-record-filters]');
+  const list = document.querySelector<HTMLElement>('[data-record-list]');
+  const count = document.querySelector<HTMLElement>('[data-record-count]');
+  const empty = document.querySelector<HTMLElement>('[data-filter-empty]');
+
+  if (form && list) {
+    const tipo = form.querySelector<HTMLSelectElement>('select[name="tipo"]')!;
+    const municipio = form.querySelector<HTMLSelectElement>('select[name="municipio"]')!;
+    const items = [...list.querySelectorAll<HTMLLIElement>(':scope > li')];
+    const total = items.length;
+
+    const params = new URLSearchParams(window.location.search);
+    const allowed = (select: HTMLSelectElement, value: string | null) =>
+      value !== null && [...select.options].some((option) => option.value === value) ? value : '';
+    tipo.value = allowed(tipo, params.get('tipo'));
+    municipio.value = allowed(municipio, params.get('municipio'));
+
+    const apply = () => {
+      let visible = 0;
+      for (const item of items) {
+        const show = (!tipo.value || item.dataset.category === tipo.value)
+          && (!municipio.value || item.dataset.municipality === municipio.value);
+        item.hidden = !show;
+        if (show) visible += 1;
+      }
+      if (count) {
+        count.textContent = visible === total
+          ? `${total} ${total === 1 ? 'registro publicado' : 'registros publicados'}`
+          : `${visible} de ${total} registros publicados`;
+      }
+      if (empty) empty.hidden = visible !== 0;
+      const next = new URLSearchParams();
+      if (tipo.value) next.set('tipo', tipo.value);
+      if (municipio.value) next.set('municipio', municipio.value);
+      const query = next.toString();
+      history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
+    };
+
+    form.addEventListener('change', apply);
+    form.addEventListener('submit', (event) => { event.preventDefault(); apply(); });
+    apply();
+  }
+</script>

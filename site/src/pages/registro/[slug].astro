@@ -12,6 +12,7 @@ import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
+import { derivedMunicipality } from '../../lib/presentation/territory';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
 interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
@@ -33,6 +34,7 @@ const timeline = timelineItems(events);
 const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
+const municipality = derivedMunicipality(record);
 ---
 
 <BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
@@ -96,6 +98,7 @@ const deadline = officialDeadline(record);
             <div><dt>Tipo</dt><dd>{categoryLabel(record.category)}</dd></div>
             {record.administrationLevel && showsAdministrationLevel(record) && <div><dt>Nivel administrativo</dt><dd>{administrationLevelLabel(record.administrationLevel)}</dd></div>}
             {geographies.length > 0 && <div><dt>Ámbito territorial</dt><dd>{geographies.join(' · ')}</dd></div>}
+            {municipality && <div><dt>{municipality.label}</dt><dd>{municipality.name}<span class="fact-note">Derivado por InfoCs: el título oficial nombra este municipio del nomenclátor INE (código {municipality.code}){municipality.role === 'convocante' ? ' como ayuntamiento convocante' : ''}.</span></dd></div>}
           </dl>
           <p class="fact-note">Los campos no disponibles en la fuente o no normalizados no se completan.</p>
         </InfoCsDerived>

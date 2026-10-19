@@ -111,6 +111,16 @@ export interface FrontendBDNSData {
   readonly extracts: readonly FrontendBDNSExtract[];
 }
 
+/** Exact territorial evidence copied from canonical provenance (BOE). */
+export interface FrontendTerritorialMatch {
+  readonly reason: string;
+  readonly entityCode: string;
+  readonly entityName: string;
+  readonly field: string;
+  readonly matchedText: string;
+  readonly method: string;
+}
+
 /** Build-time projection of the canonical Record, not a second business model. */
 export interface FrontendRecord {
   readonly id: string;
@@ -132,6 +142,7 @@ export interface FrontendRecord {
   readonly tags: readonly string[];
   readonly contentHash: string;
   readonly bdns?: FrontendBDNSData;
+  readonly territorialMatches?: readonly FrontendTerritorialMatch[];
 }
 
 export interface FrontendEvent {
