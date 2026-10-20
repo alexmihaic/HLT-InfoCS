@@ -1,10 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import RecordList from '../components/RecordList.astro';
-import StatusBadge from '../components/StatusBadge.astro';
+import CoveragePanel from '../components/CoveragePanel.astro';
 import { loadPortalData } from '../lib/data';
 import { loadPortalStatus } from '../lib/data/status';
-import { sourceLabel } from '../lib/presentation/labels';
 import { byPrimaryDateDesc } from '../lib/presentation/recordView';
 import { NOT_COVERED, sourceCoverage } from '../lib/presentation/coverage';
 import { AUTHORITY_GROUP_LABEL, authorityGroups } from '../lib/presentation/authorities';
@@ -18,7 +17,6 @@ const status = await loadPortalStatus(data.sources.map((source) => source.source
 const coverage = sourceCoverage(data.sources, status);
 const recent = [...data.records].sort(byPrimaryDateDesc).slice(0, HOME_RECORD_LIMIT);
 const organisms = authorityGroups(data.records);
-const publishedSources = coverage.filter((source) => source.published);
 const historyIds = new Set(data.eventsByRecordId.keys());
 ---
 
@@ -52,33 +50,7 @@ const historyIds = new Set(data.eventsByRecordId.keys());
   </dl>
 
   <div class="home-columns page-section">
-    <section class="home-coverage aside-panel surface-panel" aria-labelledby="coverage-title">
-      <p class="panel-kicker">Cobertura y actualización</p>
-      <h2 id="coverage-title">Qué fuentes tienen contenido público</h2>
-      <p class="count-note">{data.records.length} {data.records.length === 1 ? 'registro publicado' : 'registros publicados'} en {publishedSources.length} {publishedSources.length === 1 ? 'fuente' : 'fuentes'}</p>
-      <div class="coverage-list">
-        {coverage.map((source) => (
-          <article class="coverage-item">
-            <header class="coverage-item-header">
-              <h3>{sourceLabel(source.sourceId, data.sources)}</h3>
-              <StatusBadge label={source.statusLabel} tone={source.statusTone} />
-            </header>
-            {source.facts.length > 0 && <dl class="coverage-facts">
-              {source.facts.map((fact) => <div><dt>{fact.label}</dt><dd>{fact.datetime ? <time datetime={fact.datetime}>{fact.value}</time> : fact.value}</dd></div>)}
-            </dl>}
-            <p class="coverage-scope">{source.scope}</p>
-            <div class="coverage-item-foot">
-              <p class="coverage-count">{source.recordCountLabel}</p>
-              {source.detailPath && <a class="text-link" href={source.detailPath}>Ficha de la fuente →</a>}
-            </div>
-          </article>
-        ))}
-      </div>
-      <details class="coverage-explainer">
-        <summary>Qué indican estas fechas</summary>
-        <p class="fact-note">Las fechas de ejecución indican cuándo InfoCs completó por última vez una comprobación de la fuente; no garantizan que la fuente oficial no tenga publicaciones posteriores ni sustituyen las fechas oficiales de cada publicación. Una ejecución sin incidencias tampoco significa que se recoja toda la información de una administración.</p>
-      </details>
-    </section>
+    <CoveragePanel coverage={coverage} totalRecords={data.records.length} />
 
     <section class="home-recent" aria-labelledby="records-title">
       <div class="section-heading">

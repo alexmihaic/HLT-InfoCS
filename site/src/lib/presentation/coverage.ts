@@ -1,6 +1,7 @@
 import type { PortalStatus, SourceRunStatus } from '../data/status';
 import type { FrontendSource } from '../data/types';
 import { formatPortalDateTime } from './dates';
+import { sourceLabel } from './labels';
 import { SOURCE_EDITORIAL_DETAILS } from './sourceDetails';
 
 /**
@@ -59,7 +60,7 @@ export function sourceCoverage(
     }
     return {
       sourceId: source.sourceId,
-      name: source.name,
+      name: sourceLabel(source.sourceId, sources),
       published,
       statusLabel: published ? runStatusLabel(run) : 'Sin registros públicos',
       statusTone: published && run?.health?.status === 'healthy' ? 'active' : 'pending',
@@ -97,6 +98,14 @@ function runFacts(run: SourceRunStatus | undefined): CoverageFact[] {
       label: `Último intento registrado, sin éxito (${failures} ${failures === 1 ? 'fallo consecutivo' : 'fallos consecutivos'})`,
       value: formatPortalDateTime(lastAttemptAt),
       datetime: lastAttemptAt,
+    });
+  }
+  // manifestCount is the number of run manifest files found in data/manifests/<source>.
+  // Each manifest represents one recorded collector run, not a verified unique execution.
+  if (run.manifestCount > 0) {
+    facts.push({
+      label: 'Manifiestos de ejecución registrados',
+      value: String(run.manifestCount),
     });
   }
   return facts;
