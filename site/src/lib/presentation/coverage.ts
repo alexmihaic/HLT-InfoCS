@@ -99,6 +99,14 @@ function runFacts(run: SourceRunStatus | undefined): CoverageFact[] {
       datetime: lastAttemptAt,
     });
   }
+  // manifestCount is the number of run manifest files found in data/manifests/<source>.
+  // Each manifest represents one recorded collector run, not a verified unique execution.
+  if (run.manifestCount > 0) {
+    facts.push({
+      label: 'Manifiestos de ejecución registrados',
+      value: String(run.manifestCount),
+    });
+  }
   return facts;
 }
 
