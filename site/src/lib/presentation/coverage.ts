@@ -1,6 +1,7 @@
 import type { PortalStatus, SourceRunStatus } from '../data/status';
 import type { FrontendSource } from '../data/types';
 import { formatPortalDateTime } from './dates';
+import { sourceLabel } from './labels';
 import { SOURCE_EDITORIAL_DETAILS } from './sourceDetails';
 
 /**
@@ -59,7 +60,7 @@ export function sourceCoverage(
     }
     return {
       sourceId: source.sourceId,
-      name: source.name,
+      name: sourceLabel(source.sourceId, sources),
       published,
       statusLabel: published ? runStatusLabel(run) : 'Sin registros públicos',
       statusTone: published && run?.health?.status === 'healthy' ? 'active' : 'pending',
