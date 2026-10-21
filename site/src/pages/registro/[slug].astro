@@ -13,6 +13,7 @@ import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
 import { derivedMunicipality } from '../../lib/presentation/territory';
+import { buildSearchDocument } from '../../lib/presentation/searchContent';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
 interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
@@ -35,15 +36,27 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
 const municipality = derivedMunicipality(record);
+const searchDocument = buildSearchDocument({
+  record, bdnsView, authority, date, geographies, municipality,
+  source: sourceLabel(record.sourceId, [source]), category: categoryLabel(record.category),
+  eventDate: record.eventAt ? formatPortalDate(record.eventAt) : undefined,
+  administrationLabel: showsAdministrationLevel(record) && record.administrationLevel
+    ? administrationLevelLabel(record.administrationLevel) : undefined,
+});
 ---
 
 <BaseLayout title={record.title} description={`Ficha pública de ${categoryLabel(record.category)} en InfoCs.`}>
-  <article class="detail-page" data-pagefind-body>
+  <article class="detail-page">
     <div class="visually-hidden" data-pagefind-ignore aria-hidden="true">
       <span data-pagefind-meta="kind">record</span>
       <span data-pagefind-meta="source">{sourceLabel(record.sourceId, [source])}</span>
       <span data-pagefind-meta="category">{categoryLabel(record.category)}</span>
-      {authority && authority.label === 'Organismo' && <span data-pagefind-meta="authority">{authority.value}</span>}
+      <span data-pagefind-meta="title">{record.title}</span>
+      <span data-pagefind-meta="search_context">{JSON.stringify(searchDocument.excerpts)}</span>
+      {authority && <>
+        <span data-pagefind-meta="authority">{authority.value}</span>
+        <span data-pagefind-meta="authority_label">{authority.label}</span>
+      </>}
       <span data-pagefind-meta="primary_date_iso">{date.value}</span>
       <span data-pagefind-meta="primary_date_label">{date.label}</span>
       <span data-pagefind-meta="primary_date_value">{date.display}</span>
@@ -54,6 +67,9 @@ const municipality = derivedMunicipality(record);
         {bdnsView.budget.currency && <span data-pagefind-meta="bdns_budget_currency">{bdnsView.budget.currency}</span>}
         {bdnsView.budget.currencyNotice && <span data-pagefind-meta="bdns_budget_currency_notice">{bdnsView.budget.currencyNotice}</span>}
       </>}
+    </div>
+    <div class="record-search-content" data-pagefind-body aria-hidden="true" hidden>
+      {searchDocument.texts.map((text) => <p>{text}{' '}</p>)}
     </div>
     <nav class="breadcrumbs" aria-label="Ruta de navegación">
       <a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/registros/">Registros</a><span aria-hidden="true">/</span><span aria-current="page">Ficha</span>

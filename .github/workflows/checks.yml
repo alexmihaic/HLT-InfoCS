@@ -62,6 +62,10 @@ jobs:
         run: npm run build
         working-directory: site
 
+      - name: Test search results
+        run: node --test scripts/search.test.mjs
+        working-directory: site
+
       - name: Verify built portal
         run: node scripts/verify-build.mjs
         working-directory: site

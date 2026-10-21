@@ -157,7 +157,7 @@ main.shell { min-height: calc(100vh - 12rem); padding-block: var(--space-6) var(
 .search-result h2 { max-width: 72ch; margin: var(--space-2) 0 var(--space-1); font-size: var(--text-base); line-height: var(--leading-snug); overflow-wrap: anywhere; }
 .search-result h2 a { color: var(--text-primary); text-decoration: none; }
 .search-result h2 a:hover { color: var(--color-accent-hover); text-decoration: underline; }
-.search-result-authority, .search-result-date, .search-result-excerpt { margin: 0 0 var(--space-1); color: var(--text-secondary); font-size: var(--text-sm); }
+.search-result-authority, .search-result-date, .search-result-excerpt { margin: 0 0 var(--space-1); color: var(--text-secondary); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .search-result-excerpt { max-width: 76ch; }
 .record-card-bdns-summary { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-1) 0; font-size: var(--text-sm); }
 .record-card-bdns-summary > div { display: flex; gap: var(--space-2); }

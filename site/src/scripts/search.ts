@@ -1,6 +1,7 @@
+import { searchExcerpt } from '../lib/presentation/searchContent';
+
 interface PagefindData {
   readonly url?: unknown;
-  readonly plain_excerpt?: unknown;
   readonly meta?: Readonly<Record<string, unknown>>;
 }
 
@@ -9,6 +10,7 @@ interface PagefindResult {
 }
 
 interface PagefindApi {
+  options(options: { ranking: { metaWeights: { search_context: number } } }): Promise<void>;
   search(query: string): Promise<{ results: readonly PagefindResult[] }>;
 }
 
@@ -30,7 +32,13 @@ if (root) {
     let requestNumber = 0;
 
     function getPagefind(): Promise<PagefindApi> {
-      pagefindPromise ??= import(/* @vite-ignore */ new URL('/pagefind/pagefind.js', window.location.origin).href) as Promise<PagefindApi>;
+      pagefindPromise ??= (import(/* @vite-ignore */ new URL('/pagefind/pagefind.js', window.location.origin).href) as Promise<PagefindApi>)
+        .then(async (pagefind) => {
+          // Context is display-only metadata: its words already exist in the body.
+          // Omitted weights retain Pagefind defaults, including the title boost.
+          await pagefind.options({ ranking: { metaWeights: { search_context: 0 } } });
+          return pagefind;
+        });
       return pagefindPromise;
     }
 
@@ -63,7 +71,7 @@ if (root) {
       return element;
     }
 
-    function makeResult(data: PagefindData): HTMLLIElement | null {
+    function makeResult(data: PagefindData, query: string): HTMLLIElement | null {
       const meta = data.meta;
       if (metadataString(meta, 'kind') !== 'record') return null;
 
@@ -90,7 +98,8 @@ if (root) {
       item.append(heading);
 
       const authority = metadataString(meta, 'authority');
-      if (authority) appendText(item, 'p', 'search-result-authority', authority);
+      const authorityLabel = metadataString(meta, 'authority_label');
+      if (authority) appendText(item, 'p', 'search-result-authority', `${authorityLabel ?? 'Organismo'}: ${authority}`);
 
       const bdnsCallType = metadataLiteral(meta, 'bdns_call_type');
       const bdnsBudgetDisplay = metadataLiteral(meta, 'bdns_budget_display');
@@ -111,7 +120,10 @@ if (root) {
           const value = document.createElement('dd');
           value.append(document.createTextNode(bdnsBudgetDisplay));
           if (bdnsBudgetCurrency) value.append(document.createTextNode(` · ${bdnsBudgetCurrency}`));
-          if (bdnsBudgetCurrencyNotice) appendText(value, 'span', 'muted', bdnsBudgetCurrencyNotice);
+          if (bdnsBudgetCurrencyNotice) {
+            value.append(document.createTextNode(' · '));
+            appendText(value, 'span', 'muted', bdnsBudgetCurrencyNotice);
+          }
           fact.append(value);
           summary.append(fact);
         }
@@ -135,8 +147,9 @@ if (root) {
         item.append(dateLine);
       }
 
-      if (typeof data.plain_excerpt === 'string' && data.plain_excerpt.trim()) {
-        appendText(item, 'p', 'search-result-excerpt', data.plain_excerpt.trim());
+      const excerpt = searchExcerpt(meta?.search_context, query);
+      if (excerpt) {
+        appendText(item, 'p', 'search-result-excerpt', excerpt);
       }
       return item;
     }
@@ -163,7 +176,7 @@ if (root) {
         const data = await Promise.all(search.results.map((result) => result.data()));
         if (currentRequest !== requestNumber) return;
 
-        const items = data.map(makeResult).filter((item): item is HTMLLIElement => item !== null);
+        const items = data.map((item) => makeResult(item, query)).filter((item): item is HTMLLIElement => item !== null);
         resultList.replaceChildren(...items);
         if (items.length === 0) {
           searchStatus.textContent = `No se encontraron resultados para «${query}».`;
