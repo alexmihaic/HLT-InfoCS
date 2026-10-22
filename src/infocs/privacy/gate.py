@@ -39,16 +39,36 @@ _RULE_NAMES = frozenset({
     "structured_private_address",
 })
 
+# Separadores admitidos dentro de un identificador español: punto, espacio y
+# guion. Sólo se aceptan entre grupos de dígitos o entre el grupo y la letra de
+# control, nunca dentro de una secuencia arbitraria, para no partir números
+# administrativos, fechas ni importes («2026-09-23» y «964 123 456» no son
+# candidatos).
+_ID_SEPARATOR = r"[ .\-]"
+# Ocho dígitos (DNI) contiguos o agrupados 2-3-3, como «12.345.678».
+_DNI_DIGIT_GROUP = rf"(?:\d{{8}}|\d{{2}}{_ID_SEPARATOR}\d{{3}}{_ID_SEPARATOR}\d{{3}})"
+# Siete dígitos (NIE y NIF especial) contiguos o agrupados 2-3-2.
+_SEVEN_DIGIT_GROUP = rf"(?:\d{{7}}|\d{{2}}{_ID_SEPARATOR}\d{{3}}{_ID_SEPARATOR}\d{{2}})"
+
 _DNI_NIE_RE = re.compile(
-    r"(?<![A-Za-z0-9])(?:[XYZ][ -]?\d{7}|\d{8})[ -]?[A-Z](?![A-Za-z0-9])",
+    rf"(?<![A-Za-z0-9])(?:"
+    rf"[XYZ]{_ID_SEPARATOR}?{_SEVEN_DIGIT_GROUP}{_ID_SEPARATOR}?[A-Z]"
+    rf"|{_DNI_DIGIT_GROUP}{_ID_SEPARATOR}?[A-Z]"
+    rf")(?![A-Za-z0-9])",
     re.IGNORECASE,
 )
-_PERSONAL_NIF_KLM_RE = re.compile(r"(?<![A-Za-z0-9])[KLM]\d{7}[A-Z](?![A-Za-z0-9])", re.IGNORECASE)
+_PERSONAL_NIF_KLM_RE = re.compile(
+    rf"(?<![A-Za-z0-9])[KLM]{_ID_SEPARATOR}?{_SEVEN_DIGIT_GROUP}{_ID_SEPARATOR}?[A-Z](?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
 _LEGAL_ENTITY_NIF_RE = re.compile(r"(?<![A-Za-z0-9])[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J](?![A-Za-z0-9])", re.IGNORECASE)
 _AMBIGUOUS_TAX_SHAPE_RE = re.compile(
     r"(?:\d{8}[A-Z]|[XYZKLM]\d{7}[A-Z]|[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J])\Z",
     re.IGNORECASE,
 )
+# Separadores admitidos dentro de un identificador, para compactarlos antes
+# de comprobar forma y control.
+_IDENTIFIER_SEPARATORS_RE = re.compile(r"[ .\-]")
 _IBAN_RE = re.compile(r"(?<![A-Z0-9])[A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]){11,34}(?![A-Z0-9])", re.IGNORECASE)
 _EMAIL_RE = re.compile(
     r"(?<![A-Za-z0-9._%+\-])[A-Za-z0-9.!#$%&'*+/=?^_`{|}~\-]+@"
@@ -211,11 +231,17 @@ class PrivacyGate:
                 classification = classify_spanish_tax_identifier(value)
                 if classification is not None:
                     classifications.append(PrivacyClassification(classification, field))
-                    if classification is TaxIdentifierClassification.PERSONAL_IDENTIFIER:
-                        self._detect(
-                            "spanish_personal_identifier", field, lambda _: True, value, reasons
-                        )
-                    elif classification is TaxIdentifierClassification.AMBIGUOUS_TAX_IDENTIFIER:
+                if classification is TaxIdentifierClassification.PERSONAL_IDENTIFIER:
+                    self._detect("spanish_personal_identifier", field, lambda _: True, value, reasons)
+                elif classification is TaxIdentifierClassification.AMBIGUOUS_TAX_IDENTIFIER:
+                    self._detect("ambiguous_tax_identifier", field, lambda _: True, value, reasons)
+                elif classification is None:
+                    # No clasificable: no queda exento de todas las reglas. Se
+                    # aplican los detectores genéricos y, si el valor tiene forma
+                    # de identificador fiscal, la regla ambigua ya configurada.
+                    self._detect("spanish_personal_identifier", field, _has_valid_personal_identifier, value, reasons)
+                    self._detect("iban", field, _has_valid_iban, value, reasons)
+                    if _looks_like_unclassified_tax_identifier(value):
                         self._detect("ambiguous_tax_identifier", field, lambda _: True, value, reasons)
                 continue
 
@@ -270,8 +296,17 @@ class PrivacyGate:
 
 
 def classify_spanish_tax_identifier(value: str) -> TaxIdentifierClassification | None:
-    """Clasifica sólo formatos españoles comprobables; nunca usa nombres/contexto."""
-    candidate = value.strip().upper()
+    """Clasifica sólo formatos españoles comprobables; nunca usa nombres/contexto.
+
+    Los separadores internos admitidos (punto, espacio y guion) se eliminan
+    antes de comprobar forma y checksum, de modo que «12.345.678-Z» se
+    clasifica igual que «12345678Z».
+    """
+    if not isinstance(value, str):
+        return None
+    candidate = _compact_identifier(value.strip())
+    if not candidate:
+        return None
     if _has_valid_personal_identifier(candidate):
         return TaxIdentifierClassification.PERSONAL_IDENTIFIER
     if _LEGAL_ENTITY_NIF_RE.fullmatch(candidate) and _has_valid_legal_entity_nif(candidate):
@@ -279,6 +314,21 @@ def classify_spanish_tax_identifier(value: str) -> TaxIdentifierClassification |
     if _AMBIGUOUS_TAX_SHAPE_RE.fullmatch(candidate):
         return TaxIdentifierClassification.AMBIGUOUS_TAX_IDENTIFIER
     return None
+
+
+def _looks_like_unclassified_tax_identifier(value: str) -> bool:
+    """Indica si un valor no vacío tiene forma de identificador fiscal.
+
+    Se aplica sólo a valores que el clasificador no pudo resolver. Cubre un
+    token alfanumérico de 8 a 12 caracteres sin espacios: una etiqueta legible
+    («NIF B12345678») no se marca aquí, y tampoco se clasifica como personal.
+    """
+    candidate = value.strip()
+    if not 8 <= len(candidate) <= 12:
+        return False
+    if not candidate.isascii() or not candidate.isalnum():
+        return False
+    return any(char.isdigit() for char in candidate)
 
 
 def _inspected_fields(record: Record) -> dict[str, str]:
@@ -368,10 +418,19 @@ def _inspected_fields(record: Record) -> dict[str, str]:
     return fields
 
 
+def _compact_identifier(value: str) -> str:
+    """Quita los separadores admitidos y normaliza a mayúsculas.
+
+    La compactación sólo se aplica a un candidato ya delimitado por los
+    patrones: nunca a texto libre, para no unir números distintos.
+    """
+    return _IDENTIFIER_SEPARATORS_RE.sub("", value).upper()
+
+
 def _has_valid_personal_identifier(value: str) -> bool:
     for pattern in (_DNI_NIE_RE, _PERSONAL_NIF_KLM_RE):
         for match in pattern.finditer(value):
-            compact = re.sub(r"[ -]", "", match.group(0)).upper()
+            compact = _compact_identifier(match.group(0))
             digits = compact[:-1]
             if digits[0] in "XYZ":
                 digits = {"X": "0", "Y": "1", "Z": "2"}[digits[0]] + digits[1:]
@@ -383,7 +442,16 @@ def _has_valid_personal_identifier(value: str) -> bool:
 
 
 def _has_valid_legal_entity_nif(value: str) -> bool:
+    """Control de identificador de persona jurídica (NIF/CIF).
+
+    La suma de las posiciones pares e impares del grupo de siete dígitos fija un
+    control numérico y, según el prefijo, también uno alfabético. Es la única
+    comprobación de empresa: un identificador que no la supera no se considera
+    válido ni aunque tenga forma de CIF.
+    """
     compact = value.upper()
+    if len(compact) != 9:
+        return False
     digits = compact[1:8]
     total = 0
     for index, char in enumerate(digits):
