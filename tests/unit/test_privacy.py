@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, datetime
+import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -51,6 +52,28 @@ def procurement_record(*, awardee_name: str = "Empresa Ficticia S.L.", tax_ident
         payload["procurement"]["awardee"]["tax_identifier"] = tax_identifier
     payload["procurement"]["awardee"]["name"] = awardee_name
     return finalize_record(payload)
+
+
+# --- Identificadores de referencia --------------------------------------------
+# Valores sintéticos: ninguno corresponde a una persona o a una empresa real.
+# Son referencias fijas y comprobables a mano con el algoritmo de control
+# publicado, de modo que el test no dependa del código bajo prueba.
+# 12345678 % 23 = 14 -> letra "Z"   |   1234567 % 23 = 19 -> letra "L".
+DNI_REFERENCE = "12345678Z"
+DNI_REFERENCE_DOTTED = "12.345.678-Z"
+DNI_REFERENCE_SPACED = "12 345 678 Z"
+DNI_REFERENCE_DASHED = "12-345-678-Z"
+DNI_REFERENCE_WRONG_LETTER = "12345678A"  # control inválido: no es un DNI
+NIE_REFERENCE = "X1234567L"
+NIE_REFERENCE_SPACED = "X 1234567 L"
+NIE_REFERENCE_GROUPED = "X12.345.67-L"
+# El grupo de siete dígitos "1234567" fija el control 4: con prefijo B el control
+# es numérico ("4") y con prefijo P es alfabético ("D", tabla "JABCDEFGHI").
+ENTITY_NUMERIC_CONTROL = "B12345674"
+ENTITY_NUMERIC_CONTROL_WRONG = "B12345676"
+ENTITY_NUMERIC_CONTROL_WRONG_DIGIT = "B12345675"
+ENTITY_ALPHABETIC_CONTROL = "P1234567D"
+ENTITY_ALPHABETIC_CONTROL_WRONG = "P12345674"
 
 
 class PrivacyGateTests(unittest.TestCase):
@@ -266,6 +289,194 @@ class PrivacyGateTests(unittest.TestCase):
         self.assertIn("privacy_gate_required: true", contract)
         self.assertIn("mirror_documents: false", contract)
         self.assertIn("fulltext_publication: false", contract)
+
+
+class PrivacyIdentifierSeparatorTests(unittest.TestCase):
+    """PRIVACY-01: identificadores con separadores y campo ``tax_identifier``."""
+
+    def setUp(self) -> None:
+        self.gate = PrivacyGate.from_file(ROOT / "config" / "privacy-rules.json")
+
+    def test_personal_identifiers_with_separators_are_quarantined(self) -> None:
+        cases = (
+            DNI_REFERENCE,
+            DNI_REFERENCE_DOTTED,
+            DNI_REFERENCE_SPACED,
+            DNI_REFERENCE_DASHED,
+            NIE_REFERENCE,
+            NIE_REFERENCE_SPACED,
+            NIE_REFERENCE_GROUPED,
+        )
+        for identifier in cases:
+            with self.subTest(identifier=identifier):
+                decision = self.gate.evaluate(make_record(title=f"Documento sintético {identifier}"))
+                self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+                self.assertIn("spanish_personal_identifier", {reason.rule for reason in decision.reasons})
+                self.assertNotIn(identifier, json.dumps(decision.to_dict()))
+
+    def test_separated_personal_identifier_is_detected_in_tax_identifier_field(self) -> None:
+        for identifier in (DNI_REFERENCE_DOTTED, DNI_REFERENCE_SPACED, NIE_REFERENCE_SPACED):
+            with self.subTest(identifier=identifier):
+                decision = self.gate.evaluate(procurement_record(tax_identifier=identifier))
+                self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+                self.assertEqual(
+                    decision.classifications[0].classification,
+                    TaxIdentifierClassification.PERSONAL_IDENTIFIER,
+                )
+                self.assertNotIn(identifier, json.dumps(decision.to_dict()))
+
+    def test_personal_identifier_with_wrong_control_letter_is_not_detected(self) -> None:
+        decision = self.gate.evaluate(make_record(title=f"Documento sintético {DNI_REFERENCE_WRONG_LETTER}"))
+        self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+        self.assertNotIn("spanish_personal_identifier", {reason.rule for reason in decision.reasons})
+
+    def test_valid_company_identifiers_are_not_blocked(self) -> None:
+        for identifier in (ENTITY_NUMERIC_CONTROL, ENTITY_ALPHABETIC_CONTROL):
+            with self.subTest(identifier=identifier):
+                self.assertEqual(
+                    classify_spanish_tax_identifier(identifier),
+                    TaxIdentifierClassification.LEGAL_ENTITY_TAX_IDENTIFIER,
+                )
+                decision = self.gate.evaluate(procurement_record(tax_identifier=identifier))
+                self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+                self.assertNotIn("spanish_personal_identifier", {reason.rule for reason in decision.reasons})
+
+    def test_entity_control_errors_are_not_valid_enterprise_identifiers(self) -> None:
+        """Un control que no supera el cálculo no habilita un identificador.
+
+        El conjunto de identificadores de empresa válidos es exactamente el que
+        resulta del control por posiciones pares e impares: ni «B12345676» ni
+        «P12345674» amplían ese conjunto.
+        """
+        for identifier in (
+            ENTITY_NUMERIC_CONTROL_WRONG,
+            ENTITY_NUMERIC_CONTROL_WRONG_DIGIT,
+            ENTITY_ALPHABETIC_CONTROL_WRONG,
+        ):
+            with self.subTest(identifier=identifier):
+                self.assertNotEqual(
+                    classify_spanish_tax_identifier(identifier),
+                    TaxIdentifierClassification.LEGAL_ENTITY_TAX_IDENTIFIER,
+                )
+                decision = self.gate.evaluate(procurement_record(tax_identifier=identifier))
+                self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+                self.assertEqual(
+                    decision.classifications[0].classification,
+                    TaxIdentifierClassification.AMBIGUOUS_TAX_IDENTIFIER,
+                )
+                self.assertIn("ambiguous_tax_identifier", {reason.rule for reason in decision.reasons})
+                self.assertNotIn("personal_identifier", decision.classifications[0].classification.value)
+
+    def test_valid_company_identifier_with_separators_is_not_blocked(self) -> None:
+        separated = f"{ENTITY_NUMERIC_CONTROL[0]} {ENTITY_NUMERIC_CONTROL[1:8]} {ENTITY_NUMERIC_CONTROL[8]}"
+        decision = self.gate.evaluate(procurement_record(tax_identifier=separated))
+        self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+        self.assertEqual(
+            decision.classifications[0].classification,
+            TaxIdentifierClassification.LEGAL_ENTITY_TAX_IDENTIFIER,
+        )
+
+    def test_readable_label_with_company_identifier_is_not_blocked(self) -> None:
+        decision = self.gate.evaluate(procurement_record(tax_identifier=f"NIF {ENTITY_NUMERIC_CONTROL}"))
+        self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+
+    def test_ambiguous_tax_identifier_keeps_its_own_rule(self) -> None:
+        for identifier in ("12345678A", "B00000001", "12.345.678-A"):
+            with self.subTest(identifier=identifier):
+                decision = self.gate.evaluate(procurement_record(tax_identifier=identifier))
+                self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+                self.assertEqual(
+                    decision.classifications[0].classification,
+                    TaxIdentifierClassification.AMBIGUOUS_TAX_IDENTIFIER,
+                )
+                self.assertIn("ambiguous_tax_identifier", {reason.rule for reason in decision.reasons})
+                self.assertNotIn("personal_identifier", decision.classifications[0].classification.value)
+
+    def test_unclassifiable_tax_identifier_is_not_exempt_from_the_rules(self) -> None:
+        decision = self.gate.evaluate(procurement_record(tax_identifier="123456789"))
+        self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+        self.assertIn("ambiguous_tax_identifier", {reason.rule for reason in decision.reasons})
+        self.assertEqual(decision.classifications, ())
+
+    def test_unclassifiable_tax_identifier_still_runs_generic_detectors(self) -> None:
+        decision = self.gate.evaluate(procurement_record(tax_identifier="ES9121000418450200051332"))
+        self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+        self.assertIn("iban", {reason.rule for reason in decision.reasons})
+
+    def test_disabled_rules_still_disable_the_unclassifiable_tax_identifier(self) -> None:
+        payload = json.loads((ROOT / "config" / "privacy-rules.json").read_text(encoding="utf-8"))
+        payload["rules"]["ambiguous_tax_identifier"]["enabled"] = False
+        payload["rules"]["spanish_personal_identifier"]["enabled"] = False
+        gate = PrivacyGate(PrivacyConfig.from_mapping(payload))
+        decision = gate.evaluate(procurement_record(tax_identifier="123456789"))
+        self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+        self.assertEqual(decision.reasons, ())
+
+    def test_ordinary_text_without_identifiers_is_allowed(self) -> None:
+        for title in (
+            "Convocatoria de ayudas para el comercio local",
+            "Resolución de 8 de octubre de 2026 del Ayuntamiento Ficticio",
+            "Importe 12.345.678,50 euros y código INE 12040",
+            "Expediente 2026/001 con fecha 2026-09-23",
+            "Base reguladora: Ordenanza municipal de subvenciones",
+            "Presupuesto de convocatoria 800000 y plazo de 30 días naturales",
+        ):
+            with self.subTest(title=title):
+                self.assertEqual(self.gate.evaluate(make_record(title=title)).decision, PrivacyDecisionType.ALLOW)
+
+    def test_personal_identifier_is_detected_in_title_and_description(self) -> None:
+        identifier = DNI_REFERENCE_DOTTED
+        for changes in ({"title": f"Convocatoria {identifier}"}, {"description": f"Detalle {identifier}"}):
+            with self.subTest(field=sorted(changes)[0]):
+                decision = self.gate.evaluate(make_record(**changes))
+                self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+                self.assertIn("spanish_personal_identifier", {reason.rule for reason in decision.reasons})
+
+    def test_personal_identifier_is_detected_in_inspected_bdns_fields(self) -> None:
+        identifier = DNI_REFERENCE_DOTTED
+        payload = candidate_payload()
+        payload.update({
+            "source": {"id": "bdns", "official_id": "999999"},
+            "category": "grants.call",
+            "title": "Convocatoria de subvenciones sintética",
+            "authority": {"id": "bdns:test", "name": "Organismo Ficticio", "administration_level": None},
+            "administration_level": None,
+            "grant": {"call_id": "999999"},
+            "source_data": {"bdns": {"extension_version": "1.0", "purpose": f"Finalidad {identifier}"}},
+        })
+        decision = self.gate.evaluate(finalize_record(payload))
+        self.assertEqual(decision.decision, PrivacyDecisionType.QUARANTINE)
+        self.assertIn("spanish_personal_identifier", {reason.rule for reason in decision.reasons})
+        self.assertNotIn(identifier, json.dumps(decision.to_dict()))
+
+    def test_public_canonical_records_keep_their_classification(self) -> None:
+        """Los Records públicos existentes no pueden cambiar de clasificación."""
+        records_root = ROOT / "data" / "records"
+        if not records_root.is_dir():
+            self.skipTest("No hay datos canónicos públicos en este checkout.")
+        paths = sorted(records_root.rglob("*.json"))
+        self.assertTrue(paths, "No se encontraron Records públicos para comprobar.")
+        for index, path in enumerate(paths):
+            record = Record.from_dict(json.loads(path.read_text(encoding="utf-8")))
+            with self.subTest(record=f"records#{index + 1}"):
+                decision = self.gate.evaluate(record)
+                self.assertEqual(decision.decision, PrivacyDecisionType.ALLOW)
+
+    def test_public_canonical_data_still_validates(self) -> None:
+        """El endurecimiento del detector no debe invalidar los datos públicos.
+
+        Ejecuta el mismo validador que usa CI (``scripts/validate_canonical_data.py``)
+        sobre el árbol real, sin escribir nada.
+        """
+        script = ROOT / "scripts" / "validate_canonical_data.py"
+        if not script.is_file():
+            self.skipTest("No se encontró el validador de datos canónicos.")
+        spec = importlib.util.spec_from_file_location("validate_canonical_data", script)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        counts = module.validate_canonical_data(ROOT)
+        self.assertGreater(counts["records"], 0)
+        self.assertGreater(counts["events"], 0)
 
 
 if __name__ == "__main__":
