@@ -62,6 +62,10 @@ jobs:
         run: npm run build
         working-directory: site
 
+      - name: Test change descriptions
+        run: node --test scripts/changes.test.mjs
+        working-directory: site
+
       - name: Test search results
         run: node --test scripts/search.test.mjs
         working-directory: site
