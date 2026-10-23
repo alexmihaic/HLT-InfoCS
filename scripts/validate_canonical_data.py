@@ -21,6 +21,7 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 from infocs.diff.core import content_hash
 from infocs.events import EventStore
 from infocs.fetch.boe.review_queue import validate_review_queue_payload
+from infocs.fetch.boe.history import BOEHistoryError, validate_boe_history
 from infocs.manifests import ManifestStore, RunManifest, SourceHealth
 from infocs.models import Record, validate_record_payload
 from infocs.store import RecordStore
@@ -146,6 +147,14 @@ def validate_canonical_data(root: Path) -> dict[str, int]:
                     raise CanonicalDataError("event_without_record")
         except Exception as error:  # noqa: BLE001
             fail(source_dir, error)
+
+    # BOE only: BDNS retains its documented v1→v2 historical hash exception.
+    try:
+        validate_boe_history(root)
+    except BOEHistoryError as error:
+        errors.append(f"events/boe: {error}")
+    except Exception:
+        errors.append("events/boe: history_validation_failed")
 
     manifest_store = ManifestStore(data / "manifests")
     manifest_schema = _validator(root, "manifests")

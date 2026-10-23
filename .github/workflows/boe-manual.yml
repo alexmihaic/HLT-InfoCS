@@ -51,16 +51,15 @@ jobs:
           echo "exit_code=$runner_code" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Validate generated data artifacts
-        run: python -m infocs.fetch.boe.workflow_safety
-
-      - name: Stage only canonical data
+      - name: Validate and stage publishable BOE artifacts
+        env:
+          RUNNER_EXIT_CODE: ${{ steps.collection.outputs.exit_code }}
         shell: bash
         run: |
-          git add -- data/records data/events data/manifests data/health
-          if [[ -d data/review ]]; then
-            git add -- data/review
-          fi
+          set -euo pipefail
+          # Failure: only validated failed Manifest/Health. Never stage partial
+          # Records, Events or review queue, even if each JSON is schema-valid.
+          python -m infocs.fetch.boe.workflow_safety --runner-exit-code "$RUNNER_EXIT_CODE"
           git diff --cached --check
 
       - name: Commit and push data when changed
