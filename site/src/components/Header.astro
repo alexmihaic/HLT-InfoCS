@@ -18,7 +18,7 @@ const links: readonly { href: string; label: string; page: Page }[] = [
 
 <header class="site-header">
   <div class="shell header-inner">
-    <Wordmark />
+    <div class="brand"><Wordmark /><span class="brand-tag">Castelló en datos</span></div>
     <nav class="primary-nav" aria-label="Navegación principal">
       {links.map((link) => <a href={link.href} aria-current={currentPage === link.page ? 'page' : undefined}>{link.label}</a>)}
     </nav>
