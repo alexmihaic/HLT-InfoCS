@@ -51,6 +51,22 @@ test('values without a declared zone are kept literally, never converted or give
   assert.deepEqual(describeSystemTimestamp('2026-13-45T00:00:00Z'), { text: '2026-13-45T00:00:00Z' });
 });
 
+test('impossible calendar dates are kept literally, not rolled over by Date', () => {
+  for (const value of ['2026-02-30T00:00:00Z', '2026-04-31T12:00:00+02:00', '2025-02-29T00:00:00Z', '1900-02-29T00:00:00Z', '2026-00-10T00:00:00Z', '2026-13-01T00:00:00Z', '2026-01-00T00:00:00Z']) {
+    const view = describeSystemTimestamp(value);
+    assert.deepEqual(view, { text: value }, value);
+    assert.equal('dateTime' in view, false, value);
+  }
+});
+
+test('valid leap days are accepted and converted to Madrid time', () => {
+  for (const value of ['2024-02-29T12:00:00Z', '2000-02-29T12:00:00Z']) {
+    const view = describeSystemTimestamp(value);
+    assert.equal(view.dateTime, value);
+    assert.match(view.text, /29 de febrero de (2024|2000) a las 13:00 CET/);
+  }
+});
+
 test('timestamp presentation does not depend on the machine time zone', () => {
   const probe = `
     import { describeSystemTimestamp as d } from ${JSON.stringify(new URL('../src/lib/presentation/dates.ts', import.meta.url).href)};

@@ -54,7 +54,14 @@ export interface SystemTimestampView {
 }
 
 /** Date-time that declares its own zone: a trailing `Z` or a numeric offset after the time part (never the date's hyphens). */
-const EXPLICIT_ZONE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
+const EXPLICIT_ZONE_TIMESTAMP = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/** `Date` rolls impossible days (30 February) over to the next month, so the calendar date is checked first. */
+function isRealCalendarDate(year: number, month: number, day: number): boolean {
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  const daysInMonth = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth[month - 1]!;
+}
 
 /**
  * Presents a stored InfoCs timestamp without altering it. A missing value shows
@@ -64,6 +71,9 @@ const EXPLICIT_ZONE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+
  */
 export function describeSystemTimestamp(value: string | undefined | null): SystemTimestampView {
   if (typeof value !== 'string' || value.trim() === '') return { text: 'No disponible' };
-  if (!EXPLICIT_ZONE_TIMESTAMP.test(value) || Number.isNaN(new Date(value).getTime())) return { text: value };
+  const parts = EXPLICIT_ZONE_TIMESTAMP.exec(value);
+  if (!parts || !isRealCalendarDate(Number(parts[1]), Number(parts[2]), Number(parts[3])) || Number.isNaN(new Date(value).getTime())) {
+    return { text: value };
+  }
   return { dateTime: value, text: formatPortalDateTime(value) };
 }
