@@ -82,7 +82,7 @@ const pausedSources = coverage.filter((source) => !source.published);
           return (
             <li>
               <div class="hx-ledger-head"><span class="hx-ledger-name">{sourceLabel(source.sourceId, data.sources)}</span><StatusBadge label={source.statusLabel} tone={source.statusTone} /></div>
-              <p class="hx-ledger-line">{source.recordCountLabel}{lastSuccess && <> · última comprobación <time datetime={lastSuccess} title={formatPortalDateTime(lastSuccess)}>{formatPortalDateTimeShort(lastSuccess)}</time></>}</p>
+              <p class="hx-ledger-line">{source.recordCountLabel}{lastSuccess && <> · última ejecución satisfactoria <time datetime={lastSuccess} title={formatPortalDateTime(lastSuccess)}>{formatPortalDateTimeShort(lastSuccess)}</time></>}</p>
               {source.sourceId === 'boe' && status.boePendingReview !== undefined && (
                 <dl class="hx-ledger-facts"><div><dt>Detectadas y pendientes de revisión (no publicadas)</dt><dd>{status.boePendingReview}</dd></div></dl>
               )}
