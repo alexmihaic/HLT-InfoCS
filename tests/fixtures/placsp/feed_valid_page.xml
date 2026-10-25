@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- Datos 100 % sintéticos: ningún valor procede del feed real. -->
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:at="http://purl.org/atompub/tombstones/1.0"
+      xmlns:cbc="urn:dgpe:names:draft:codice:schema:xsd:CommonBasicComponents-2"
+      xmlns:cac="urn:dgpe:names:draft:codice:schema:xsd:CommonAggregateComponents-2"
+      xmlns:ext="urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonAggregateComponents-2"
+      xmlns:bext="urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonBasicComponents-2">
+  <author><name>Fuente sintetica</name></author>
+  <id>https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom</id>
+  <link href="https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom" rel="self"/>
+  <link href="https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3_20261023_202231.atom" rel="next"/>
+  <title>Feed sintetico de pruebas</title>
+  <updated>2026-10-24T20:02:56.368+02:00</updated>
+  <at:deleted-entry ref="https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-0900" when="2026-10-23T20:27:20.747+02:00">
+    <at:comment type="ANULADA"/>
+  </at:deleted-entry>
+  <at:deleted-entry ref="https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-0901" when="2026-10-23T21:00:00.000+02:00">
+    <at:comment type="CERRADA"/>
+  </at:deleted-entry>
+
+  <!-- A: entrada mínima -->
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-0001</id>
+    <updated>2026-10-24T19:53:51.443+02:00</updated>
+    <ext:ContractFolderStatus>
+      <cbc:ContractFolderID>SYN/2026/0001</cbc:ContractFolderID>
+      <ext:LocatedContractingParty>
+        <cac:Party>
+          <cac:PartyIdentification><cbc:ID schemeName="ID_PLATAFORMA">9990000000001</cbc:ID></cac:PartyIdentification>
+        </cac:Party>
+      </ext:LocatedContractingParty>
+    </ext:ContractFolderStatus>
+  </entry>
+
+  <!-- B: varios avisos, DIR3, ES522, datos personales señuelo en rutas excluidas -->
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-0002</id>
+    <title>Servicio ficticio de mantenimiento</title>
+    <summary>Resumen ficticio con dato señuelo: persona.senuelo@example.invalid</summary>
+    <updated>2026-10-24T18:00:00.000+02:00</updated>
+    <ext:ContractFolderStatus>
+      <cbc:ContractFolderID>SYN/2026/0002</cbc:ContractFolderID>
+      <bext:ContractFolderStatusCode listURI="urn:synthetic:status" listVersionID="1.0">EV</bext:ContractFolderStatusCode>
+      <ext:LocatedContractingParty>
+        <cbc:ContractingPartyTypeCode>3</cbc:ContractingPartyTypeCode>
+        <cac:Party>
+          <cbc:WebsiteURI>https://senuelo.example.invalid</cbc:WebsiteURI>
+          <cac:PartyIdentification><cbc:ID schemeName="NIF">Q0000000J</cbc:ID></cac:PartyIdentification>
+          <cac:PartyIdentification><cbc:ID schemeName="ID_PLATAFORMA">9990000000002</cbc:ID></cac:PartyIdentification>
+          <cac:PartyIdentification><cbc:ID schemeName="DIR3">L01990001</cbc:ID></cac:PartyIdentification>
+          <cac:PartyName><cbc:Name>Organo Sintetico SENUELO</cbc:Name></cac:PartyName>
+          <cac:PostalAddress>
+            <cbc:CityName>Ciudad Senuelo</cbc:CityName>
+            <cbc:PostalZone>12999</cbc:PostalZone>
+            <cac:AddressLine><cbc:Line>Calle Senuelo 1</cbc:Line></cac:AddressLine>
+          </cac:PostalAddress>
+          <cac:Contact>
+            <cbc:Name>Persona Senuelo</cbc:Name>
+            <cbc:Telephone>+34 900 000 000</cbc:Telephone>
+            <cbc:ElectronicMail>contacto.senuelo@example.invalid</cbc:ElectronicMail>
+          </cac:Contact>
+        </cac:Party>
+        <ext:ParentLocatedParty><cac:PartyName><cbc:Name>Jerarquia Senuelo</cbc:Name></cac:PartyName></ext:ParentLocatedParty>
+      </ext:LocatedContractingParty>
+      <cac:ProcurementProject>
+        <cbc:TypeCode listURI="urn:synthetic:type">2</cbc:TypeCode>
+        <cac:BudgetAmount><cbc:TaxExclusiveAmount currencyID="EUR">1234.50</cbc:TaxExclusiveAmount></cac:BudgetAmount>
+        <cac:RequiredCommodityClassification><cbc:ItemClassificationCode>50000000</cbc:ItemClassificationCode></cac:RequiredCommodityClassification>
+        <cac:RequiredCommodityClassification><cbc:ItemClassificationCode>45000000</cbc:ItemClassificationCode></cac:RequiredCommodityClassification>
+        <cac:RealizedLocation>
+          <cbc:CountrySubentity>Castellon Senuelo</cbc:CountrySubentity>
+          <cbc:CountrySubentityCode>ES522</cbc:CountrySubentityCode>
+          <cac:Address><cbc:CityName>Municipio Senuelo</cbc:CityName></cac:Address>
+        </cac:RealizedLocation>
+      </cac:ProcurementProject>
+      <cac:TenderingProcess>
+        <cbc:ProcedureCode>1</cbc:ProcedureCode>
+        <cac:TenderSubmissionDeadlinePeriod>
+          <cbc:EndDate>2026-11-10</cbc:EndDate>
+          <cbc:EndTime>14:00:00.000+01:00</cbc:EndTime>
+        </cac:TenderSubmissionDeadlinePeriod>
+      </cac:TenderingProcess>
+      <ext:ValidNoticeInfo>
+        <bext:NoticeTypeCode>DOC_CN</bext:NoticeTypeCode>
+        <bext:NoticeIssueDate>2026-10-20</bext:NoticeIssueDate>
+      </ext:ValidNoticeInfo>
+      <ext:ValidNoticeInfo>
+        <bext:NoticeTypeCode>DOC_CAN_ADJ</bext:NoticeTypeCode>
+        <bext:NoticeIssueDate>2026-10-24</bext:NoticeIssueDate>
+      </ext:ValidNoticeInfo>
+      <cac:TenderResult>
+        <cac:WinningParty>
+          <cac:PartyIdentification><cbc:ID schemeName="NIF">B0000000J</cbc:ID></cac:PartyIdentification>
+          <cac:PartyName><cbc:Name>Adjudicataria Senuelo SL</cbc:Name></cac:PartyName>
+        </cac:WinningParty>
+      </cac:TenderResult>
+      <cac:LegalDocumentReference>
+        <cac:Attachment><cac:ExternalReference>
+          <cbc:URI>https://documentos.example.invalid/pliego-senuelo.pdf</cbc:URI>
+          <cbc:FileName>pliego-senuelo.pdf</cbc:FileName>
+        </cac:ExternalReference></cac:Attachment>
+      </cac:LegalDocumentReference>
+    </ext:ContractFolderStatus>
+  </entry>
+
+  <!-- C: lotes (contenido señuelo que no debe almacenarse), otro NUTS, sin DIR3 -->
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-0003</id>
+    <title>Obra ficticia con lotes</title>
+    <updated>2026-10-24T17:00:00.000+02:00</updated>
+    <ext:ContractFolderStatus>
+      <cbc:ContractFolderID>SYN/2026/0003</cbc:ContractFolderID>
+      <bext:ContractFolderStatusCode>PUB</bext:ContractFolderStatusCode>
+      <ext:LocatedContractingParty>
+        <cac:Party>
+          <cac:PartyIdentification><cbc:ID schemeName="ID_PLATAFORMA">9990000000003</cbc:ID></cac:PartyIdentification>
+        </cac:Party>
+      </ext:LocatedContractingParty>
+      <cac:ProcurementProject>
+        <cac:RealizedLocation><cbc:CountrySubentityCode>ES523</cbc:CountrySubentityCode></cac:RealizedLocation>
+      </cac:ProcurementProject>
+      <cac:ProcurementProjectLot>
+        <cbc:ID>1</cbc:ID>
+        <cac:ProcurementProject>
+          <cbc:Name>Contenido de lote señuelo</cbc:Name>
+          <cac:RealizedLocation><cbc:CountrySubentityCode>ES522</cbc:CountrySubentityCode></cac:RealizedLocation>
+        </cac:ProcurementProject>
+      </cac:ProcurementProjectLot>
+    </ext:ContractFolderStatus>
+  </entry>
+</feed>

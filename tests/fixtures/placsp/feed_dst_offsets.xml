@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Sintético: el offset pasa de +02:00 a +01:00 (cambio horario). -->
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:cbc="urn:dgpe:names:draft:codice:schema:xsd:CommonBasicComponents-2"
+      xmlns:cac="urn:dgpe:names:draft:codice:schema:xsd:CommonAggregateComponents-2"
+      xmlns:ext="urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonAggregateComponents-2">
+  <id>https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom</id>
+  <updated>2026-10-25T03:00:44.752+01:00</updated>
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-1001</id>
+    <updated>2026-10-25T02:30:00.000+02:00</updated>
+    <ext:ContractFolderStatus>
+      <cbc:ContractFolderID>SYN/DST/1</cbc:ContractFolderID>
+      <ext:LocatedContractingParty><cac:Party>
+        <cac:PartyIdentification><cbc:ID schemeName="ID_PLATAFORMA">9990000001001</cbc:ID></cac:PartyIdentification>
+      </cac:Party></ext:LocatedContractingParty>
+    </ext:ContractFolderStatus>
+  </entry>
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacionesPerfilContratante/SYN-1002</id>
+    <updated>2026-10-25T02:10:00.000+01:00</updated>
+    <ext:ContractFolderStatus>
+      <cbc:ContractFolderID>SYN/DST/2</cbc:ContractFolderID>
+      <ext:LocatedContractingParty><cac:Party>
+        <cac:PartyIdentification><cbc:ID schemeName="ID_PLATAFORMA">9990000001002</cbc:ID></cac:PartyIdentification>
+      </cac:Party></ext:LocatedContractingParty>
+    </ext:ContractFolderStatus>
+  </entry>
+</feed>
