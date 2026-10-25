@@ -1,16 +1,20 @@
 ---
+import '../styles/home.css';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import RecordList from '../components/RecordList.astro';
-import CoveragePanel from '../components/CoveragePanel.astro';
+import StatusBadge from '../components/StatusBadge.astro';
 import { loadPortalData } from '../lib/data';
 import { loadPortalStatus } from '../lib/data/status';
-import { byPrimaryDateDesc } from '../lib/presentation/recordView';
+import { byPrimaryDateDesc, primaryDate } from '../lib/presentation/recordView';
 import { NOT_COVERED, sourceCoverage } from '../lib/presentation/coverage';
 import { AUTHORITY_GROUP_LABEL, authorityGroups } from '../lib/presentation/authorities';
-import { formatPortalDateTime } from '../lib/presentation/dates';
+import { changeItems } from '../lib/presentation/changes';
+import { sourceLabel } from '../lib/presentation/labels';
+import { formatPortalDateTime, formatPortalDateTimeShort } from '../lib/presentation/dates';
 
-const HOME_RECORD_LIMIT = 20;
-const HOME_ORGANISM_LIMIT = 8;
+const HOME_RECORD_LIMIT = 10;
+const HOME_ORGANISM_LIMIT = 6;
+const RECENT_WINDOW_DAYS = 30;
 
 const data = await loadPortalData();
 const status = await loadPortalStatus(data.sources.map((source) => source.sourceId));
@@ -18,6 +22,28 @@ const coverage = sourceCoverage(data.sources, status);
 const recent = [...data.records].sort(byPrimaryDateDesc).slice(0, HOME_RECORD_LIMIT);
 const organisms = authorityGroups(data.records);
 const historyIds = new Set(data.eventsByRecordId.keys());
+const changes = changeItems(data);
+
+const countOf = (sourceId: string): number => data.sources.find((source) => source.sourceId === sourceId)?.recordCount ?? 0;
+const maxOrganism = Math.max(1, ...organisms.slice(0, HOME_ORGANISM_LIMIT).map((group) => group.records.length));
+// Recuento por el concepto de fecha que muestra cada ficha (`primaryDate`): fecha oficial de
+// publicación, fecha de recepción en BDNS o, en su defecto, detección por InfoCs. No se mezclan.
+const builtAtMs = Date.parse(status.builtAt);
+const windowStart = builtAtMs - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+const DATE_KINDS: readonly { label: string; phrase: (n: number) => string }[] = [
+  { label: 'Publicado', phrase: (n) => `${n} ${n === 1 ? 'publicado' : 'publicados'}` },
+  { label: 'Recibida en BDNS', phrase: (n) => `${n} ${n === 1 ? 'recibida' : 'recibidas'} en BDNS` },
+  { label: 'Detectado por InfoCs', phrase: (n) => `${n} ${n === 1 ? 'detectado' : 'detectados'} por InfoCs` },
+];
+const recentByKind = new Map<string, number>();
+for (const record of data.records) {
+  const date = primaryDate(record);
+  const at = Date.parse(date.value.slice(0, 10));
+  if (at >= windowStart && at <= builtAtMs) recentByKind.set(date.label, (recentByKind.get(date.label) ?? 0) + 1);
+}
+const recentSummary = DATE_KINDS.filter((kind) => (recentByKind.get(kind.label) ?? 0) > 0).map((kind) => kind.phrase(recentByKind.get(kind.label)!)).join(', ');
+const publishedSources = coverage.filter((source) => source.published);
+const pausedSources = coverage.filter((source) => !source.published);
 ---
 
 <BaseLayout
@@ -25,62 +51,136 @@ const historyIds = new Set(data.eventsByRecordId.keys());
   description="Publicaciones oficiales relevantes para Castellón, con procedencia, cobertura y acceso a la fuente original."
   currentPage="home"
 >
-  <section class="home-intro" aria-labelledby="page-title">
-    <div class="home-intro-copy">
-      <p class="eyebrow">Datos públicos · fuentes oficiales</p>
-      <h1 id="page-title">Actividad pública de Castellón desde las fuentes oficiales</h1>
-      <p class="lede">InfoCs reúne publicaciones oficiales que afectan a Castelló de la Plana y a la provincia de Castellón. Cada ficha enlaza a la fuente original, que es siempre la referencia válida.</p>
+  <section class="hx-hero" aria-labelledby="page-title">
+    <div class="hx-hero-main">
+      <p class="eyebrow">Castelló en datos · fuentes oficiales</p>
+      <h1 id="page-title">Consulta lo que se publica oficialmente sobre <span class="hx-accent">Castellón</span></h1>
+      <p class="lede">InfoCs reúne publicaciones oficiales que afectan a Castelló de la Plana y a la provincia, y enlaza cada una con su fuente original, que es siempre la referencia válida.</p>
+
+      <form class="hx-search" action="/buscar/" method="get" role="search">
+        <label class="hx-search-label" for="home-search">Buscar en las publicaciones</label>
+        <div class="hx-search-row">
+          <input class="hx-search-input" id="home-search" name="q" type="search" autocomplete="off" placeholder="Título u organismo…" />
+          <button class="hx-search-submit" type="submit">Buscar</button>
+        </div>
+      </form>
+      <p class="hx-quick">
+        <span>Atajos:</span>
+        <a href="/fuentes/bdns/">Subvenciones</a>
+        <a href="/fuentes/boe/">BOE</a>
+        <a href="/organismos/">Administraciones</a>
+        <a href="/cambios/">Cambios</a>
+      </p>
     </div>
-    <nav class="home-uses" aria-labelledby="what-title">
-      <h2 id="what-title" class="home-uses-title">Qué puedes consultar</h2>
-      <ul>
-        <li><a href="/fuentes/bdns/"><strong>Convocatorias de subvenciones</strong><span>Presupuesto, plazo y destinatarios tal como los publica BDNS</span></a></li>
-        <li><a href="/organismos/"><strong>Administraciones convocantes</strong><span>{organisms.length} {organisms.length === 1 ? 'administración' : 'administraciones'} según BDNS</span></a></li>
-        <li><a href="/fuentes/boe/"><strong>Publicaciones del BOE</strong><span>Relacionadas con Castellón, tras revisión</span></a></li>
-        <li><a href="/buscar/"><strong>Buscar</strong><span>Por título, organismo o término</span></a></li>
+
+    <aside class="hx-ledger" aria-labelledby="ledger-title">
+      <h2 id="ledger-title" class="hx-ledger-title">Datos disponibles ahora</h2>
+      <p class="hx-ledger-total"><span class="hx-ledger-number">{data.records.length}</span><span class="hx-ledger-unit">{data.records.length === 1 ? 'registro publicado' : 'registros publicados'}</span></p>
+      <ul class="hx-ledger-sources">
+        {publishedSources.map((source) => {
+          const lastSuccess = status.sources.get(source.sourceId)?.health?.lastSuccessAt;
+          return (
+            <li>
+              <div class="hx-ledger-head"><span class="hx-ledger-name">{sourceLabel(source.sourceId, data.sources)}</span><StatusBadge label={source.statusLabel} tone={source.statusTone} /></div>
+              <p class="hx-ledger-line">{source.recordCountLabel}{lastSuccess && <> · última comprobación <time datetime={lastSuccess} title={formatPortalDateTime(lastSuccess)}>{formatPortalDateTimeShort(lastSuccess)}</time></>}</p>
+              {source.sourceId === 'boe' && status.boePendingReview !== undefined && (
+                <dl class="hx-ledger-facts"><div><dt>Detectadas y pendientes de revisión (no publicadas)</dt><dd>{status.boePendingReview}</dd></div></dl>
+              )}
+            </li>
+          );
+        })}
+        {pausedSources.map((source) => (
+          <li class="is-paused">
+            <div class="hx-ledger-head"><span class="hx-ledger-name">{sourceLabel(source.sourceId, data.sources)}</span><StatusBadge label={source.statusLabel} tone="pending" /></div>
+            <p class="hx-ledger-line">Integración preparada; no se publican registros hasta aclarar su reutilización.</p>
+          </li>
+        ))}
       </ul>
-    </nav>
+      <p class="hx-ledger-note">Las fechas son comprobaciones de InfoCs, no fechas oficiales de publicación. <a href="/fuentes/">Fuentes y cobertura →</a></p>
+    </aside>
   </section>
 
-  <dl class="stat-strip" aria-label="Indicadores del portal">
-    <div><dt>Registros publicados</dt><dd>{data.records.length}</dd></div>
-    <div><dt>Administraciones convocantes (BDNS)</dt><dd>{organisms.length}</dd></div>
-    {status.boePendingReview !== undefined && <div><dt>BOE pendientes de revisión</dt><dd>{status.boePendingReview}</dd></div>}
-    <div class="stat-strip-link"><dt class="visually-hidden">Cobertura</dt><dd><a class="text-link" href="#coverage-title">Cobertura y última actualización →</a></dd></div>
-  </dl>
+  <h2 class="hx-doors-title" id="doors-title">Qué puedes consultar</h2>
+  <nav class="hx-doors" aria-labelledby="doors-title">
+    <a class="hx-door" href="/fuentes/bdns/">
+      <span class="hx-door-kicker">Subvenciones · BDNS</span>
+      <span class="hx-door-number">{countOf('bdns')}</span>
+      <span class="hx-door-title">Convocatorias</span>
+      <span class="hx-door-text">Presupuesto, plazo y destinatarios tal como los publica BDNS.</span>
+    </a>
+    <a class="hx-door" href="/fuentes/boe/">
+      <span class="hx-door-kicker">Normativa · BOE</span>
+      <span class="hx-door-number">{countOf('boe')}</span>
+      <span class="hx-door-title">Publicaciones del BOE</span>
+      <span class="hx-door-text">Relacionadas con Castellón, tras revisión.</span>
+    </a>
+    <a class="hx-door" href="/organismos/">
+      <span class="hx-door-kicker">Quién convoca</span>
+      <span class="hx-door-number">{organisms.length}</span>
+      <span class="hx-door-title">{organisms.length === 1 ? 'Administración' : 'Administraciones'}</span>
+      <span class="hx-door-text">Según BDNS, con sus convocatorias agrupadas.</span>
+    </a>
+    <a class="hx-door" href="/cambios/">
+      <span class="hx-door-kicker">Historial</span>
+      <span class="hx-door-number">{changes.length}</span>
+      <span class="hx-door-title">{changes.length === 1 ? 'Evento observado' : 'Eventos observados'}</span>
+      <span class="hx-door-text">Cuándo InfoCs incorporó o vio cambiar una publicación.</span>
+    </a>
+  </nav>
 
-  <div class="home-columns page-section">
-    <CoveragePanel coverage={coverage} totalRecords={data.records.length} />
-
-    <section class="home-recent" aria-labelledby="records-title">
-      <div class="section-heading">
-        <div><p class="eyebrow">Más recientes primero</p><h2 id="records-title">Últimas publicaciones</h2></div>
+  <div class="hx-main">
+    <section class="hx-recent" aria-labelledby="records-title">
+      <div class="hx-section-head">
+        <div>
+          <p class="eyebrow">Más recientes primero</p>
+          <h2 id="records-title">Últimas publicaciones</h2>
+        </div>
         <a class="text-link" href="/registros/">Ver los {data.records.length} registros →</a>
       </div>
+      {recentSummary && <p class="hx-recent-note">Últimos {RECENT_WINDOW_DAYS} días según la fecha de cada ficha: {recentSummary}. Son fechas de distinto concepto.</p>}
       <RecordList records={recent} sources={data.sources} historyIds={historyIds} emptyMessage="Todavía no hay publicaciones disponibles. Consulta las fuentes oficiales para acceder a sus contenidos." />
       <p class="fact-note home-dates-note">«Publicado» es la fecha oficial de publicación; «Recibida en BDNS» es la fecha oficial en que BDNS registró la convocatoria, que no es una fecha de publicación; «Detectado por InfoCs» es cuándo InfoCs la observó por primera vez.</p>
     </section>
 
-    <aside class="home-aside" aria-label="Explorar y límites">
-
-      <section class="aside-panel surface-panel" aria-labelledby="organisms-title">
-        <p class="panel-kicker">{AUTHORITY_GROUP_LABEL}</p>
-        <h2 id="organisms-title">Explorar por administración</h2>
-        <ol class="organism-mini-list">
-          {organisms.slice(0, HOME_ORGANISM_LIMIT).map((group) => <li><a href={`/organismos/${group.slug}/`}><span>{group.name}</span><span class="count-note">{group.records.length}</span></a></li>)}
+    <aside class="hx-aside" aria-label="Explorar por administración">
+      <section aria-labelledby="organisms-title">
+        <p class="eyebrow">{AUTHORITY_GROUP_LABEL}</p>
+        <h2 id="organisms-title">Administraciones con más convocatorias</h2>
+        <p class="hx-bars-note">Convocatorias BDNS publicadas en InfoCs por administración. La barra es proporcional a la mayor; no valora la actividad ni el rendimiento de ninguna administración.</p>
+        <ol class="hx-bars" aria-label="Número de convocatorias publicadas por administración">
+          {organisms.slice(0, HOME_ORGANISM_LIMIT).map((group) => (
+            <li>
+              <a href={`/organismos/${group.slug}/`}>
+                <span class="hx-bars-name">{group.name}</span>
+                <span class="hx-bars-count">{group.records.length}</span>
+                <span class="hx-bars-track" aria-hidden="true"><span class="hx-bars-fill" style={`--share: ${Math.round((group.records.length / maxOrganism) * 100)}%`}></span></span>
+              </a>
+            </li>
+          ))}
         </ol>
         <a class="text-link" href="/organismos/">Ver las {organisms.length} administraciones →</a>
       </section>
-
-      <section class="aside-panel surface-panel" aria-labelledby="not-covered-title">
-        <p class="panel-kicker">Límites actuales</p>
-        <h2 id="not-covered-title">Qué no cubre todavía InfoCs</h2>
-        <dl class="not-covered-list">
-          {NOT_COVERED.map((item) => <div><dt>{item.title}</dt><dd>{item.detail}</dd></div>)}
-        </dl>
-      </section>
     </aside>
   </div>
+
+  <section class="hx-scope" aria-labelledby="scope-title">
+    <div class="hx-section-head"><div><p class="eyebrow">Cobertura</p><h2 id="scope-title">Qué cubre InfoCs y qué todavía no</h2></div></div>
+    <div class="hx-scope-grid">
+      <div>
+        <h3>Qué fuentes tienen contenido público</h3>
+        <dl class="hx-scope-list">
+          {publishedSources.map((source) => <div><dt>{source.name}</dt><dd>{source.scope}</dd></div>)}
+        </dl>
+      </div>
+      <div>
+        <h3>Qué no cubre todavía InfoCs</h3>
+        <dl class="hx-scope-list">
+          {NOT_COVERED.map((item) => <div><dt>{item.title}</dt><dd>{item.detail}</dd></div>)}
+        </dl>
+      </div>
+    </div>
+    <p class="hx-scope-note">Los registros publicados son los que han superado los criterios de relevancia y privacidad de InfoCs; una comprobación sin incidencias no significa que se recoja toda la información de una administración.</p>
+  </section>
 
   <p class="count-note build-note">Portal generado el <time datetime={status.builtAt}>{formatPortalDateTime(status.builtAt)}</time> a partir de los datos públicos disponibles en ese momento.</p>
 </BaseLayout>

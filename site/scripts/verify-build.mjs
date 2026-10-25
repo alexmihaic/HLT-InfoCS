@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const SITE = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(SITE, 'dist');
 const DATA = resolve(SITE, '..', 'data');
-const HOME_LIMIT = 20;
+const HOME_LIMIT = 10;
 const FRESHNESS_CLAIMS = [/tiempo real/i, /actualizad[oa] hoy/i, /siempre actualizad/i, /al minuto/i];
 const STATE_CLAIMS = [/abierta ahora/i, /plazo abierto/i, /plazo cerrado/i, /convocatoria cerrada/i];
 

@@ -31,3 +31,18 @@ export function formatPortalDateTime(value: string): string {
   if (Number.isNaN(date.getTime())) throw new Error('Marca temporal incompatible para presentación.');
   return DATE_TIME_FORMATTER.format(date);
 }
+
+const DATE_TIME_SHORT_FORMATTER = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Madrid',
+});
+
+/** Compact InfoCs system timestamp (Madrid time) for dense layouts; the full form stays in `title`. */
+export function formatPortalDateTimeShort(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new Error('Marca temporal incompatible para presentación.');
+  return DATE_TIME_SHORT_FORMATTER.format(date);
+}
