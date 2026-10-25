@@ -147,7 +147,7 @@ else {
   for (const slug of slugs) {
     const html = await readPage(page('organismos', slug));
     if (!html) { fail('página de organismo inexistente', organismLabels.get(slug)); continue; }
-    const links = [...html.matchAll(/<h3[^>]*><a href="\/registro\/([^"/]+)\/">/g)].map((match) => match[1]);
+    const links = [...html.matchAll(/<h[23][^>]*><a href="\/registro\/([^"/]+)\/">/g)].map((match) => match[1]);
     if (links.length === 0) fail('organismo sin registros', organismLabels.get(slug));
     for (const recordSlug of links) {
       const record = slugToRecord.get(recordSlug);
@@ -242,6 +242,27 @@ if (allPage) {
     if (!html) continue;
     if (expected && !html.includes(`<dt>${expected.label}</dt>`)) fail('ficha sin municipio derivado esperado', where);
     if (!expected && /<dt>Municipio (convocante|relacionado)<\/dt>/.test(html)) fail('ficha con municipio sin evidencia suficiente', where);
+  }
+}
+
+// --- 6c. Accessibility structure: heading levels, status region, duplicate links ----
+for (const path of await files(DIST, '.html')) {
+  const html = await readFile(path, 'utf8');
+  const main = html.match(/<main[\s\S]*<\/main>/)?.[0] ?? '';
+  let previous = 0;
+  for (const match of main.matchAll(/<h([1-4])[\s>]/g)) {
+    const level = Number(match[1]);
+    if (previous && level - previous > 1) fail(`salto de encabezados h${previous}→h${level}`, pageLabel(path));
+    previous = level;
+  }
+}
+const recordsPage = await readPage(page('registros'));
+if (recordsPage && !/<p[^>]*data-record-count[^>]*role="status"/.test(recordsPage)) fail('contador de registros sin región de estado', 'registros');
+const changesPage = await readPage(page('cambios'));
+if (changesPage) {
+  for (const entry of changesPage.matchAll(/<article class="change-entry"[\s\S]*?<\/article>/g)) {
+    const hrefs = [...entry[0].matchAll(/href="(\/registro\/[^"]+)"/g)].map((m) => m[1]);
+    if (hrefs.length !== new Set(hrefs).size) { fail('enlace duplicado en una entrada de cambios', 'cambios'); break; }
   }
 }
 

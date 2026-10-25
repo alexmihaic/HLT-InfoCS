@@ -46,3 +46,24 @@ export function formatPortalDateTimeShort(value: string): string {
   if (Number.isNaN(date.getTime())) throw new Error('Marca temporal incompatible para presentación.');
   return DATE_TIME_SHORT_FORMATTER.format(date);
 }
+
+export interface SystemTimestampView {
+  /** Machine-readable value for `<time datetime>`; absent when the stored value is not a valid instant. */
+  readonly dateTime?: string;
+  readonly text: string;
+}
+
+/** Date-time that declares its own zone: a trailing `Z` or a numeric offset after the time part (never the date's hyphens). */
+const EXPLICIT_ZONE_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * Presents a stored InfoCs timestamp without altering it. A missing value shows
+ * a neutral placeholder. Values that are unparseable or declare no zone (a bare
+ * date, or a date-time without `Z`/offset) are kept literally: converting them
+ * would invent a time or depend on the build machine's time zone.
+ */
+export function describeSystemTimestamp(value: string | undefined | null): SystemTimestampView {
+  if (typeof value !== 'string' || value.trim() === '') return { text: 'No disponible' };
+  if (!EXPLICIT_ZONE_TIMESTAMP.test(value) || Number.isNaN(new Date(value).getTime())) return { text: value };
+  return { dateTime: value, text: formatPortalDateTime(value) };
+}

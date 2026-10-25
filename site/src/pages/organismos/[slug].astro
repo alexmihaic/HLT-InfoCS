@@ -32,6 +32,6 @@ const records = [...group.records].sort(byPrimaryDateDesc);
       <h1>{group.name}</h1>
       <p class="lede">{records.length} {records.length === 1 ? 'convocatoria publicada' : 'convocatorias publicadas'} en InfoCs con esta administración convocante según BDNS. Puede no incluir todas sus convocatorias: sólo las que entran en el alcance territorial de InfoCs.</p>
     </header>
-    <RecordList records={records} sources={sources} historyIds={withHistory} />
+    <RecordList records={records} sources={sources} historyIds={withHistory} headingLevel={2} />
   </article>
 </BaseLayout>
