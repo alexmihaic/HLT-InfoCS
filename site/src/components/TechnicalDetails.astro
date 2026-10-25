@@ -1,6 +1,9 @@
 ---
-interface Props { recordId: string; officialId?: string; contentHash: string; detectedAt: string; lastCheckedAt: string }
+import { describeSystemTimestamp } from '../lib/presentation/dates';
+interface Props { recordId: string; officialId?: string; contentHash: string; detectedAt?: string; lastCheckedAt?: string }
 const { recordId, officialId, contentHash, detectedAt, lastCheckedAt } = Astro.props;
+const detected = describeSystemTimestamp(detectedAt);
+const lastChecked = describeSystemTimestamp(lastCheckedAt);
 ---
 <details class="technical-details" data-pagefind-ignore>
   <summary>Detalles técnicos</summary>
@@ -8,7 +11,7 @@ const { recordId, officialId, contentHash, detectedAt, lastCheckedAt } = Astro.p
     <div><dt>Identificador InfoCs</dt><dd class="mono-value">{recordId}</dd></div>
     {officialId && <div><dt>Identificador de la fuente</dt><dd class="mono-value">{officialId}</dd></div>}
     <div><dt>Hash de contenido</dt><dd class="mono-value">{contentHash}</dd></div>
-    <div><dt>Detectado</dt><dd><time datetime={detectedAt}>{detectedAt}</time></dd></div>
-    <div><dt>Última comprobación</dt><dd><time datetime={lastCheckedAt}>{lastCheckedAt}</time></dd></div>
+    <div><dt>Detectado</dt><dd>{detected.dateTime ? <time datetime={detected.dateTime}>{detected.text}</time> : detected.text}</dd></div>
+    <div><dt>Última comprobación</dt><dd>{lastChecked.dateTime ? <time datetime={lastChecked.dateTime}>{lastChecked.text}</time> : lastChecked.text}</dd></div>
   </dl>
 </details>

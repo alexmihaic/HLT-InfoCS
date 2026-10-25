@@ -44,6 +44,8 @@ const municipalityOptions = [...municipalities.entries()]
 </form>
 
 <script>
+  import { recordCountLabel } from '../lib/presentation/recordFilters';
+
   const form = document.querySelector<HTMLFormElement>('[data-record-filters]');
   const list = document.querySelector<HTMLElement>('[data-record-list]');
   const count = document.querySelector<HTMLElement>('[data-record-count]');
@@ -70,9 +72,9 @@ const municipalityOptions = [...municipalities.entries()]
         if (show) visible += 1;
       }
       if (count) {
-        count.textContent = visible === total
-          ? `${total} ${total === 1 ? 'registro publicado' : 'registros publicados'}`
-          : `${visible} de ${total} registros publicados`;
+        // Only write on change so the status region is not re-announced for identical text.
+        const label = recordCountLabel(visible, total);
+        if (count.textContent !== label) count.textContent = label;
       }
       if (empty) empty.hidden = visible !== 0;
       const next = new URLSearchParams();

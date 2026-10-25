@@ -13,8 +13,11 @@ interface Props {
   category: string;
   hasHistory: boolean;
   bdnsSummary?: Pick<BDNSRecordView, 'callType' | 'budget'>;
+  /** Heading level of the title; must follow the enclosing heading (h3 under an h2 section, h2 directly under the page h1). */
+  headingLevel?: 2 | 3;
 }
-const { record, href, source, category, hasHistory, bdnsSummary } = Astro.props;
+const { record, href, source, category, hasHistory, bdnsSummary, headingLevel = 3 } = Astro.props;
+const Heading = `h${headingLevel}` as 'h2' | 'h3';
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
 const geography = geographyLabels(record);
@@ -29,7 +32,7 @@ const hasFacts = Boolean(bdnsSummary?.budget || bdnsSummary?.callType || deadlin
   <DateStamp date={primaryDate(record)} />
   <div class="record-item-main">
     <div class="record-item-meta"><RecordMeta source={source} category={category} />{hasHistory && <span class="history-indicator">Historial</span>}</div>
-    <h3 class:list={['record-item-title', { 'is-uppercase': isUppercaseTitle(record.title) }]}><a href={href}>{record.title}</a></h3>
+    <Heading class:list={['record-item-title', { 'is-uppercase': isUppercaseTitle(record.title) }]}><a href={href}>{record.title}</a></Heading>
     {authority && authorityText && <p class="record-item-authority">{record.sourceId === 'boe' && <span class="fact-label">{authority.label}: </span>}{authorityText}</p>}
     {municipality && <p class="record-item-territory"><span class="fact-label">{municipality.label} (InfoCs): </span>{municipality.name}</p>}
     {geography.length > 0 && <p class="record-item-geography">{geography.join(' · ')}</p>}

@@ -151,6 +151,7 @@ main.shell { min-height: calc(100vh - 12rem); padding-block: var(--space-6) var(
 /* Search results (rendered by search.ts) */
 .search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); max-width: var(--container-reading); }
 .search-input { width: 100%; min-height: var(--control-lg); padding: 0 var(--space-4); border: var(--border-1) solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); background: var(--surface-default); font: inherit; }
+.search-input:focus-visible { outline: var(--border-2) solid var(--color-focus); outline-offset: 3px; }
 .search-input::placeholder { color: var(--text-tertiary); }
 .search-submit { min-height: var(--control-lg); padding-inline: var(--space-5); border: var(--border-1) solid var(--color-accent); border-radius: var(--radius-sm); color: var(--color-text-on-accent); background: var(--color-accent); font: inherit; font-weight: var(--font-weight-semibold); cursor: pointer; }
 .search-submit:hover { border-color: var(--color-accent-hover); background: var(--color-accent-hover); }
