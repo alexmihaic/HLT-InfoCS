@@ -18,6 +18,6 @@ const records = [...data.records].sort(byPrimaryDateDesc);
 
   <section aria-label="Registros">
     <RecordFilters records={records} />
-    <RecordList records={records} sources={data.sources} historyIds={new Set(data.eventsByRecordId.keys())} headingLevel={2} countLabel={`${records.length} ${records.length === 1 ? 'registro publicado' : 'registros publicados'}`} />
+    <RecordList records={records} sources={data.sources} historyIds={new Set(data.eventsByRecordId.keys())} headingLevel={2} callTypeDisplay="meta" countLabel={`${records.length} ${records.length === 1 ? 'registro publicado' : 'registros publicados'}`} />
   </section>
 </BaseLayout>
