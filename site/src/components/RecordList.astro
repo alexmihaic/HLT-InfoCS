@@ -3,6 +3,7 @@ import type { FrontendRecord, SourceMeta } from '../lib/data/types';
 import { encodeRecordId } from '../lib/data';
 import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
+import { callTypeValue } from '../lib/presentation/recordFilters';
 import { derivedMunicipality } from '../lib/presentation/territory';
 import EmptyState from './EmptyState.astro';
 import RecordItem from './RecordItem.astro';
@@ -16,8 +17,10 @@ interface Props {
   emptyMessage?: string;
   /** Level of each record title; 2 when the list follows the page h1 with no section heading. */
   headingLevel?: 2 | 3;
+  /** 'meta' shows the official BDNS call type next to the badges in every view; 'facts' keeps the card-only fact row. */
+  callTypeDisplay?: 'facts' | 'meta';
 }
-const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no hay publicaciones disponibles.', headingLevel = 3 } = Astro.props;
+const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no hay publicaciones disponibles.', headingLevel = 3, callTypeDisplay = 'facts' } = Astro.props;
 ---
 
 <div class="records-toolbar">
@@ -30,7 +33,7 @@ const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no ha
     {records.map((record) => {
       const bdnsView = buildBDNSRecordView(record);
       const municipality = derivedMunicipality(record);
-      return <li data-category={record.category} data-municipality={municipality?.code}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} headingLevel={headingLevel} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
+      return <li data-category={record.category} data-municipality={municipality?.code} data-calltype={callTypeValue(record)}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} headingLevel={headingLevel} callTypeDisplay={callTypeDisplay} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
     })}
   </ol>}
 <p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados. Esto no significa que no existan publicaciones de esa localidad: las convocatorias de BDNS se consultan por administración en <a href="/organismos/">Organismos</a>. Usa «Quitar filtros» para volver al listado completo.</p>

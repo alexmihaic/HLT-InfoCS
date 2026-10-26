@@ -15,8 +15,9 @@ interface Props {
   bdnsSummary?: Pick<BDNSRecordView, 'callType' | 'budget'>;
   /** Heading level of the title; must follow the enclosing heading (h3 under an h2 section, h2 directly under the page h1). */
   headingLevel?: 2 | 3;
+  callTypeDisplay?: 'facts' | 'meta';
 }
-const { record, href, source, category, hasHistory, bdnsSummary, headingLevel = 3 } = Astro.props;
+const { record, href, source, category, hasHistory, bdnsSummary, headingLevel = 3, callTypeDisplay = 'facts' } = Astro.props;
 const Heading = `h${headingLevel}` as 'h2' | 'h3';
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
@@ -25,13 +26,16 @@ const municipality = derivedMunicipality(record);
 // Rows show the most specific official body name (BDNS nivel3) when available;
 // the full literal hierarchy remains on the record page.
 const authorityText = record.sourceId === 'bdns' ? record.bdns?.authorityHierarchy?.nivel3 ?? authority?.value : authority?.value;
-const hasFacts = Boolean(bdnsSummary?.budget || bdnsSummary?.callType || deadline);
+const callTypeInFacts = callTypeDisplay === 'facts' ? bdnsSummary?.callType : undefined;
+const callTypeInMeta = callTypeDisplay === 'meta' ? bdnsSummary?.callType : undefined;
+const hasFacts = Boolean(bdnsSummary?.budget || callTypeInFacts || deadline);
 ---
 
 <article class="record-item" data-record-item>
   <DateStamp date={primaryDate(record)} />
   <div class="record-item-main">
     <div class="record-item-meta"><RecordMeta source={source} category={category} />{hasHistory && <span class="history-indicator">Historial</span>}</div>
+    {callTypeInMeta && <p class="record-item-calltype-meta"><span class="fact-label">{callTypeInMeta.label} (BDNS): </span><span class="calltype-value">{callTypeInMeta.value}</span></p>}
     <Heading class:list={['record-item-title', { 'is-uppercase': isUppercaseTitle(record.title) }]}><a href={href}>{record.title}</a></Heading>
     {authority && authorityText && <p class="record-item-authority">{record.sourceId === 'boe' && <span class="fact-label">{authority.label}: </span>}{authorityText}</p>}
     {municipality && <p class="record-item-territory"><span class="fact-label">{municipality.label} (InfoCs): </span>{municipality.name}</p>}
@@ -40,6 +44,6 @@ const hasFacts = Boolean(bdnsSummary?.budget || bdnsSummary?.callType || deadlin
   {hasFacts && <dl class="record-item-facts">
     {bdnsSummary?.budget && <div><dt>Presupuesto</dt><dd><span class="money">{bdnsSummary.budget.displayValue}</span>{bdnsSummary.budget.currency && <span> {bdnsSummary.budget.currency}</span>}{bdnsSummary.budget.currencyNotice && <span class="fact-note">{bdnsSummary.budget.currencyNotice}</span>}</dd></div>}
     {deadline && <div><dt>{deadline.label}</dt><dd>{deadline.date && <time datetime={deadline.date.value}>{deadline.date.display}</time>}{deadline.date && deadline.text && <span> · </span>}{deadline.text && <span class="deadline-text">{deadline.text}</span>}</dd></div>}
-    {bdnsSummary?.callType && <div class="record-item-calltype"><dt>Tipo de convocatoria</dt><dd>{bdnsSummary.callType.value}</dd></div>}
+    {callTypeInFacts && <div class="record-item-calltype"><dt>Tipo de convocatoria</dt><dd>{callTypeInFacts.value}</dd></div>}
   </dl>}
 </article>

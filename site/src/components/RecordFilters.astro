@@ -1,6 +1,7 @@
 ---
 import type { FrontendRecord } from '../lib/data/types';
 import { categoryLabel } from '../lib/presentation/labels';
+import { callTypeOptions } from '../lib/presentation/recordFilters';
 import { derivedMunicipality, municipalityShortName } from '../lib/presentation/territory';
 
 interface Props { records: readonly FrontendRecord[] }
@@ -22,6 +23,7 @@ const categoryOptions = [...categories.entries()]
 const municipalityOptions = [...municipalities.entries()]
   .map(([value, { name, count }]) => ({ value, label: name, count }))
   .sort((left, right) => left.label.localeCompare(right.label, 'es'));
+const callTypes = callTypeOptions(records);
 ---
 
 <form class="record-filters" action="/registros/" method="get" data-record-filters aria-label="Filtrar registros">
@@ -32,6 +34,13 @@ const municipalityOptions = [...municipalities.entries()]
       {categoryOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
     </select>
   </div>
+  {callTypes.length > 0 && <div class="record-filter">
+    <label for="filter-convocatoria">Tipo de convocatoria BDNS</label>
+    <select id="filter-convocatoria" name="convocatoria">
+      <option value="">Todos</option>
+      {callTypes.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
+    </select>
+  </div>}
   <div class="record-filter">
     <label for="filter-municipio">Municipio mencionado en el título (BOE)</label>
     <select id="filter-municipio" name="municipio">
@@ -41,11 +50,11 @@ const municipalityOptions = [...municipalities.entries()]
   </div>
   <div class="record-filter-actions"><button class="record-filter-reset" type="button" data-filter-reset hidden>Quitar filtros</button></div>
   <noscript><button class="search-submit" type="submit">Filtrar</button></noscript>
-  <p class="fact-note record-filter-note">Este filtro solo reconoce municipios nombrados en el título de publicaciones del BOE. No filtra las convocatorias de BDNS por organismo: para ver las de un ayuntamiento, consulta <a href="/organismos/">Organismos</a>.</p>
+  <p class="fact-note record-filter-note">El tipo de convocatoria BDNS es el literal oficial de la fuente: no indica si puedes solicitar la ayuda ni si su plazo sigue abierto. El filtro de municipio solo reconoce municipios nombrados en el título de publicaciones del BOE y no filtra las convocatorias de BDNS por organismo: para ver las de un ayuntamiento, consulta <a href="/organismos/">Organismos</a>.</p>
 </form>
 
 <script>
-  import { recordCountLabel } from '../lib/presentation/recordFilters';
+  import { matchesRecordFilters, recordCountLabel, sanitizeFilterValue } from '../lib/presentation/recordFilters';
 
   const form = document.querySelector<HTMLFormElement>('[data-record-filters]');
   const list = document.querySelector<HTMLElement>('[data-record-list]');
@@ -55,21 +64,26 @@ const municipalityOptions = [...municipalities.entries()]
   if (form && list) {
     const tipo = form.querySelector<HTMLSelectElement>('select[name="tipo"]')!;
     const municipio = form.querySelector<HTMLSelectElement>('select[name="municipio"]')!;
+    const convocatoria = form.querySelector<HTMLSelectElement>('select[name="convocatoria"]');
+    const reset = form.querySelector<HTMLButtonElement>('[data-filter-reset]');
     const items = [...list.querySelectorAll<HTMLLIElement>(':scope > li')];
     const total = items.length;
 
     const params = new URLSearchParams(window.location.search);
-    const allowed = (select: HTMLSelectElement, value: string | null) =>
-      value !== null && [...select.options].some((option) => option.value === value) ? value : '';
-    tipo.value = allowed(tipo, params.get('tipo'));
-    municipio.value = allowed(municipio, params.get('municipio'));
+    const allowed = (select: HTMLSelectElement | null, name: string) =>
+      select ? sanitizeFilterValue(params.get(name), [...select.options].map((option) => option.value)) : '';
+    tipo.value = allowed(tipo, 'tipo');
+    municipio.value = allowed(municipio, 'municipio');
+    if (convocatoria) convocatoria.value = allowed(convocatoria, 'convocatoria');
 
-    const reset = form.querySelector<HTMLButtonElement>('[data-filter-reset]');
     const apply = () => {
+      const selection = { category: tipo.value, municipality: municipio.value, callType: convocatoria?.value ?? '' };
       let visible = 0;
       for (const item of items) {
-        const show = (!tipo.value || item.dataset.category === tipo.value)
-          && (!municipio.value || item.dataset.municipality === municipio.value);
+        const show = matchesRecordFilters(
+          { category: item.dataset.category, municipality: item.dataset.municipality, callType: item.dataset.calltype },
+          selection,
+        );
         item.hidden = !show;
         if (show) visible += 1;
       }
@@ -79,10 +93,11 @@ const municipalityOptions = [...municipalities.entries()]
         if (count.textContent !== label) count.textContent = label;
       }
       if (empty) empty.hidden = visible !== 0;
-      if (reset) reset.hidden = !tipo.value && !municipio.value;
+      if (reset) reset.hidden = !selection.category && !selection.municipality && !selection.callType;
       const next = new URLSearchParams();
-      if (tipo.value) next.set('tipo', tipo.value);
-      if (municipio.value) next.set('municipio', municipio.value);
+      if (selection.category) next.set('tipo', selection.category);
+      if (selection.callType) next.set('convocatoria', selection.callType);
+      if (selection.municipality) next.set('municipio', selection.municipality);
       const query = next.toString();
       history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
     };
@@ -90,6 +105,7 @@ const municipalityOptions = [...municipalities.entries()]
     reset?.addEventListener('click', () => {
       tipo.value = '';
       municipio.value = '';
+      if (convocatoria) convocatoria.value = '';
       apply();
       tipo.focus();
     });

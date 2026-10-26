@@ -9,7 +9,7 @@ import { test } from 'node:test';
 test('municipality filter states its BOE-title scope, points to Organismos and offers a reset', async () => {
   const filters = await readFile(new URL('../src/components/RecordFilters.astro', import.meta.url), 'utf8');
   assert.match(filters, /Municipio mencionado en el título \(BOE\)/);
-  assert.match(filters, /No filtra las convocatorias de BDNS por organismo/);
+  assert.match(filters, /no filtra las convocatorias de BDNS por organismo/);
   assert.match(filters, /href="\/organismos\/"/);
   assert.match(filters, /data-filter-reset/);
   assert.match(filters, /Quitar filtros/);

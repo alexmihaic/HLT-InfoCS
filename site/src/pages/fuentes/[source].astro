@@ -63,11 +63,12 @@ const historyIds = new Set(detail.records
 
     <section class="page-section" aria-labelledby="source-records-title">
       <div class="section-heading"><div><p class="eyebrow">Contenido disponible</p><h2 id="source-records-title">Publicaciones de esta fuente</h2></div></div>
+      {source.sourceId === 'bdns' && detail.records.length > 0 && <p class="source-filter-link"><a class="text-link" href="/registros/?tipo=grants.call">Filtrar las convocatorias por tipo de convocatoria BDNS en el listado de registros →</a></p>}
       {detail.records.length === 0
         ? <EmptyState compact message={source.publicationState === 'publication_pending'
           ? 'No hay registros públicos de esta fuente en InfoCs.'
           : 'No hay publicaciones de esta fuente disponibles ahora mismo.'} />
-        : <RecordList records={detail.records} sources={[source]} historyIds={historyIds} />}
+        : <RecordList records={detail.records} sources={[source]} historyIds={historyIds} callTypeDisplay="meta" />}
     </section>
 
     {detail.activity.length > 0 && <section class="page-section" aria-labelledby="source-activity-title">
