@@ -1,4 +1,5 @@
 import type { PortalData, SourceMeta } from '../data/types';
+import { byPrimaryDateDesc } from './recordView';
 import { changeItems, type ChangeItemView } from './changes';
 
 interface SourceEditorialDetails {
@@ -53,7 +54,7 @@ export function sourceDetailBySlug(data: PortalData, slug: string): SourceDetail
   if (!editorial) return null;
   const source = data.sources.find((item) => item.sourceId === editorial.sourceId);
   if (!source) throw new Error(`Frontend data contract: falta metadata editorial para la fuente ${editorial.sourceId}.`);
-  const records = data.records.filter((record) => record.sourceId === source.sourceId);
+  const records = data.records.filter((record) => record.sourceId === source.sourceId).sort(byPrimaryDateDesc);
   return {
     source,
     slug: editorial.slug,

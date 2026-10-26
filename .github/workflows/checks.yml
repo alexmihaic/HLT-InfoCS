@@ -50,10 +50,6 @@ jobs:
         run: npm ci
         working-directory: site
 
-      - name: Run portal unit tests
-        run: node --test scripts/portal.test.mjs
-        working-directory: site
-
       - name: Check Astro project
         run: npm run check
         working-directory: site
@@ -62,12 +58,8 @@ jobs:
         run: npm run build
         working-directory: site
 
-      - name: Test change descriptions
-        run: node --test scripts/changes.test.mjs
-        working-directory: site
-
-      - name: Test search results
-        run: node --test scripts/search.test.mjs
+      - name: Run portal tests (all scripts/*.test.mjs; some need the build)
+        run: node --test scripts/*.test.mjs
         working-directory: site
 
       - name: Verify built portal

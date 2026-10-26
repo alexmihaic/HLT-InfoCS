@@ -33,14 +33,15 @@ const municipalityOptions = [...municipalities.entries()]
     </select>
   </div>
   <div class="record-filter">
-    <label for="filter-municipio">Municipio (identificado por InfoCs)</label>
+    <label for="filter-municipio">Municipio mencionado en el título (BOE)</label>
     <select id="filter-municipio" name="municipio">
-      <option value="">Todos los municipios</option>
+      <option value="">Todos</option>
       {municipalityOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
     </select>
   </div>
+  <div class="record-filter-actions"><button class="record-filter-reset" type="button" data-filter-reset hidden>Quitar filtros</button></div>
   <noscript><button class="search-submit" type="submit">Filtrar</button></noscript>
-  <p class="fact-note record-filter-note">InfoCs identifica el municipio solo cuando el título oficial del BOE nombra un único municipio del nomenclátor INE. Las publicaciones sin municipio identificado aparecen con «Todos los municipios».</p>
+  <p class="fact-note record-filter-note">Este filtro solo reconoce municipios nombrados en el título de publicaciones del BOE. No filtra las convocatorias de BDNS por organismo: para ver las de un ayuntamiento, consulta <a href="/organismos/">Organismos</a>.</p>
 </form>
 
 <script>
@@ -63,6 +64,7 @@ const municipalityOptions = [...municipalities.entries()]
     tipo.value = allowed(tipo, params.get('tipo'));
     municipio.value = allowed(municipio, params.get('municipio'));
 
+    const reset = form.querySelector<HTMLButtonElement>('[data-filter-reset]');
     const apply = () => {
       let visible = 0;
       for (const item of items) {
@@ -77,6 +79,7 @@ const municipalityOptions = [...municipalities.entries()]
         if (count.textContent !== label) count.textContent = label;
       }
       if (empty) empty.hidden = visible !== 0;
+      if (reset) reset.hidden = !tipo.value && !municipio.value;
       const next = new URLSearchParams();
       if (tipo.value) next.set('tipo', tipo.value);
       if (municipio.value) next.set('municipio', municipio.value);
@@ -84,6 +87,12 @@ const municipalityOptions = [...municipalities.entries()]
       history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
     };
 
+    reset?.addEventListener('click', () => {
+      tipo.value = '';
+      municipio.value = '';
+      apply();
+      tipo.focus();
+    });
     form.addEventListener('change', apply);
     form.addEventListener('submit', (event) => { event.preventDefault(); apply(); });
     apply();
