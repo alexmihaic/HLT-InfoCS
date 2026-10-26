@@ -33,4 +33,4 @@ const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no ha
       return <li data-category={record.category} data-municipality={municipality?.code}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} headingLevel={headingLevel} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
     })}
   </ol>}
-<p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados.</p>
+<p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados. Esto no significa que no existan publicaciones de esa localidad: las convocatorias de BDNS se consultan por administración en <a href="/organismos/">Organismos</a>. Usa «Quitar filtros» para volver al listado completo.</p>

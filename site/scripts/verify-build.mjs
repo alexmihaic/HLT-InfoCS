@@ -129,6 +129,20 @@ const allPage = await readPage(page('registros'));
 if (!allPage) fail('falta /registros/');
 else if (count(allPage, /data-record-item/g) !== publishedRecords.length) fail('/registros/ no lista todos los registros publicados');
 
+// --- 3b. Source pages: same order as /registros/, by the date the visitor sees -------
+for (const sourceId of publishedSources) {
+  const slug = sourceId.replace(/_/g, '-');
+  const html = await readPage(page('fuentes', slug));
+  if (!html || !allPage) continue;
+  const hrefsOf = (text) => [...text.matchAll(/data-record-item[\s\S]*?href="(\/registro\/[^"]+)"/g)].map((match) => match[1]);
+  const inSource = new Set(hrefsOf(html));
+  const expected = hrefsOf(allPage).filter((href) => inSource.has(href));
+  const actual = hrefsOf(html);
+  if (actual.length !== expected.length || actual.some((href, index) => href !== expected[index])) fail('/fuentes/<fuente>/ no ordena los registros como /registros/', slug);
+  const shown = [...html.matchAll(/data-date-kind="[a-z]+"[^>]*>[\s\S]*?datetime="([^"]+)"/g)].map((match) => match[1].slice(0, 10));
+  if (shown.some((value, index) => index > 0 && value > shown[index - 1])) fail('/fuentes/<fuente>/ no está ordenada por la fecha mostrada', slug);
+}
+
 // --- 4. Organisms --------------------------------------------------------------------
 const organismIndex = await readPage(page('organismos'));
 if (!organismIndex) fail('falta /organismos/');

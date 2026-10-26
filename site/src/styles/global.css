@@ -126,6 +126,9 @@ main.shell { min-height: calc(100vh - 12rem); padding-block: var(--space-6) var(
 .record-filter label { color: var(--text-tertiary); font-size: var(--text-xs); font-weight: var(--font-weight-semibold); }
 .record-filter select { min-height: var(--control-md); padding: 0 var(--space-2); border: var(--border-1) solid var(--border-default); border-radius: var(--radius-sm); color: var(--text-primary); background: var(--page-bg); font-size: var(--text-sm); }
 .record-filter-note { margin: 0; }
+.record-filter-actions { display: flex; align-items: center; }
+.record-filter-reset { min-height: var(--control-md); padding-inline: var(--space-4); border: var(--border-1) solid var(--border-strong); border-radius: var(--radius-sm); color: var(--text-primary); background: transparent; font: inherit; font-size: var(--text-sm); font-weight: var(--font-weight-semibold); cursor: pointer; }
+.record-filter-reset:hover { background: var(--surface-default); }
 .record-list > li[hidden] { display: none; }
 .record-item-geography { display: none; margin: var(--space-1) 0 0; color: var(--text-tertiary); font-size: var(--text-xs); }
 .record-item-facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; font-size: var(--text-sm); }
@@ -332,11 +335,13 @@ main.shell { min-height: calc(100vh - 12rem); padding-block: var(--space-6) var(
   .page-section { margin-top: var(--space-12); }
   .build-note { margin-top: var(--space-12); }
 }
+@media (min-width: 1100px) {
+  .brand-tag { display: inline; }
+}
 @media (min-width: 1024px) {
   .shell { width: min(var(--container-wide), calc(100% - var(--gutter-desktop) - var(--gutter-desktop))); }
   .header-inner { min-height: var(--header-height-desktop); }
   .primary-nav { display: flex; }
-  .brand-tag { display: inline; }
   .header-theme { display: block; }
   .mobile-menu { display: none; }
   .home-intro { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; gap: var(--space-10); }
