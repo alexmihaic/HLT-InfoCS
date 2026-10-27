@@ -4,23 +4,11 @@ import type {
   FrontendBDNSDocument,
   FrontendRecord,
 } from '../data/types';
+import type { BDNSDateView, BDNSExtractsView, BDNSOfficialView, BDNSTextView } from './bdnsViewTypes';
+import { buildBDNSExtractsView } from './bdnsExtracts';
 import { formatPortalDate } from './dates';
 
-/** Values remain official; labels, formatting and paths are presentation-derived. */
-interface BDNSOfficialView {
-  readonly origin: 'official';
-  readonly label: string;
-  readonly canonicalPath: string;
-}
-
-export interface BDNSTextView extends BDNSOfficialView {
-  readonly value: string;
-}
-
-export interface BDNSDateView extends BDNSOfficialView {
-  readonly value: string;
-  readonly display: string;
-}
+export type { BDNSDateView, BDNSExtractView, BDNSExtractsView, BDNSTextView } from './bdnsViewTypes';
 
 export interface BDNSBudgetView extends BDNSOfficialView {
   readonly rawValue: string;
@@ -98,6 +86,7 @@ export interface BDNSRecordView {
   readonly regulatoryBases?: BDNSRegulatoryBasesView;
   readonly electronicOffice?: BDNSTextView;
   readonly documents: BDNSDocumentsView;
+  readonly extracts: BDNSExtractsView;
 }
 
 const BDNS_PATH = 'source_data.bdns';
@@ -180,6 +169,7 @@ export function buildBDNSRecordView(record: FrontendRecord): BDNSRecordView | nu
       ...officialGroup('Documentos oficiales', `${BDNS_PATH}.documents`),
       items: data.documents.map(documentView),
     },
+    extracts: buildBDNSExtractsView(data.extracts, record.title, { officialGroup, textView, dateView }),
   };
 }
 
@@ -236,5 +226,5 @@ function documentView(data: FrontendBDNSDocument, index: number): BDNSDocumentVi
   };
 }
 
-// MVP intentionally excludes extracts, both source flags, document IDs/datMod,
-// technical versions, narrative and clickability. They remain in E2's projection.
+// Presentation still excludes both source flags, document IDs/datMod, technical
+// versions, narrative and clickability. Extract links belong to UTILITY-03B-2.

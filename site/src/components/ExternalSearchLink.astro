@@ -1,0 +1,8 @@
+---
+interface Props { href: string }
+const { href } = Astro.props;
+---
+<div class="external-search">
+  <a class="text-link external-search-link" href={href} target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" data-external-search>Buscar en Google<span class="visually-hidden"> (se abre en una pestaña nueva)</span></a>
+  <p class="fact-note">Búsqueda externa: resultados de Google no verificados por InfoCs.</p>
+</div>

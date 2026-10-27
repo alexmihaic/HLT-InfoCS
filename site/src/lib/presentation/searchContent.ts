@@ -71,6 +71,13 @@ export function buildSearchDocument(input: SearchDocumentInput): { texts: string
     for (const item of view.impactRegions.items) add(item, view.impactRegions.label);
     for (const level of view.authorityHierarchy?.items ?? []) add(level.value, level.label, false);
     add(view.regulatoryBases?.description?.value, view.regulatoryBases?.description?.label);
+    for (const extract of view.extracts.items) {
+      add(extract.title?.value, extract.title?.label);
+      add(extract.titleCoofficial?.value, extract.titleCoofficial?.label);
+      add(extract.diary?.value, extract.diary?.label);
+      add(extract.publicationDate?.display, extract.publicationDate?.label);
+      add(extract.cve?.value, extract.cve?.label, false);
+    }
     for (const document of view.documents.items) {
       add(document.description?.value, document.description?.label);
       add(document.publishedDate?.display, document.publishedDate?.label);

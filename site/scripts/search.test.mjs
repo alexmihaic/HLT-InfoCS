@@ -56,12 +56,22 @@ test('BDNS preserves searchable official details, excludes locators/codes alread
     regulatoryBases: { description: { label: 'Bases reguladoras', value: 'Bases reguladoras del comercio de prueba' }, sourceLocator: { value: 'LOCATOR_NOT_INDEXED' } },
     electronicOffice: { value: 'URL_NOT_INDEXED' },
     documents: { items: [{ description: { label: 'Descripción', value: 'Anexo de bases' }, filename: { value: 'FILE_NOT_INDEXED' } }] },
+    extracts: { items: [{
+      diary: { label: 'Diario oficial', value: 'B.O.P. DE CASTELLÓN' },
+      publicationDate: { label: 'Fecha del extracto', value: '2026-10-22', display: '22 de octubre de 2026' },
+      title: { label: 'Título del extracto', value: 'Anuncio de prueba' },
+      cve: { label: 'CVE', value: 'CVE-NOT-IN-EXCERPTS' },
+    }] },
   };
   const result = buildSearchDocument(input);
   assert.ok(result.texts.includes('Presupuesto de la convocatoria: 20.000 · Moneda no indicada en los datos'));
   assert.ok(result.excerpts.includes('Fin de solicitud: Veinte días hábiles desde la publicación'));
   assert.ok(result.excerpts.includes('Descripción: Anexo de bases'));
   assert.ok(result.excerpts.includes('Bases reguladoras del comercio de prueba'));
+  assert.ok(result.excerpts.includes('Título del extracto: Anuncio de prueba'));
+  assert.ok(result.texts.includes('Diario oficial: B.O.P. DE CASTELLÓN'));
+  assert.ok(result.texts.includes('CVE: CVE-NOT-IN-EXCERPTS'));
+  assert.ok(!result.excerpts.some((text) => text.includes('CVE-NOT-IN-EXCERPTS')));
   assert.ok(!result.excerpts.some((text) => text.includes('20.000')));
   assert.ok(!result.texts.join(' ').includes('NOT_INDEXED'));
 });
