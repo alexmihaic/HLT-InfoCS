@@ -5,6 +5,7 @@ import ChangeTimeline from '../../components/ChangeTimeline.astro';
 import InfoCsDerived from '../../components/InfoCsDerived.astro';
 import OfficialData from '../../components/OfficialData.astro';
 import RecordMeta from '../../components/RecordMeta.astro';
+import ExternalSearchLink from '../../components/ExternalSearchLink.astro';
 import SourceLink from '../../components/SourceLink.astro';
 import TechnicalDetails from '../../components/TechnicalDetails.astro';
 import { encodeRecordId, loadPortalData } from '../../lib/data';
@@ -12,6 +13,7 @@ import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
+import { buildExternalSearchHref } from '../../lib/presentation/externalLinks';
 import { derivedMunicipality } from '../../lib/presentation/territory';
 import { buildSearchDocument } from '../../lib/presentation/searchContent';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
@@ -36,6 +38,7 @@ const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 const authority = authorityPresentation(record);
 const deadline = officialDeadline(record);
 const municipality = derivedMunicipality(record);
+const externalSearchHref = buildExternalSearchHref(record);
 const searchDocument = buildSearchDocument({
   record, bdnsView, authority, date, geographies, municipality,
   source: sourceLabel(record.sourceId, [source]), category: categoryLabel(record.category),
@@ -91,6 +94,7 @@ const searchDocument = buildSearchDocument({
       <div class="key-facts-actions" data-pagefind-ignore>
         <SourceLink href={record.sourceUrl} variant="primary" label={record.sourceId === 'bdns' ? 'Datos oficiales en BDNS (JSON de la API)' : record.sourceId === 'boe' ? 'Abrir publicación oficial en el BOE' : 'Abrir publicación oficial'} />
         {record.sourceId === 'bdns' && <p class="fact-note">El enlace abre la respuesta en formato JSON de la API oficial de BDNS, no una ficha web.</p>}
+        {externalSearchHref && <ExternalSearchLink href={externalSearchHref} />}
       </div>
     </section>
 

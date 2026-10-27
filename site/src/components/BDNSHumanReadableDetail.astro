@@ -57,6 +57,21 @@ const { view } = Astro.props;
     {view.regulatoryBases.sourceLocator && <dl class="detail-grid" data-pagefind-ignore><div><dt>{view.regulatoryBases.sourceLocator.label}</dt><dd class="mono-value bdns-literal">{view.regulatoryBases.sourceLocator.value}</dd></div></dl>}
   </section>}
 
+  {view.extracts.items.length > 0 && <section class="page-section" aria-labelledby="bdns-extracts-title">
+    <h3 id="bdns-extracts-title">{view.extracts.label}</h3>
+    <ul class="bdns-extracts">
+      {view.extracts.items.map((item) => <li class="bdns-extract">
+        {item.title && <p class="bdns-literal"><span class="fact-label">{item.title.label}: </span>{item.title.value}</p>}
+        {item.titleCoofficial && <p class="bdns-literal"><span class="fact-label">{item.titleCoofficial.label}: </span>{item.titleCoofficial.value}</p>}
+        <dl class="detail-grid">
+          {item.diary && <div><dt>{item.diary.label}</dt><dd class="bdns-literal">{item.diary.value}</dd></div>}
+          {item.publicationDate && <div><dt>{item.publicationDate.label}</dt><dd><time datetime={item.publicationDate.value}>{item.publicationDate.display}</time></dd></div>}
+          {item.cve && <div><dt>{item.cve.label}</dt><dd class="mono-value">{item.cve.value}</dd></div>}
+        </dl>
+      </li>)}
+    </ul>
+  </section>}
+
   {view.documents.items.length > 0 && <section class="page-section" aria-labelledby="bdns-documents-title">
     <h3 id="bdns-documents-title">{view.documents.label}</h3>
     <ul>{view.documents.items.map((item) => <li>
