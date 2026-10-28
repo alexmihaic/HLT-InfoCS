@@ -152,6 +152,21 @@ test('the component never triggers a search on load', async () => {
   assert.doesNotMatch(component, /<script|<form|fetch\(|XMLHttpRequest|window\.|onload|autofocus/i);
 });
 
+test('secondary CTA has decorative icons and a separate associated warning', async () => {
+  const component = await readFile(componentUrl, 'utf8');
+  assert.match(component, /class="external-search-link"/);
+  assert.doesNotMatch(component, /class="text-link/);
+  assert.equal((component.match(/<svg aria-hidden="true" focusable="false"/g) ?? []).length, 2);
+  assert.match(component, /aria-describedby="external-search-note"/);
+  assert.match(component, /<\/a>\s*<p class="fact-note" id="external-search-note">Búsqueda externa:/);
+  const css = await readFile(new URL('../src/styles/global.css', import.meta.url), 'utf8');
+  const button = css.match(/\.external-search-link \{([^}]+)\}/)?.[1] ?? '';
+  assert.match(button, /min-height: var\(--control-md\)/);
+  assert.match(button, /min-width: var\(--control-md\)/);
+  assert.match(button, /border: var\(--border-1\) solid var\(--color-accent\)/);
+  assert.match(css, /\.external-search-link:focus-visible\s*\{[^}]*outline:/);
+});
+
 // --- 7/8/9. Extracts ---------------------------------------------------------------------------
 test('official extract metadata is projected literally, with its own date role', () => {
   const view = buildBDNSExtractsView([{
@@ -229,6 +244,8 @@ test('built BDNS and BOE fiches keep the official link and add the Google link b
       assert.match(anchor, /target="_blank"/);
       assert.match(anchor, /rel="noopener noreferrer"/);
       assert.match(anchor, /referrerpolicy="no-referrer"/);
+      assert.match(anchor, /aria-describedby="external-search-note"/);
+      assert.equal((html.match(/id="external-search-note"/g) ?? []).length, 1);
       assert.match(anchor, /^<a\s[^>]*href="https:\/\/www\.google\.com\/search\?q=[^"]+"[^>]*>$/);
       const href = decode(anchor.match(/\shref="([^"]*)"/)[1]);
       const url = new URL(href);
