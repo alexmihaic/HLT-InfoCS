@@ -31,6 +31,12 @@ Astro genera HTML estático y de sólo lectura. No hay servidor runtime, API,
 SSR ni base de datos. El único JavaScript cliente de esta slice permite
 cambiar y recordar el tema visual.
 
+Para `npm run dev` y `npm run build` se necesita Python 3.12 con el runtime
+de InfoCs instalado desde la raíz mediante `python -m pip install -e .`.
+Las URLs BDNS se validan en un lote local durante la generación, sin peticiones
+HTTP ni cambios en los Records. Si Python no está disponible, se bloquea la
+generación de fichas; no se admiten enlaces sin validar.
+
 ```powershell
 npm install
 npm run dev
