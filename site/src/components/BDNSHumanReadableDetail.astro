@@ -1,8 +1,10 @@
 ---
 import type { BDNSRecordView } from '../lib/presentation/bdnsRecordView';
+import type { BDNSLinks } from '../lib/data/bdnsLinks';
+import SourceLink from './SourceLink.astro';
 
-interface Props { view: BDNSRecordView }
-const { view } = Astro.props;
+interface Props { view: BDNSRecordView; links: BDNSLinks }
+const { view, links } = Astro.props;
 ---
 
 <section class="bdns-detail page-section" aria-labelledby="bdns-call-title">
@@ -55,6 +57,7 @@ const { view } = Astro.props;
     <h3 id="bdns-bases-title">{view.regulatoryBases.label}</h3>
     {view.regulatoryBases.description && <p class="bdns-literal">{view.regulatoryBases.description.value}</p>}
     {view.regulatoryBases.sourceLocator && <dl class="detail-grid" data-pagefind-ignore><div><dt>{view.regulatoryBases.sourceLocator.label}</dt><dd class="mono-value bdns-literal">{view.regulatoryBases.sourceLocator.value}</dd></div></dl>}
+    {links.bases && <div data-pagefind-ignore><SourceLink href={links.bases} label="Abrir localizador de bases reguladoras" /><p class="fact-note">Localizador suministrado por BDNS; contenido no cotejado por InfoCs.</p></div>}
   </section>}
 
   {view.extracts.items.length > 0 && <section class="page-section" aria-labelledby="bdns-extracts-title">
@@ -84,5 +87,6 @@ const { view } = Astro.props;
   {view.electronicOffice && <section class="page-section" aria-labelledby="bdns-office-title" data-pagefind-ignore>
     <h3 id="bdns-office-title">{view.electronicOffice.label}</h3>
     <p class="font-mono bdns-literal">{view.electronicOffice.value}</p>
+    {links.office && <><SourceLink href={links.office} label="Abrir sede electrónica indicada por BDNS" /><p class="fact-note">La sede puede ser general y no conducir directamente al trámite.</p></>}
   </section>}
 </section>

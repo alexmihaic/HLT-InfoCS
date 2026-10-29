@@ -13,23 +13,26 @@ import { formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
+import { projectBDNSLinks } from '../../lib/data/bdnsLinks';
+import type { BDNSLinks } from '../../lib/data/bdnsLinks';
 import { buildExternalSearchHref } from '../../lib/presentation/externalLinks';
 import { derivedMunicipality } from '../../lib/presentation/territory';
 import { buildSearchDocument } from '../../lib/presentation/searchContent';
 import type { FrontendEvent, FrontendRecord, SourceMeta } from '../../lib/data/types';
 
-interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta }
+interface Props { record: FrontendRecord; events: readonly FrontendEvent[]; source: SourceMeta; bdnsLinks: BDNSLinks }
 
 export async function getStaticPaths() {
   const data = await loadPortalData();
-  return data.records.map((record) => {
+  const links = projectBDNSLinks(data.records);
+  return data.records.map((record, index) => {
     const source = data.sources.find((item) => item.sourceId === record.sourceId);
     if (!source) throw new Error('No se encontró metadata editorial de una fuente publicada.');
-    return { params: { slug: encodeRecordId(record.id) }, props: { record, events: data.eventsByRecordId.get(record.id) ?? [], source } };
+    return { params: { slug: encodeRecordId(record.id) }, props: { record, events: data.eventsByRecordId.get(record.id) ?? [], source, bdnsLinks: links[index] } };
   });
 }
 
-const { record, events, source } = Astro.props as Props;
+const { record, events, source, bdnsLinks } = Astro.props as Props;
 const bdnsView = buildBDNSRecordView(record);
 const geographies = geographyLabels(record);
 const date = primaryDate(record);
@@ -107,7 +110,7 @@ const searchDocument = buildSearchDocument({
             {record.sourceId === 'bdns' && record.grant?.callId && <div><dt>Código BDNS</dt><dd class="mono-value">{record.grant.callId}</dd></div>}
             {record.sourceId === 'boe' && record.officialId && <div><dt>Identificador BOE</dt><dd class="mono-value">{record.officialId}</dd></div>}
           </dl>
-          {bdnsView && <BDNSHumanReadableDetail view={bdnsView} />}
+          {bdnsView && <BDNSHumanReadableDetail view={bdnsView} links={bdnsLinks} />}
         </OfficialData>
         <ChangeTimeline items={timeline} />
       </div>

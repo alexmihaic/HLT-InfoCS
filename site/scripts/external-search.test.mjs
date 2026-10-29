@@ -7,6 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 import { buildBDNSExtractsView } from '../src/lib/presentation/bdnsExtracts.ts';
 import { buildExternalSearchHref, googleSearchHref, searchOrganism } from '../src/lib/presentation/externalLinks.ts';
@@ -313,16 +314,21 @@ test('built search corpus excludes technical URLs, hashes and internal identifie
   }
 });
 
-test('built fiches: no SNPSAP ficha link and no automatic clickability for locators', { skip: !built }, async () => {
-  for (const item of await publicRecords('bdns')) {
+test('built fiches: no SNPSAP ficha link and clickability follows Python BDNS policy', { skip: !built }, async () => {
+  const records = await publicRecords('bdns');
+  const candidates = records.map((item) => ({ bases: item.source_data.bdns.regulatory_bases?.source_locator ?? null, office: item.source_data.bdns.electronic_office_url ?? null }));
+  const projection = spawnSync('python', ['-B', fileURLToPath(new URL('./bdns_link_projection.py', import.meta.url))], { input: JSON.stringify(candidates), encoding: 'utf8' });
+  assert.equal(projection.status, 0, 'Python BDNS validator must be available');
+  const approved = JSON.parse(projection.stdout);
+  for (const [index, item] of records.entries()) {
     const html = decode(await pageOf(item));
     assert.doesNotMatch(html, /bdnstrans\/GE\/es\/convocatorias\//, `ficha SNPSAP prematura: ${item.id}`);
     const locator = item.source_data.bdns.regulatory_bases?.source_locator;
     if (typeof locator === 'string' && locator.trim()) {
-      assert.ok(!html.includes(`href="${locator}"`), `localizador convertido en enlace: ${item.id}`);
+      assert.equal(html.includes(`href="${locator}"`), approved[index].bases === locator, `política de bases: ${item.id}`);
     }
     if (item.source_data.bdns.electronic_office_url) {
-      assert.ok(!html.includes(`href="${item.source_data.bdns.electronic_office_url}"`), `sede convertida en enlace: ${item.id}`);
+      assert.equal(html.includes(`href="${item.source_data.bdns.electronic_office_url}"`), approved[index].office === item.source_data.bdns.electronic_office_url, `política de sede: ${item.id}`);
     }
   }
 });
