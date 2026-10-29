@@ -31,12 +31,19 @@ export function authoritySlug(value: string): string | null {
   return slug.length > 0 ? slug : null;
 }
 
+/** Same literal grouping key for the directory and discovery filters. */
+export function authorityName(record: Pick<FrontendRecord, 'sourceId' | 'bdns'>): string | undefined {
+  if (record.sourceId !== 'bdns') return undefined;
+  const name = record.bdns?.authorityHierarchy?.nivel2;
+  return name?.trim() ? name : undefined;
+}
+
 export function authorityGroups(records: readonly FrontendRecord[]): AuthorityGroup[] {
   const byName = new Map<string, FrontendRecord[]>();
   for (const record of records) {
     if (record.sourceId !== 'bdns') continue;
-    const name = record.bdns?.authorityHierarchy?.nivel2;
-    if (typeof name !== 'string' || name.trim() === '') continue;
+    const name = authorityName(record);
+    if (name === undefined) continue;
     const bucket = byName.get(name) ?? [];
     bucket.push(record);
     byName.set(name, bucket);

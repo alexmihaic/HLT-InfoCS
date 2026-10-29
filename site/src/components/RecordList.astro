@@ -3,7 +3,8 @@ import type { FrontendRecord, SourceMeta } from '../lib/data/types';
 import { encodeRecordId } from '../lib/data';
 import { buildBDNSRecordView } from '../lib/presentation/bdnsRecordView';
 import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
-import { callTypeValue } from '../lib/presentation/recordFilters';
+import { primaryDate } from '../lib/presentation/recordView';
+import { authorityFilterValue, callTypeValue } from '../lib/presentation/recordFilters';
 import { derivedMunicipality } from '../lib/presentation/territory';
 import EmptyState from './EmptyState.astro';
 import RecordItem from './RecordItem.astro';
@@ -33,7 +34,7 @@ const { records, sources, historyIds, countLabel, emptyMessage = 'Todavía no ha
     {records.map((record) => {
       const bdnsView = buildBDNSRecordView(record);
       const municipality = derivedMunicipality(record);
-      return <li data-category={record.category} data-municipality={municipality?.code} data-calltype={callTypeValue(record)}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} headingLevel={headingLevel} callTypeDisplay={callTypeDisplay} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
+      return <li data-source={record.sourceId} data-authority={authorityFilterValue(record)} data-date={primaryDate(record).value.slice(0, 10)} data-category={record.category} data-municipality={municipality?.code} data-calltype={callTypeValue(record)}><RecordItem record={record} href={`/registro/${encodeRecordId(record.id)}/`} source={sourceLabel(record.sourceId, sources)} category={categoryLabel(record.category)} hasHistory={historyIds.has(record.id)} headingLevel={headingLevel} callTypeDisplay={callTypeDisplay} bdnsSummary={bdnsView ? { callType: bdnsView.callType, budget: bdnsView.budget } : undefined} /></li>;
     })}
   </ol>}
-<p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados. Esto no significa que no existan publicaciones de esa localidad: las convocatorias de BDNS se consultan por administración en <a href="/organismos/">Organismos</a>. Usa «Quitar filtros» para volver al listado completo.</p>
+<p class="empty-state" data-filter-empty hidden>No hay registros que cumplan los filtros seleccionados. Prueba a ampliar las fechas o quitar algún filtro. Municipio del título BOE y administración BDNS corresponden a fuentes distintas; combinarlos no produce coincidencias. También puedes explorar <a href="/organismos/">Organismos</a>. Usa «Quitar filtros» para volver al listado completo.</p>
