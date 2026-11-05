@@ -183,4 +183,37 @@ class BOETransportTests(unittest.TestCase):
 
         timeout_result, _ = self.fetch(error=TimeoutError())
         self.assertEqual(timeout_result.status, BOEFetchStatus.SOURCE_FAILURE)
-        self.assertEqual(timeout_result.reason, "network_failure")
+        self.assertEqual(timeout_result.reason, "network_timeout")
+
+
+class BOERetryTests(unittest.TestCase):
+    def test_timeout_then_success(self):
+        responses = iter([TimeoutError(), json_response(payload())])
+        calls, delays = [], []
+        def opener(request, timeout):
+            calls.append(1)
+            value = next(responses)
+            if isinstance(value, Exception): raise value
+            return value
+        result = BOETransport(opener=opener, sleeper=delays.append).fetch_daily_summary("20240529")
+        self.assertEqual(result.status, BOEFetchStatus.COMPLETE_SUCCESS)
+        self.assertEqual((len(calls), delays), (2, [1.0]))
+
+    def test_transient_exhaustion_and_permanent_failures(self):
+        for code, expected in [(503, 3), (429, 3), (403, 1), (404, 1), (302, 1)]:
+            with self.subTest(code=code):
+                calls, delays = [], []
+                def opener(request, timeout):
+                    calls.append(1)
+                    return FakeResponse(code, b"")
+                result = BOETransport(opener=opener, sleeper=delays.append).fetch_daily_summary("20240529")
+                self.assertEqual(len(calls), expected)
+                self.assertEqual(result.http_status, code)
+                self.assertNotEqual(result.status, BOEFetchStatus.COMPLETE_SUCCESS)
+        calls = []
+        def malformed(request, timeout):
+            calls.append(1)
+            return FakeResponse(200, b"bad")
+        result = BOETransport(opener=malformed, sleeper=lambda _: self.fail("unexpected retry")).fetch_daily_summary("20240529")
+        self.assertEqual(result.reason, "invalid_json")
+        self.assertEqual(len(calls), 1)

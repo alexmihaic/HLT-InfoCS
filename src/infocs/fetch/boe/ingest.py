@@ -328,7 +328,7 @@ def _summary_or_status(fetched: BOESummary | BOEFetchResult) -> BOESummary | BOE
         status=status,
         metrics=BOEIngestionMetrics(),
         # 404 es una respuesta operativamente válida: no describe un fallo.
-        error=None if status is BOEIngestionStatus.NO_DAILY_PUBLICATION else fetched.reason,
+        error=None if status is BOEIngestionStatus.NO_DAILY_PUBLICATION else (f"http_{fetched.http_status}" if fetched.reason == "http_failure" and fetched.http_status is not None and 100 <= fetched.http_status <= 599 else fetched.reason),
     )
 
 
