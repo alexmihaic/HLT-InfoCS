@@ -218,6 +218,39 @@ class RunnerContractTests(unittest.TestCase):
                 _write_requested_date_output(date(2026, 9, 23))
             self.assertEqual(output_path.read_text(encoding="utf-8"), "requested_date=2026-09-23\n")
 
+    def test_manual_and_scheduled_runner_export_the_actual_collection_date(self) -> None:
+        from contextlib import redirect_stderr
+        from io import StringIO
+        from unittest.mock import patch
+        from infocs.fetch.boe.runner import main
+
+        cases = (
+            (["--date", "2026-09-18"], date(2026, 9, 18)),
+            (["--today"], date(2026, 9, 19)),
+        )
+        for args, expected in cases:
+            with self.subTest(args=args), TemporaryDirectory() as directory:
+                output_path = Path(directory) / "github-output.txt"
+                # Madrid is already on 19 September while UTC remains on the 18th.
+                now = datetime(2026, 9, 18, 22, 30, tzinfo=UTC)
+                with patch.dict("os.environ", {"GITHUB_OUTPUT": str(output_path)}), \
+                     patch("infocs.fetch.boe.runner._utc_now", return_value=now), \
+                     patch("infocs.fetch.boe.runner.run_boe_collection", side_effect=RuntimeError) as collect, \
+                     redirect_stderr(StringIO()):
+                    self.assertEqual(main(args), 1)
+                self.assertEqual(collect.call_args.args[0], expected)
+                self.assertEqual(output_path.read_text(encoding="utf-8"), f"requested_date={expected.isoformat()}\n")
+
+    def test_workflow_uses_runner_output_and_blocks_missing_date_before_commit(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "boe-manual.yml").read_text(encoding="utf-8")
+        self.assertIn("REQUESTED_DATE: ${{ steps.collection.outputs.requested_date }}", workflow)
+        self.assertIn("python -m infocs.fetch.boe.runner --today", workflow)
+        self.assertIn('python -m infocs.fetch.boe.runner --date "$REQUESTED_DATE"', workflow)
+        guard = 'if [[ ! "$REQUESTED_DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then'
+        self.assertIn(guard, workflow)
+        self.assertRegex(workflow[workflow.index(guard):], r'(?s)^if \[\[.*?exit 1\s+fi')
+        self.assertLess(workflow.index(guard), workflow.index('git commit -m "data(boe): collect ${REQUESTED_DATE}"'))
+
     def test_failed_status_has_nonzero_workflow_exit_code(self) -> None:
         self.assertEqual(runner_exit_code(RunStatus.FAILED), 1)
         self.assertEqual(runner_exit_code(RunStatus.SUCCESS), 0)
