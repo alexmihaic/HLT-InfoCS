@@ -1,11 +1,11 @@
 ---
-import type { FrontendRecord } from '../lib/data/types';
-import { categoryLabel } from '../lib/presentation/labels';
-import { callTypeOptions } from '../lib/presentation/recordFilters';
+import type { FrontendRecord, SourceMeta } from '../lib/data/types';
+import { categoryLabel, sourceLabel } from '../lib/presentation/labels';
+import { authorityOptions, callTypeOptions } from '../lib/presentation/recordFilters';
 import { derivedMunicipality, municipalityShortName } from '../lib/presentation/territory';
 
-interface Props { records: readonly FrontendRecord[] }
-const { records } = Astro.props;
+interface Props { records: readonly FrontendRecord[]; sources: readonly SourceMeta[] }
+const { records, sources } = Astro.props;
 
 const categories = new Map<string, number>();
 const municipalities = new Map<string, { name: string; count: number }>();
@@ -24,6 +24,8 @@ const municipalityOptions = [...municipalities.entries()]
   .map(([value, { name, count }]) => ({ value, label: name, count }))
   .sort((left, right) => left.label.localeCompare(right.label, 'es'));
 const callTypes = callTypeOptions(records);
+const authorities = authorityOptions(records);
+const sourceOptions = [...new Set(records.map(record => record.sourceId))].map(value => ({ value, label: sourceLabel(value, sources), count: records.filter(record => record.sourceId === value).length }));
 ---
 
 <form class="record-filters" action="/registros/" method="get" data-record-filters aria-label="Filtrar registros">
@@ -48,69 +50,35 @@ const callTypes = callTypeOptions(records);
       {municipalityOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
     </select>
   </div>
+  <div class="record-filter">
+    <label for="filter-organismo">Administración convocante (según BDNS)</label>
+    <select id="filter-organismo" name="organismo" aria-describedby="filter-scope-note">
+      <option value="">Todas</option>
+      {authorities.map(option => <option value={option.value}>{option.label} ({option.count})</option>)}
+    </select>
+  </div>
+  {sourceOptions.length > 1 && <div class="record-filter">
+    <label for="filter-fuente">Fuente oficial</label>
+    <select id="filter-fuente" name="fuente">
+      <option value="">Todas las fuentes</option>
+      {sourceOptions.map(option => <option value={option.value}>{option.label} ({option.count})</option>)}
+    </select>
+  </div>}
+  <div class="record-filter">
+    <label for="filter-desde">Fecha mostrada · desde</label>
+    <input id="filter-desde" type="date" name="desde" aria-describedby="filter-date-note filter-date-error" />
+  </div>
+  <div class="record-filter">
+    <label for="filter-hasta">Fecha mostrada · hasta</label>
+    <input id="filter-hasta" type="date" name="hasta" aria-describedby="filter-date-note filter-date-error" />
+  </div>
+  <p id="filter-date-error" class="record-filter-note" role="status" hidden>El inicio es posterior al final. Corrige el intervalo o quita los filtros.</p>
+  <p id="filter-date-note" class="fact-note record-filter-note">Intervalo inclusivo sobre la fecha de cada ficha: publicación; si falta, recepción en BDNS; si también falta, detección por InfoCs. No es el plazo de solicitud.</p>
   <div class="record-filter-actions"><button class="record-filter-reset" type="button" data-filter-reset hidden>Quitar filtros</button></div>
-  <noscript><button class="search-submit" type="submit">Filtrar</button></noscript>
-  <p class="fact-note record-filter-note">El tipo de convocatoria BDNS es el literal oficial de la fuente: no indica si puedes solicitar la ayuda ni si su plazo sigue abierto. El filtro de municipio solo reconoce municipios nombrados en el título de publicaciones del BOE y no filtra las convocatorias de BDNS por organismo: para ver las de un ayuntamiento, consulta <a href="/organismos/">Organismos</a>.</p>
+  <noscript><p>Los filtros necesitan JavaScript. Puedes consultar el listado completo, <a href="/organismos/">Organismos</a> y <a href="/fuentes/">Fuentes</a>.</p></noscript>
+  <p id="filter-scope-note" class="fact-note record-filter-note">Los recuentos indican coincidencias con los demás filtros. La administración agrupa por el nombre literal del nivel 2 de la jerarquía oficial BDNS, como en <a href="/organismos/">Organismos</a>; no es el municipio beneficiario. Nombres iguales se agrupan; no necesariamente identifican jurídicamente al organismo convocante exacto. El municipio solo se busca en títulos BOE. El tipo de convocatoria no determina quién puede solicitarla ni la vigencia del plazo.</p>
 </form>
 
 <script>
-  import { matchesRecordFilters, recordCountLabel, sanitizeFilterValue } from '../lib/presentation/recordFilters';
-
-  const form = document.querySelector<HTMLFormElement>('[data-record-filters]');
-  const list = document.querySelector<HTMLElement>('[data-record-list]');
-  const count = document.querySelector<HTMLElement>('[data-record-count]');
-  const empty = document.querySelector<HTMLElement>('[data-filter-empty]');
-
-  if (form && list) {
-    const tipo = form.querySelector<HTMLSelectElement>('select[name="tipo"]')!;
-    const municipio = form.querySelector<HTMLSelectElement>('select[name="municipio"]')!;
-    const convocatoria = form.querySelector<HTMLSelectElement>('select[name="convocatoria"]');
-    const reset = form.querySelector<HTMLButtonElement>('[data-filter-reset]');
-    const items = [...list.querySelectorAll<HTMLLIElement>(':scope > li')];
-    const total = items.length;
-
-    const params = new URLSearchParams(window.location.search);
-    const allowed = (select: HTMLSelectElement | null, name: string) =>
-      select ? sanitizeFilterValue(params.get(name), [...select.options].map((option) => option.value)) : '';
-    tipo.value = allowed(tipo, 'tipo');
-    municipio.value = allowed(municipio, 'municipio');
-    if (convocatoria) convocatoria.value = allowed(convocatoria, 'convocatoria');
-
-    const apply = () => {
-      const selection = { category: tipo.value, municipality: municipio.value, callType: convocatoria?.value ?? '' };
-      let visible = 0;
-      for (const item of items) {
-        const show = matchesRecordFilters(
-          { category: item.dataset.category, municipality: item.dataset.municipality, callType: item.dataset.calltype },
-          selection,
-        );
-        item.hidden = !show;
-        if (show) visible += 1;
-      }
-      if (count) {
-        // Only write on change so the status region is not re-announced for identical text.
-        const label = recordCountLabel(visible, total);
-        if (count.textContent !== label) count.textContent = label;
-      }
-      if (empty) empty.hidden = visible !== 0;
-      if (reset) reset.hidden = !selection.category && !selection.municipality && !selection.callType;
-      const next = new URLSearchParams();
-      if (selection.category) next.set('tipo', selection.category);
-      if (selection.callType) next.set('convocatoria', selection.callType);
-      if (selection.municipality) next.set('municipio', selection.municipality);
-      const query = next.toString();
-      history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
-    };
-
-    reset?.addEventListener('click', () => {
-      tipo.value = '';
-      municipio.value = '';
-      if (convocatoria) convocatoria.value = '';
-      apply();
-      tipo.focus();
-    });
-    form.addEventListener('change', apply);
-    form.addEventListener('submit', (event) => { event.preventDefault(); apply(); });
-    apply();
-  }
+  import '../scripts/recordFilters';
 </script>
