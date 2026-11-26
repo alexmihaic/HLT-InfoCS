@@ -25,13 +25,16 @@ export function buildSearchDocument(input: SearchDocumentInput): { texts: string
   const excerpts: string[] = [];
   const seen = new Set<string>();
   const add = (value: string | undefined, label?: string, excerpt = true) => {
-    if (!value?.trim()) return;
-    const key = value.replace(/\s+/gu, ' ').trim();
+    // Official description fields sometimes contain a URL instead of prose.
+    // Keep the original on the detail page; index the surrounding words only.
+    const prose = value?.replace(/https?:\/\/[^\s<>]+/giu, ' ').trim();
+    if (!prose) return;
+    const key = prose.replace(/\s+/gu, ' ').trim();
     if (seen.has(key)) return;
     seen.add(key);
     const alreadyLabelled = label && (key.toLocaleLowerCase('es') === label.toLocaleLowerCase('es')
       || key.toLocaleLowerCase('es').startsWith(`${label.toLocaleLowerCase('es')} `));
-    const text = label && !alreadyLabelled ? `${label}: ${value}` : value;
+    const text = label && !alreadyLabelled ? `${label}: ${key}` : key;
     texts.push(text);
     if (excerpt) excerpts.push(text);
   };

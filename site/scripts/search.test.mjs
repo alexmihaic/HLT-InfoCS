@@ -22,6 +22,15 @@ const fixture = () => ({
   geographies: ['Provincia: Castellón'], municipality: null,
 });
 
+test('official prose remains searchable when it contains a URL', () => {
+  const entry = fixture();
+  entry.geographies = ['Antes https://example.org/documento después', 'https://example.org/'];
+  const { texts, excerpts } = buildSearchDocument(entry);
+  assert.ok(texts.includes('Antes después'));
+  assert.ok(excerpts.includes('Antes después'));
+  assert.ok(!texts.some(text => text.includes('example.org')));
+});
+
 test('index retains metadata matches with explicit separators, without page boilerplate', () => {
   const result = buildSearchDocument(fixture());
   assert.ok(result.texts.includes('Sección del BOE: Administración Local'));
