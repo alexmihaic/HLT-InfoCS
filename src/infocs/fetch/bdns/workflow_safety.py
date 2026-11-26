@@ -231,6 +231,9 @@ def write_runner_summary(path: str | Path, result: Mapping[str, Any], exit_code:
     """Validate again, then expose only a closed diagnostic projection."""
     safe = validate_runner_result(json.dumps(dict(result)), "", exit_code)
     lines = ["## BDNS collection result", "", f"Status: `{safe['status']}`"]
+    lines.append("Los contadores describen el procesamiento. La publicación requiere validar el conjunto preparado.")
+    if exit_code == 1:
+        lines.append("Ante fallo terminal solo se admite observabilidad válida. Records y Events bloquean la publicación.")
     if "failure_position" in safe:
         lines.extend([
             "Primary error: `item_ingestion_failure`",
@@ -264,6 +267,12 @@ def validate_generated_artifacts(
     """Validate changed BDNS artifacts against schemas, Stores and each other."""
     root = Path(repo_root).resolve()
     accepted = validate_changed_entries(entries)
+    status = result.get("status")
+    terminal = isinstance(status, str) and _STATUS_EXIT.get(status) == 1
+    if terminal:
+        if any(path.startswith(("data/records/bdns/", "data/events/bdns/")) for _, path in accepted):
+            raise WorkflowSafetyError("terminal_data_publication_forbidden")
+        _assert_terminal_counters(result.get("metrics", {}))
     paths = tuple(path for _status, path in accepted)
     changed_records: dict[str, Record] = {}
     changed_events: list[Event] = []
@@ -298,6 +307,10 @@ def validate_generated_artifacts(
             changed_events.append(event)
         elif relative.startswith("data/manifests/bdns/"):
             manifest = RunManifest.from_mapping(payload)
+            if terminal:
+                if manifest.status.value != "failed" or manifest.run_id != result.get("run_id"):
+                    raise WorkflowSafetyError("terminal_manifest_mismatch")
+                _assert_terminal_counters(manifest.metrics.to_dict())
             if manifest.source_id != "bdns":
                 raise WorkflowSafetyError("manifest_source_invalid")
             if path != ManifestStore(root / "data" / "manifests").path_for(manifest).resolve():
@@ -356,9 +369,27 @@ def validate_generated_artifacts(
     return paths
 
 
+def _assert_terminal_counters(metrics: Mapping[str, Any]) -> None:
+    """Do not publish terminal observability claiming generated data writes.
+
+    No metrics are rewritten. If processing generated Records/Events, the whole
+    publication is blocked; their safe failure diagnostics remain in the job.
+    """
+    if any(metrics.get(name, 0) for name in ("created", "updated", "events_created", "events_updated")):
+        raise WorkflowSafetyError("terminal_generated_data_counters")
+
+
+def _validated_publication_result(result: Mapping[str, Any]) -> dict[str, Any]:
+    status = result.get("status")
+    if not isinstance(status, str) or status not in _STATUS_EXIT:
+        raise WorkflowSafetyError("publication_result_status_required")
+    return validate_runner_result(json.dumps(dict(result)), "", _STATUS_EXIT[status])
+
+
 def stage_validated_artifacts(repo_root: str | Path, result: Mapping[str, Any]) -> tuple[str, ...]:
     """Validate the complete run diff, stage only its allowed BDNS JSON paths."""
     root = Path(repo_root).resolve()
+    result = _validated_publication_result(result)
     entries = _working_tree_entries(root)
     paths = validate_generated_artifacts(root, entries, result)
     for relative in paths:
@@ -404,6 +435,7 @@ def validate_remote_boe_commit(subject: str, entries: Iterable[tuple[str, str]])
 def validate_committed_artifacts(repo_root: str | Path, commit: str, result: Mapping[str, Any]) -> tuple[str, ...]:
     """Revalidate the BDNS commit after a compatible BOE rebase, without refetching BDNS."""
     root = Path(repo_root).resolve()
+    result = _validated_publication_result(result)
     entries = _git_name_status(root, "diff-tree", "--no-commit-id", "--name-status", "-z", "--no-renames", "-r", commit)
     accepted = validate_changed_entries(entries)
     paths = tuple(path for _status, path in accepted)

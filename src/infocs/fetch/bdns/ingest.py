@@ -9,6 +9,7 @@ from enum import StrEnum
 from pathlib import Path
 import re
 
+from infocs.diff.core import semantic_payload
 from infocs.events import EventStore, EventStoreError, create_event, update_event
 from infocs.fetch.bdns.models import BDNSRequestStatus, BDNSSearchQuery
 from infocs.fetch.bdns.normalize import (
@@ -278,10 +279,9 @@ def ingest_bdns(
 
         try:
             record = finalize_record(normalized.candidate)
-            if hash_version == 2:
-                prior = record_store.get(record.id, source_id="bdns")
-                if prior is not None:
-                    record = replace(record, dates=replace(record.dates, detected_at=prior.dates.detected_at))
+            prior = record_store.get(record.id, source_id="bdns")
+            if prior is not None:
+                record = replace(record, dates=replace(record.dates, detected_at=prior.dates.detected_at))
         except DataValidationError:
             counts["errors"] += 1
             continue
@@ -363,6 +363,22 @@ def ingest_bdns(
                 safe_reason="record_preflight_failed",
             )
 
+        if existing is not None:
+            if (existing.technical.content_hash_version != record.technical.content_hash_version
+                    or existing.provenance.normalizer_version != record.provenance.normalizer_version):
+                counts["errors"] += 1
+                return _result(BDNSIngestionStatus.PERSISTENCE_BLOCKED, counts, requests, statuses,
+                    safe_reason="observation_contract_mismatch")
+            if _loses_material_information(semantic_payload(existing.to_dict()), semantic_payload(record.to_dict())):
+                counts["errors"] += 1
+                return _result(BDNSIngestionStatus.SOURCE_FAILURE, counts, requests, statuses,
+                    safe_reason="observation_incomplete")
+            if (record.technical.content_hash != existing.technical.content_hash
+                    and observed_at < existing.dates.last_checked_at):
+                counts["errors"] += 1
+                return _result(BDNSIngestionStatus.SOURCE_FAILURE, counts, requests, statuses,
+                    safe_reason="observation_outdated")
+
         if existing is None:
             operation = BDNSRecordOperation.CREATE
         elif existing.technical.content_hash == record.technical.content_hash:
@@ -379,6 +395,9 @@ def ingest_bdns(
         else:
             counts["records_unchanged"] += 1
             event = None
+            # Preserve the stored representation, including non-hash metadata.
+            record = replace(existing, dates=replace(existing.dates,
+                last_checked_at=max(existing.dates.last_checked_at, observed_at)))
 
         if operation is not BDNSRecordOperation.NO_CHANGE and event is None:
             counts["errors"] += 1
@@ -410,7 +429,7 @@ def ingest_bdns(
                 event_created = event_store.write(
                     event, record=record, authorization=authorization
                 ).created
-            if operation is not BDNSRecordOperation.NO_CHANGE:
+            if operation is not BDNSRecordOperation.NO_CHANGE or record != existing:
                 _assert_persistence_gates(record, privacy)
                 written_path = record_store.write(record)
             else:
@@ -450,6 +469,83 @@ def ingest_bdns(
     return _result(status, counts, requests, statuses,
         safe_reason=normalization_reason or "no_publishable_record_in_budget",
         safe_field_class=normalization_field_class)
+
+
+def _loses_material_information(previous: object, current: object) -> bool:
+    """Hold ambiguous erasures; never merge old and fresh source fields.
+
+    The parser collapses absent/null/empty optional blocks. None of those is
+    evidence of an official withdrawal. Hold missing populated keys, smaller
+    collections and lost fields of documents/extracts with a shared stable key.
+    Nonempty replacements remain ordinary material changes. Explicit withdrawals
+    need a future source contract; this block supplies no override for them.
+    """
+    if isinstance(previous, dict):
+        if not isinstance(current, dict):
+            return bool(previous)
+        return any(key not in current or _loses_material_information(value, current[key])
+            for key, value in previous.items())
+    if isinstance(previous, list):
+        if not isinstance(current, list) or len(current) < len(previous):
+            return bool(previous)
+        for old in previous:
+            if isinstance(old, dict):
+                identity = next((key for key in ("source_document_id", "cve", "source_url") if old.get(key)), None)
+                if identity is not None:
+                    for new in current:
+                        if isinstance(new, dict) and new.get(identity) == old[identity]:
+                            if _loses_material_information(old, new):
+                                return True
+        return False
+    return (previous is not None and current is None) or (bool(previous) and current == "")
+
+
+def observe_bdns_record(*, record_id: str, record_store: RecordStore,
+    event_store: EventStore, transport: BDNSTransport, started_at: datetime,
+    clock: Callable[[], datetime], privacy_gate: PrivacyGate | None = None,
+    attribution_path: Path = BDNS_ATTRIBUTION_PATH) -> BDNSIngestionResult:
+    """Observe one stored ID using the existing controlled reader and ingestion.
+
+    Transport is explicit so offline callers can inject fixtures. No discovery,
+    migration, checkpoint or Manifest is executed by this entry point.
+    """
+    from infocs.fetch.bdns.migration import collect_fresh_observation
+    from infocs.fetch.bdns.runner import _PrefetchedTransport
+
+    _validate_aware_timestamp(started_at, "started_at")
+    if not isinstance(event_store, EventStore):
+        raise TypeError("observation_event_store_required")
+    record = record_store.get(record_id, source_id="bdns")
+    if record is None:
+        raise ValueError("observation_record_missing")
+    counts = {field.name: 0 for field in fields(BDNSIngestionMetrics)}
+    requests = 0
+    statuses = []
+
+    def request(fetch):
+        nonlocal requests
+        requests += 1
+        result = fetch()
+        if result.http_status is not None:
+            statuses.append(result.http_status)
+        return result
+
+    try:
+        productive_hash_version(record_store, event_store)
+        fresh = collect_fresh_observation(record, transport, request)
+    except Exception:
+        counts["errors"] = 1
+        return _make_result(BDNSIngestionStatus.SOURCE_FAILURE, counts, requests, statuses,
+            safe_reason="observation_read_failed")
+    if record_store.get(record_id, source_id="bdns") != record:
+        counts["errors"] = 1
+        return _make_result(BDNSIngestionStatus.PERSISTENCE_BLOCKED, counts, requests, statuses,
+            safe_reason="observation_base_changed")
+    result = ingest_bdns(record_store=record_store, event_store=event_store,
+        transport=_PrefetchedTransport(fresh.summary, fresh.detail), started_at=started_at,
+        clock=clock, privacy_gate=privacy_gate, attribution_path=attribution_path,
+        page_size=1, max_details=1)
+    return replace(result, request_count=requests, http_statuses=tuple(statuses))
 
 
 def _assert_persistence_gates(record: Record, privacy: PrivacyDecision) -> None:

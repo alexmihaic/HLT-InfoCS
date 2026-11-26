@@ -63,8 +63,8 @@ def manifest_from_boe_result(
     else:
         status = RunStatus.FAILED
         error_summary = ErrorSummary(
-            stage="review_queue" if result.error == "review_queue_failure" else "transport",
-            error_code=result.error if result.error == "review_queue_failure" else result.status.value,
+            stage="review_queue" if result.error == "review_queue_failure" else "pipeline" if result.error == "pipeline_failure" else "transport",
+            error_code=result.error if result.error in {"review_queue_failure", "pipeline_failure", "network_timeout", "network_failure", "http_failure", "mime_incompatible", "body_too_large", "invalid_json", "invalid_payload", "invalid_request"} else result.error if result.error and result.error in {f"http_{code}" for code in range(100, 600)} else result.status.value,
             safe_message=(
                 "El procesamiento de la fuente falló antes de completar el lote."
                 if result.error == "review_queue_failure"

@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 import json
+import shutil
 from pathlib import Path
 import sys
 import tempfile
@@ -20,6 +21,7 @@ from infocs.fetch.bdns.ingest import (  # noqa: E402
     BDNSIngestionStatus,
     BDNSRecordOperation,
     ingest_bdns,
+    observe_bdns_record,
 )
 from infocs.fetch.bdns.models import BDNSFetchResult, BDNSRequestStatus  # noqa: E402
 from infocs.fetch.bdns.parser import parse_bdns_detail, parse_bdns_search  # noqa: E402
@@ -68,6 +70,192 @@ class FixedGate:
 
     def evaluate(self, record):
         return PrivacyDecision(self.decision.decision, self.decision.record_id)
+
+
+class BDNSIndividualObservationTests(unittest.TestCase):
+    """Synthetic v2 corpus in a temporary directory, including baseline evidence."""
+
+    def setUp(self):
+        from infocs.fetch.bdns.migration import prepare_baseline_migration, stage_batch, materialize_staged_tree
+        from tests.unit.test_bdns_runner import FakeTransport as StableTransport
+
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.store = RecordStore(self.root / "data" / "records")
+        self.events = EventStore(self.root / "data" / "events")
+        page, self.detail = fixture_models()
+        self.page = replace(page, items=(page.items[0],), page_number=0, page_size=50,
+            offset=0, total_pages=1, total_elements=1, number_of_elements=1,
+            first=True, last=True, empty=False)
+        first = ingest_bdns(record_store=self.store, event_store=self.events,
+            transport=StableTransport(self.page, self.detail), started_at=STARTED, clock=lambda: OBSERVED)
+        self.assertEqual(first.operation, BDNSRecordOperation.CREATE)
+        self.record_id = self.store.list_source("bdns")[0].id
+        prepared = prepare_baseline_migration(record_store=self.store,
+            transport=StableTransport(self.page, self.detail),
+            migration_id="bdns-v1-v2-11111111-1111-4111-8111-111111111111",
+            software_git_sha="a" * 40, clock=lambda: OBSERVED + timedelta(minutes=1))
+        self.assertEqual(prepared.status, "prepared", prepared.safe_reason)
+        stage = self.root / "stage"
+        stage_batch(prepared.batch, stage)
+        materialize_staged_tree(stage, self.store)
+        self.old = self.store.get(self.record_id, source_id="bdns")
+        self.when = OBSERVED + timedelta(minutes=2)
+        self.addCleanup(patch.stopall)
+        # Any accidental network fallback makes the offline test fail.
+        patch("socket.create_connection", side_effect=AssertionError("offline_test_network_forbidden")).start()
+
+    def observe(self, detail=None, *, when=None, transport=None, gate=None):
+        from tests.unit.test_bdns_runner import FakeTransport as StableTransport
+        return observe_bdns_record(record_id=self.record_id, record_store=self.store,
+            event_store=self.events, transport=transport or StableTransport(self.page, detail or self.detail),
+            started_at=STARTED, clock=lambda: when or self.when, privacy_gate=gate)
+
+    def snapshot(self):
+        return {str(p.relative_to(self.root)): p.read_bytes()
+            for p in (self.root / "data").rglob("*") if p.is_file()}
+
+    def test_identical_observation_changes_only_freshness_and_not_hash_or_events(self):
+        before_events = self.events.list_source("bdns")
+        with patch.object(self.store, "write", wraps=self.store.write) as write:
+            result = self.observe()
+            write.assert_called_once()
+        current = self.store.get(self.record_id, source_id="bdns")
+        self.assertEqual(current, replace(self.old, dates=replace(self.old.dates, last_checked_at=self.when)))
+        self.assertEqual(result.operation, BDNSRecordOperation.NO_CHANGE)
+        self.assertEqual(result.request_count, 4)
+        self.assertEqual(result.metrics.events_updated, 0)
+        self.assertEqual(self.events.list_source("bdns"), before_events)
+        from infocs.diff.core import content_hash
+        self.assertEqual(content_hash(current.to_dict()), self.old.technical.content_hash)
+        self.assertEqual(Record.from_json(current.canonical_json()), current)
+        raw = self.store.path_for("bdns", current.id).read_text(encoding="utf-8")
+        self.assertEqual(raw, current.canonical_json() + "\n")
+        from infocs.fetch.bdns.workflow_safety import validate_generated_artifacts
+        shutil.copytree(ROOT / "schemas", self.root / "schemas")
+        attribution = self.root / "data" / "records" / "bdns" / "README.md"
+        attribution.write_bytes(ATTRIBUTION.read_bytes())
+        path = self.store.path_for("bdns", current.id).relative_to(self.root).as_posix()
+        self.assertEqual(validate_generated_artifacts(self.root, (("M", path),), {}), (path,))
+
+    def test_repeated_and_earlier_observations_never_write_or_move_freshness_backwards(self):
+        self.observe()
+        before = self.snapshot()
+        for when in (self.when, self.when - timedelta(seconds=1)):
+            with self.subTest(when=when), patch.object(self.store, "write", wraps=self.store.write) as write:
+                self.assertEqual(self.observe(when=when).operation, BDNSRecordOperation.NO_CHANGE)
+                write.assert_not_called()
+                self.assertEqual(self.snapshot(), before)
+
+    def test_material_end_date_update_is_authorized_and_idempotent(self):
+        changed = replace(self.detail, application_end_date=date(2027, 2, 1))
+        result = self.observe(changed)
+        self.assertEqual(result.operation, BDNSRecordOperation.UPDATE)
+        self.assertEqual(result.metrics.events_updated, 1)
+        current = self.store.get(self.record_id, source_id="bdns")
+        self.assertEqual(current.id, self.old.id)
+        self.assertEqual(current.dates.detected_at, self.old.dates.detected_at)
+        self.assertEqual(current.dates.last_checked_at, self.when)
+        self.assertNotEqual(current.technical.content_hash, self.old.technical.content_hash)
+        event = next(e for e in self.events.list_source("bdns") if e.type == "update")
+        self.assertEqual(event.previous_content_hash, self.old.technical.content_hash)
+        self.assertEqual(event.content_hash, current.technical.content_hash)
+        self.assertEqual(event.changed_fields, ("source_data.bdns.application.end_date",))
+        before = self.snapshot()
+        self.observe(changed)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_outdated_material_change_cannot_replace_a_newer_observation(self):
+        self.observe()
+        before = self.snapshot()
+        result = self.observe(replace(self.detail, application_end_date=date(2027, 2, 1)),
+            when=self.when - timedelta(seconds=1))
+        self.assertEqual(result.safe_reason, "observation_outdated")
+        self.assertEqual(self.snapshot(), before)
+
+    def test_nonempty_document_replacement_is_a_material_update(self):
+        # The bounded guard holds erasures, while allowing an explicit replacement.
+        changed = replace(self.detail, documents=(replace(self.detail.documents[0],
+            document_id=self.detail.documents[0].document_id + 1, filename="nuevo-anexo.pdf"),))
+        result = self.observe(changed)
+        self.assertEqual(result.operation, BDNSRecordOperation.UPDATE)
+        self.assertEqual(result.metrics.events_updated, 1)
+
+    def test_stable_reader_rejects_wrong_identity_without_writing(self):
+        before = self.snapshot()
+        result = self.observe(replace(self.detail, codigo_bdns="999999999"))
+        self.assertEqual(result.safe_reason, "observation_read_failed")
+        self.assertEqual(self.snapshot(), before)
+
+    def test_absent_null_empty_and_lost_document_fields_hold_the_previous_record(self):
+        raw = json.loads((FIXTURES / "detail_success.json").read_text(encoding="utf-8"), parse_float=Decimal)
+        raw["regiones"] = [{"descripcion": "ES522 - Castellón / Castelló"}]
+        cases = []
+        for field in ("fechaFinSolicitud", "documentos", "anuncios"):
+            for mode in ("absent", "null", "empty"):
+                if field == "fechaFinSolicitud" and mode == "empty":
+                    continue  # Empty calendar dates already fail parser validation.
+                payload = dict(raw)
+                if mode == "absent":
+                    payload.pop(field, None)
+                else:
+                    payload[field] = None if mode == "null" else ([] if field != "fechaFinSolicitud" else "")
+                cases.append((field, mode, parse_bdns_detail(payload)))
+        cases.append(("document_filename", "null", replace(self.detail,
+            documents=(replace(self.detail.documents[0], filename=None),))))
+        before = self.snapshot()
+        for field, mode, detail in cases:
+            with self.subTest(field=field, mode=mode):
+                result = self.observe(detail)
+                self.assertEqual(result.status, BDNSIngestionStatus.SOURCE_FAILURE)
+                self.assertEqual(result.safe_reason, "observation_incomplete")
+                self.assertEqual(self.snapshot(), before)
+                self.assertNotIn(self.detail.codigo_bdns, json.dumps(result.to_dict()))
+
+    def test_transport_error_drift_and_privacy_denial_preserve_state(self):
+        from tests.unit.test_bdns_runner import FakeTransport as StableTransport
+        before = self.snapshot()
+        client = StableTransport(self.page, self.detail)
+        with patch.object(client, "fetch_detail", side_effect=OSError("sensitive source value")):
+            result = self.observe(transport=client)
+        self.assertEqual(result.safe_reason, "observation_read_failed")
+        self.assertNotIn("sensitive", json.dumps(result.to_dict()))
+        client = StableTransport(self.page, self.detail)
+        with patch.object(client, "fetch_detail", side_effect=[
+            BDNSFetchResult(BDNSRequestStatus.SUCCESS, 200, payload=self.detail),
+            BDNSFetchResult(BDNSRequestStatus.SUCCESS, 200, payload=replace(self.detail, title="Cambio durante la lectura"))]):
+            self.assertEqual(self.observe(transport=client).safe_reason, "observation_read_failed")
+        result = self.observe(gate=FixedGate(PrivacyDecision(PrivacyDecisionType.REJECT, self.record_id)))
+        self.assertEqual(result.metrics.privacy_reject, 1)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_incompatible_normalizer_does_not_generate_an_event(self):
+        invalid = replace(self.old, provenance=replace(self.old.provenance, normalizer_version="9.0.0"))
+        self.store.write(invalid)
+        before = self.snapshot()
+        result = self.observe(replace(self.detail, application_end_date=date(2027, 2, 1)))
+        self.assertEqual(result.safe_reason, "observation_contract_mismatch")
+        self.assertEqual(self.snapshot(), before)
+
+    def test_failure_between_event_and_record_is_detected_and_retry_recovers(self):
+        from infocs.fetch.bdns.workflow_safety import validate_generated_artifacts, WorkflowSafetyError
+        before_record = self.store.path_for("bdns", self.record_id).read_bytes()
+        changed = replace(self.detail, application_end_date=date(2027, 2, 1))
+        with patch.object(self.store, "write", side_effect=OSError("simulated disk failure")):
+            result = self.observe(changed)
+        self.assertEqual(result.status, BDNSIngestionStatus.PERSISTENCE_BLOCKED)
+        self.assertEqual(self.store.path_for("bdns", self.record_id).read_bytes(), before_record)
+        event = next(e for e in self.events.list_source("bdns") if e.type == "update")
+        path = self.events.path_for("bdns", self.record_id, event.event_id)
+        entry = ("A", path.relative_to(self.root).as_posix())
+        shutil.copytree(ROOT / "schemas", self.root / "schemas")
+        with self.assertRaisesRegex(WorkflowSafetyError, "event_record_binding_invalid"):
+            validate_generated_artifacts(self.root, (entry,), {})
+        recovered = self.observe(changed)
+        self.assertEqual(recovered.status, BDNSIngestionStatus.COMPLETE_SUCCESS)
+        self.assertEqual(len([e for e in self.events.list_source("bdns") if e.type == "update"]), 1)
+        self.assertEqual(self.store.get(self.record_id, source_id="bdns").technical.content_hash, event.content_hash)
 
 
 class BDNSIngestionTests(unittest.TestCase):

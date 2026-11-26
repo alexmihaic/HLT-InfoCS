@@ -328,6 +328,15 @@ class BOEManifestAdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.build(invalid)
 
+    def test_known_boe_diagnostics_are_safe_and_unknown_codes_are_rejected(self) -> None:
+        for code, stage in [("network_timeout", "transport"), ("http_503", "transport"), ("invalid_json", "transport"), ("pipeline_failure", "pipeline")]:
+            with self.subTest(code=code):
+                result = BOEIngestionResult(BOEIngestionStatus.SOURCE_FAILURE, BOEIngestionMetrics(), error=code)
+                value = self.build(result)
+                self.assertEqual(value.error_summary.error_code, code)
+                self.assertEqual(value.error_summary.stage, stage)
+                self.assertEqual(value.status, RunStatus.FAILED)
+
     def test_source_failure_uses_safe_summary_not_raw_error(self) -> None:
         result = BOEIngestionResult(
             BOEIngestionStatus.SOURCE_FAILURE,
