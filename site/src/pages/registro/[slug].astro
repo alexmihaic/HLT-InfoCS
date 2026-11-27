@@ -9,7 +9,7 @@ import ExternalSearchLink from '../../components/ExternalSearchLink.astro';
 import SourceLink from '../../components/SourceLink.astro';
 import TechnicalDetails from '../../components/TechnicalDetails.astro';
 import { encodeRecordId, loadPortalData } from '../../lib/data';
-import { formatPortalDate } from '../../lib/presentation/dates';
+import { describeSystemTimestamp, formatPortalDate } from '../../lib/presentation/dates';
 import { administrationLevelLabel, categoryLabel, sourceLabel } from '../../lib/presentation/labels';
 import { authorityPresentation, geographyLabels, isUppercaseTitle, officialDeadline, primaryDate, showsAdministrationLevel, timelineItems } from '../../lib/presentation/recordView';
 import { buildBDNSRecordView } from '../../lib/presentation/bdnsRecordView';
@@ -36,6 +36,7 @@ const { record, events, source, bdnsLinks } = Astro.props as Props;
 const bdnsView = buildBDNSRecordView(record);
 const geographies = geographyLabels(record);
 const date = primaryDate(record);
+const checked = describeSystemTimestamp(record.lastCheckedAt);
 const timeline = timelineItems(events);
 const recordPath = `/registro/${encodeRecordId(record.id)}/`;
 const authority = authorityPresentation(record);
@@ -78,7 +79,7 @@ const searchDocument = buildSearchDocument({
       {searchDocument.texts.map((text) => <p>{text}{' '}</p>)}
     </div>
     <nav class="breadcrumbs" aria-label="Ruta de navegación">
-      <a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/registros/">Registros</a><span aria-hidden="true">/</span><span aria-current="page">Ficha</span>
+      <a href="/">Inicio</a><span aria-hidden="true">/</span><a href="/registros/">Actividad pública</a><span aria-hidden="true">/</span><span aria-current="page">Ficha</span>
     </nav>
 
     <header class="detail-header">
@@ -97,6 +98,9 @@ const searchDocument = buildSearchDocument({
       <div class="key-facts-actions" data-pagefind-ignore>
         <SourceLink href={record.sourceUrl} variant="primary" label={record.sourceId === 'bdns' ? 'Datos oficiales en BDNS (JSON de la API)' : record.sourceId === 'boe' ? 'Abrir publicación oficial en el BOE' : 'Abrir publicación oficial'} />
         {record.sourceId === 'bdns' && <p class="fact-note">El enlace abre la respuesta en formato JSON de la API oficial de BDNS, no una ficha web.</p>}
+        <p class="record-check"><strong>Última comprobación de este registro por InfoCs</strong>
+          {checked.dateTime ? <time datetime={checked.dateTime}>{checked.text}</time> : checked.text}
+        </p>
         {externalSearchHref && <ExternalSearchLink href={externalSearchHref} />}
       </div>
     </section>
@@ -140,7 +144,7 @@ const searchDocument = buildSearchDocument({
           <p>InfoCs organiza metadatos estructurados, conserva el enlace oficial y aplica controles de privacidad antes de publicar. Esta ficha no sustituye a la fuente original ni ofrece asesoramiento jurídico.</p>
         </section>
 
-        <div data-pagefind-ignore><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} lastCheckedAt={record.lastCheckedAt} /></div>
+        <div data-pagefind-ignore><TechnicalDetails recordId={record.id} officialId={record.officialId} contentHash={record.contentHash} detectedAt={record.detectedAt} /></div>
       </aside>
     </div>
   </article>

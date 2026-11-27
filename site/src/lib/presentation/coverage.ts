@@ -14,6 +14,7 @@ export interface CoverageFact {
   readonly label: string;
   readonly value: string;
   readonly datetime?: string;
+  readonly detailOnly?: boolean;
 }
 
 export interface SourceCoverageView {
@@ -105,6 +106,7 @@ function runFacts(run: SourceRunStatus | undefined): CoverageFact[] {
   if (run.manifestCount > 0) {
     facts.push({
       label: 'Manifiestos de ejecución registrados',
+      detailOnly: true,
       value: String(run.manifestCount),
     });
   }

@@ -11,8 +11,8 @@ const groups = authorityGroups(data.records);
 <BaseLayout title="Organismos" description="Convocatorias de subvenciones publicadas en InfoCs agrupadas por la administración convocante que indica BDNS." currentPage="organisms">
   <section class="page-intro" aria-labelledby="page-title">
     <p class="eyebrow">{AUTHORITY_GROUP_LABEL}</p>
-    <h1 id="page-title">Organismos</h1>
-    <p class="lede">Convocatorias de subvenciones agrupadas por la administración convocante tal como figura en la Base de Datos Nacional de Subvenciones (BDNS). Es el nombre literal de la fuente: InfoCs no lo normaliza, no lo convierte en municipio y no une nombres parecidos.</p>
+    <h1 id="page-title">Explorar por administración</h1>
+    <p class="lede">Elige una administración para ver sus publicaciones por fecha. InfoCs agrupa los nombres tal como figuran en el nivel 2 de la jerarquía de la Base de Datos Nacional de Subvenciones (BDNS). Un mismo nombre puede corresponder a más de una entidad.</p>
   </section>
 
   <section aria-labelledby="organisms-title">
@@ -22,6 +22,6 @@ const groups = authorityGroups(data.records);
       : <ol class="organism-list">
         {groups.map((group) => <li><a class="organism-link" href={`/organismos/${group.slug}/`}><span class="organism-name">{group.name}</span><span class="count-note">{group.records.length} {group.records.length === 1 ? 'convocatoria' : 'convocatorias'}</span></a></li>)}
       </ol>}
-    <p class="method-note organism-note">Sólo se incluyen convocatorias BDNS publicadas en InfoCs que indican este dato. Las publicaciones del BOE no se agrupan aquí porque el BOE identifica la sección del boletín, no el organismo emisor.</p>
+    <p class="method-note organism-note">Los recuentos corresponden a publicaciones disponibles en InfoCs. El nombre de una administración tampoco determina el municipio beneficiario. Sólo se incluyen convocatorias BDNS publicadas en InfoCs que indican este dato. Las publicaciones del BOE no se agrupan aquí porque el BOE identifica la sección del boletín, no el organismo emisor.</p>
   </section>
 </BaseLayout>

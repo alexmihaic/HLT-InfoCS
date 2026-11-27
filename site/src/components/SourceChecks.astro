@@ -1,0 +1,16 @@
+---
+import StatusBadge from './StatusBadge.astro';
+import type { SourceCoverageView } from '../lib/presentation/coverage';
+interface Props { source: SourceCoverageView; compact?: boolean }
+const { source, compact = false } = Astro.props;
+const facts = compact ? source.facts.filter(fact => !fact.detailOnly) : source.facts;
+---
+{source.published && <div class="source-checks">
+  <StatusBadge label={source.statusLabel} tone={source.statusTone} />
+  <dl class="coverage-facts">
+    {facts.map(fact => <div>
+      <dt>{fact.label}</dt>
+      <dd>{fact.datetime ? <time datetime={fact.datetime}>{fact.value}</time> : fact.value}</dd>
+    </div>)}
+  </dl>
+</div>}
