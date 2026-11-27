@@ -9,14 +9,14 @@ const data = await loadPortalData();
 const records = [...data.records].sort(byPrimaryDateDesc);
 ---
 
-<BaseLayout title="Todos los registros" description="Todas las publicaciones oficiales que InfoCs ha incorporado al portal." currentPage="records">
-  <header class="page-intro">
-    <p class="eyebrow">Publicaciones oficiales</p>
-    <h1>Todos los registros</h1>
-    <p class="lede">Del más reciente al más antiguo según su fecha oficial o, si no existe, la fecha en que InfoCs los detectó.</p>
+<BaseLayout title="Actividad pública" description="Todas las publicaciones oficiales que InfoCs ha incorporado al portal." currentPage="records">
+  <header class="page-intro activity-intro">
+    <p class="eyebrow">Provincia de Castellón</p>
+    <h1>Actividad pública</h1>
+    <p class="lede">Publicaciones de BOE y BDNS seleccionadas por InfoCs.</p>
   </header>
 
-  <section aria-label="Registros">
+  <section class="activity-list" aria-label="Registros">
     <RecordFilters records={records} sources={data.sources} />
     <RecordList records={records} sources={data.sources} historyIds={new Set(data.eventsByRecordId.keys())} headingLevel={2} callTypeDisplay="meta" countLabel={`${records.length} ${records.length === 1 ? 'registro publicado' : 'registros publicados'}`} />
   </section>

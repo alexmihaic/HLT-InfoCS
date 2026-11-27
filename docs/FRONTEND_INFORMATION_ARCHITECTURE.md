@@ -10,7 +10,13 @@ vertical funcional implementada. No sustituyen el sistema de producto/UI de
 InfoCs aprobado previamente, que contempla superficies y rutas adicionales
 que se integrarán en fases posteriores de la Fase 09.
 
-## Rutas y navegación
+## H1.1 · Navegación ciudadana (M03 y M07)
+
+La portada da acceso por intención a /registros/, /organismos/, /cambios/ y /buscar/?q=, con procedencia en /fuentes/. El menú reutiliza esos destinos en móvil y escritorio. La sección principal conserva hasta diez publicaciones y su orden de fecha visible (publicación, recepción BDNS, primera detección). Los estados de ejecución proceden de Health y Manifest; la comprobación individual procede de dates.last_checked_at. La generación del portal es una tercera fecha independiente. El inicio de cobertura continuada no está acreditado.
+
+El contexto provincial y el directorio por literal BDNS nivel 2 no atribuyen un municipio beneficiario. En BOE se mantienen los roles derivados existentes con evidencia por registro. Sin nuevas rutas ni filtros territoriales globales. Las fichas actuales conservan su identidad y enlace oficial. Los estados de reutilización y los criterios de beta se rigen por los contratos vigentes. Los apartados siguientes documentan el corte histórico 09D.
+
+## Rutas y navegación en 09D
 
 - `/`: últimas publicaciones disponibles, ordenadas por `publishedAt` y, si
   falta, por `detectedAt`.

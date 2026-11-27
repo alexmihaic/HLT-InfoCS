@@ -3,6 +3,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import ChangeRecordEntry from '../../components/ChangeRecordEntry.astro';
 import EmptyState from '../../components/EmptyState.astro';
 import RecordList from '../../components/RecordList.astro';
+import SourceChecks from '../../components/SourceChecks.astro';
+import { loadPortalStatus } from '../../lib/data/status';
+import { sourceCoverage } from '../../lib/presentation/coverage';
 import SourceLink from '../../components/SourceLink.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
 import { loadPortalData, encodeRecordId } from '../../lib/data';
@@ -22,6 +25,8 @@ export async function getStaticPaths() {
 
 const { detail } = Astro.props as Props;
 const { source } = detail;
+const status = await loadPortalStatus([source.sourceId]);
+const [coverage] = sourceCoverage([source], status);
 const historyIds = new Set(detail.records
   .filter((record) => detail.activity.some((item) => item.recordHref === `/registro/${encodeRecordId(record.id)}/`))
   .map((record) => record.id));
@@ -51,6 +56,8 @@ const historyIds = new Set(detail.records
         <div><dt>Estado editorial en InfoCs</dt><dd>{source.statusLabel}</dd></div>
         <div><dt>Registros públicos disponibles</dt><dd>{source.recordCount}</dd></div>
       </dl>
+      <SourceChecks source={coverage} />
+      {coverage.published && <p class="fact-note">Inicio de cobertura continuada no acreditado. Las fechas de las fichas corresponden a publicaciones concretas.</p>}
       {source.attribution && <p class="attribution">{source.attribution}</p>}
       <p class="source-reuse-note">{detail.reuseNote}</p>
       <SourceLink href={source.officialUrl} label="Abrir fuente oficial" />

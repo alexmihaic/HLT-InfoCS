@@ -7,12 +7,12 @@ interface Props { currentPage?: Page }
 const { currentPage } = Astro.props;
 const links: readonly { href: string; label: string; page: Page }[] = [
   { href: '/', label: 'Inicio', page: 'home' },
-  { href: '/registros/', label: 'Registros', page: 'records' },
-  { href: '/organismos/', label: 'Organismos', page: 'organisms' },
+  { href: '/registros/', label: 'Actividad pública', page: 'records' },
+  { href: '/organismos/', label: 'Administraciones', page: 'organisms' },
   { href: '/buscar/', label: 'Buscar', page: 'search' },
-  { href: '/cambios/', label: 'Cambios', page: 'changes' },
-  { href: '/fuentes/', label: 'Fuentes', page: 'sources' },
-  { href: '/metodologia/', label: 'Metodología', page: 'methodology' },
+  { href: '/cambios/', label: 'Cambios observados', page: 'changes' },
+  { href: '/fuentes/', label: 'Fuentes y cobertura', page: 'sources' },
+  { href: '/metodologia/', label: 'Cómo trabaja InfoCs', page: 'methodology' },
 ];
 ---
 

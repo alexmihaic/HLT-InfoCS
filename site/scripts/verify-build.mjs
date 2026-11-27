@@ -221,6 +221,9 @@ for (const record of publishedRecords) {
   const linkAt = html.indexOf('source-link-primary');
   const layoutAt = html.indexOf('class="detail-layout"');
   if (linkAt < 0 || !(titleAt < linkAt && linkAt < layoutAt)) fail('el enlace oficial no aparece justo después del título', where);
+  const evidence = html.slice(linkAt, layoutAt);
+  const stamp = evidence.match(/class="record-check"[^>]*>[\s\S]*?<time datetime="([^"]+)"/)?.[1];
+  if (stamp !== record.dates.last_checked_at) fail('la procedencia visible debe usar la comprobación del propio registro', where);
   if (record.source.id === 'bdns' && linkAt >= 0 && !/source-link-primary[^>]*>[^<]*JSON/.test(html.slice(linkAt - 200, linkAt + 400))) {
     fail('el enlace BDNS no indica que abre JSON de la API', where);
   }

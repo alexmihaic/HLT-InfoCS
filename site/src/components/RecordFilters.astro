@@ -32,7 +32,7 @@ const sourceOptions = [...new Set(records.map(record => record.sourceId))].map(v
   <div class="record-filter">
     <label for="filter-tipo">Tipo</label>
     <select id="filter-tipo" name="tipo">
-      <option value="">Todos los tipos</option>
+      <option value="">Todos</option>
       {categoryOptions.map((option) => <option value={option.value}>{option.label} ({option.count})</option>)}
     </select>
   </div>
@@ -73,10 +73,15 @@ const sourceOptions = [...new Set(records.map(record => record.sourceId))].map(v
     <input id="filter-hasta" type="date" name="hasta" aria-describedby="filter-date-note filter-date-error" />
   </div>
   <p id="filter-date-error" class="record-filter-note" role="status" hidden>El inicio es posterior al final. Corrige el intervalo o quita los filtros.</p>
-  <p id="filter-date-note" class="fact-note record-filter-note">Intervalo inclusivo sobre la fecha de cada ficha: publicación; si falta, recepción en BDNS; si también falta, detección por InfoCs. No es el plazo de solicitud.</p>
   <div class="record-filter-actions"><button class="record-filter-reset" type="button" data-filter-reset hidden>Quitar filtros</button></div>
   <noscript><p>Los filtros necesitan JavaScript. Puedes consultar el listado completo, <a href="/organismos/">Organismos</a> y <a href="/fuentes/">Fuentes</a>.</p></noscript>
-  <p id="filter-scope-note" class="fact-note record-filter-note">Los recuentos indican coincidencias con los demás filtros. La administración agrupa por el nombre literal del nivel 2 de la jerarquía oficial BDNS, como en <a href="/organismos/">Organismos</a>; no es el municipio beneficiario. Nombres iguales se agrupan; no necesariamente identifican jurídicamente al organismo convocante exacto. El municipio solo se busca en títulos BOE. El tipo de convocatoria no determina quién puede solicitarla ni la vigencia del plazo.</p>
+  <details class="record-filter-guide">
+    <summary>Fechas, filtros y cobertura</summary>
+    <p class="fact-note">Cada fila se ordena por la fecha indicada: publicación, recepción en BDNS o primera detección por InfoCs.</p>
+    <p id="filter-date-note" class="fact-note record-filter-note">Intervalo inclusivo sobre la fecha de cada ficha: publicación; si falta, recepción en BDNS; si también falta, detección por InfoCs. No es el plazo de solicitud.</p>
+    <p id="filter-scope-note" class="fact-note record-filter-note">Los recuentos indican coincidencias con los demás filtros. La administración agrupa por el nombre literal del nivel 2 de la jerarquía oficial BDNS, como en <a href="/organismos/">Organismos</a>; no es el municipio beneficiario. Nombres iguales se agrupan; no necesariamente identifican jurídicamente al organismo convocante exacto. El municipio solo se busca en títulos BOE. El tipo de convocatoria no determina quién puede solicitarla ni la vigencia del plazo.</p>
+    <a href="/fuentes/" class="text-link scope-link">Qué fuentes cubre el listado →</a>
+  </details>
 </form>
 
 <script>

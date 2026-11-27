@@ -1,6 +1,9 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import EmptyState from '../../components/EmptyState.astro';
+import SourceChecks from '../../components/SourceChecks.astro';
+import { loadPortalStatus } from '../../lib/data/status';
+import { sourceCoverage } from '../../lib/presentation/coverage';
 import SourceLink from '../../components/SourceLink.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
 import { loadPortalData } from '../../lib/data';
@@ -8,46 +11,63 @@ import { sourceLabel } from '../../lib/presentation/labels';
 import { sourceDetailPath } from '../../lib/presentation/sourceDetails';
 
 const data = await loadPortalData();
+const status = await loadPortalStatus(data.sources.map(source => source.sourceId));
+const coverage = new Map(sourceCoverage(data.sources, status).map(source => [source.sourceId, source]));
 ---
 
-<BaseLayout title="Fuentes oficiales" description="Organismos de origen, disponibilidad editorial y método de organización de InfoCs." currentPage="sources">
-  <section class="page-intro" aria-labelledby="page-title">
-    <p class="eyebrow">Procedencia y alcance</p>
-    <h1 id="page-title">Fuentes oficiales</h1>
-    <p class="lede">InfoCs conserva la procedencia y el enlace original de cada publicación. El estado de esta página describe su disponibilidad editorial en InfoCs, no la salud técnica de los organismos.</p>
+<BaseLayout title="Fuentes y cobertura" description="Organismos de origen, disponibilidad editorial y método de organización de InfoCs." currentPage="sources">
+  <section class="page-intro coverage-intro" aria-labelledby="page-title">
+    <h1 id="page-title">Fuentes y cobertura</h1>
+    <p class="lede">Consulta qué incluye cada fuente, cuándo se consultó y dónde abrir el original.</p>
   </section>
 
   {data.sources.length === 0
     ? <EmptyState message="Todavía no hay fuentes configuradas para el portal." />
     : <section class="source-directory" aria-label="Directorio de fuentes">
       <ol class="source-list">
-        {data.sources.map((source) => (
-          <li>
-            <article class="source-entry">
-              <div class="source-entry-heading">
-                <div><p class="eyebrow">Fuente integrada</p><h2>{sourceLabel(source.sourceId, data.sources)}</h2></div>
-                <StatusBadge label={source.statusLabel} tone={source.publicationState === 'publication_pending' ? 'pending' : 'active'} />
-              </div>
-              <p>{source.summary}</p>
-              <dl class="source-facts">
-                <div><dt>Organismo responsable</dt><dd>{source.responsibleBody}</dd></div>
-                <div><dt>Acceso</dt><dd>{source.accessType}</dd></div>
-                <div><dt>Disponibilidad en InfoCs</dt><dd>{source.publicationState === 'publication_pending'
-                  ? 'No se publican registros de esta fuente mientras las condiciones de reutilización estén pendientes de aclaración.'
-                  : source.recordCount > 0
-                    ? `${source.recordCount} ${source.recordCount === 1 ? 'registro público disponible' : 'registros públicos disponibles'}`
-                    : 'Fuente activa; actualmente no hay registros públicos disponibles.'}</dd></div>
-              </dl>
-              {source.attribution && <p class="attribution">{source.attribution}</p>}
-              <div class="source-entry-actions">
-                {sourceDetailPath(source.sourceId) && <a class="text-link" href={sourceDetailPath(source.sourceId)!}>Detalles de la fuente →</a>}
-                <SourceLink href={source.officialUrl} label="Visitar fuente oficial" />
-              </div>
-            </article>
-          </li>
-        ))}
+        {data.sources.map((source) => {
+          const sourceView = coverage.get(source.sourceId);
+          const detailPath = sourceDetailPath(source.sourceId);
+          return (
+            <li>
+              <article class="source-entry">
+                <div class="source-entry-heading">
+                  <h2>{sourceLabel(source.sourceId, data.sources)}</h2>
+                  <StatusBadge label={source.statusLabel} tone={source.publicationState === 'publication_pending' ? 'pending' : 'active'} />
+                </div>
+                <p>{sourceView?.scope ?? source.summary}</p>
+                <dl class="source-facts source-availability">
+                  <div><dt>Disponibilidad en InfoCs</dt><dd>{source.publicationState === 'publication_pending'
+                    ? 'No se publican registros de esta fuente mientras las condiciones de reutilización estén pendientes de aclaración.'
+                    : source.recordCount > 0
+                      ? `${source.recordCount} ${source.recordCount === 1 ? 'registro público disponible' : 'registros públicos disponibles'}`
+                      : 'Fuente activa; actualmente no hay registros públicos disponibles.'}</dd></div>
+                </dl>
+                {sourceView && <SourceChecks source={sourceView} compact />}
+                <div class="source-entry-actions">
+                  <SourceLink href={source.officialUrl} label="Visitar fuente oficial" />
+                  {detailPath && <a class="text-link" href={detailPath}>Detalles de la fuente →</a>}
+                </div>
+                <details class="source-entry-details">
+                  <summary>Información técnica y atribución</summary>
+                  {sourceView?.scope !== source.summary && <p>{source.summary}</p>}
+                  <dl class="source-facts">
+                    <div><dt>Organismo responsable</dt><dd>{source.responsibleBody}</dd></div>
+                    <div><dt>Acceso</dt><dd>{source.accessType}</dd></div>
+                    {sourceView?.facts.filter(fact => fact.detailOnly).map(fact =>
+                      <div><dt>{fact.label}</dt><dd>{fact.value}</dd></div>
+                    )}
+                  </dl>
+                  {source.attribution && <p class="attribution">{source.attribution}</p>}
+                </details>
+              </article>
+            </li>
+          );
+        })}
       </ol>
     </section>}
+
+  <p class="fact-note coverage-retention">Si una consulta falla, las publicaciones ya incorporadas siguen disponibles.</p>
 
   <section class="page-section" aria-labelledby="method-title">
     <div class="surface-panel">
